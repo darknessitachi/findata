@@ -13,6 +13,7 @@ import java.util.Properties;
 public final class ResourceUtil {
 	// 资源文件
 	private static Properties resource = null;
+
 	static {
 		try {
 			init();

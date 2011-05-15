@@ -25,22 +25,22 @@ public class NeteaseTradingDatum extends SecurityTradingDatum {
 		this.stockCode = stockCode;
 		try {
 			if (stockCode.startsWith("6") || stockCode.startsWith("9")) {
-				neteaseInternalCode = "0"+stockCode;
+				neteaseInternalCode = "0" + stockCode;
 			} else {
-				neteaseInternalCode = "1"+stockCode;
+				neteaseInternalCode = "1" + stockCode;
 			}
-			URL url = new URL ("http://api.money.163.com/data/feed/"+neteaseInternalCode);
+			URL url = new URL("http://api.money.163.com/data/feed/" + neteaseInternalCode);
 			InputStream is = url.openStream();
 			is.skip(22);
-			byte [] in = new byte [is.available()-2];
+			byte[] in = new byte[is.available() - 2];
 			is.read(in);
-			String s = "{" + new String (in);
+			String s = "{" + new String(in);
 			data = (JSONObject) JSONValue.parse(s);
 		} catch (Exception e) {
 		}
 	}
 
-	public String getStockCode () {
+	public String getStockCode() {
 		return stockCode;
 	}
 
@@ -52,9 +52,9 @@ public class NeteaseTradingDatum extends SecurityTradingDatum {
 		return (Double) getProperty("price");
 	}
 
-	private Object getProperty (String name) {
+	private Object getProperty(String name) {
 		try {
-			return  ((Map)data.get(neteaseInternalCode)).get(name);
+			return ((Map) data.get(neteaseInternalCode)).get(name);
 		} catch (Exception e) {
 			return null;
 		}

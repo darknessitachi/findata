@@ -12,13 +12,13 @@ import michael.findata.util.FinDataConstants;
  * To change this template use File | Settings | File Templates.
  */
 public class Hexun2008FinancialSheetTest {
-	public static void main (String [] args) {
-		FinancialSheet sheet = new Hexun2008FinancialSheet("600026", FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET, 2008, (short)4);
+	public static void main(String[] args) {
+		FinancialSheet sheet = new Hexun2008FinancialSheet("600026", FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET, 2008, (short) 4);
 		java.util.Iterator<String> it = sheet.getDatumNames();
 		String name;
 		while (it.hasNext()) {
 			name = it.next();
-			System.out.println(name+"\t"+sheet.getValue(name));
+			System.out.println(name + "\t" + sheet.getValue(name));
 		}
 	}
 }

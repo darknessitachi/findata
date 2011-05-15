@@ -10,10 +10,13 @@ import java.util.Iterator;
  * To change this template use File | Settings | File Templates.
  */
 public abstract class FinancialSheet {
-	public abstract Iterator<String> getDatumNames ();
+	public abstract Iterator<String> getDatumNames();
+
 	public abstract Number getValue(String name);
-	public abstract String getURL ();
-	public abstract String getName ();
+
+	public abstract String getURL();
+
+	public abstract String getName();
 //	public enum AccountingSeason {
 //		first, second, third, fourth;
 //	};
@@ -22,23 +25,23 @@ public abstract class FinancialSheet {
 	protected int accountingYear = 0;
 	protected short accountingSeason;
 
-	public final String getStockCode (){
+	public final String getStockCode() {
 		return stockCode;
 	}
 
-	public final String getSheetType () {
+	public final String getSheetType() {
 		return sheetType;
 	}
 
-	public final int getAccountingYear (){
+	public final int getAccountingYear() {
 		return accountingYear;
 	}
 
-	public final int getAccountingSeason (){
+	public final int getAccountingSeason() {
 		return accountingYear;
 	}
 
-	public FinancialSheet (String stockCode, String sheetType, int accountingYear, short accountingSeason) {
+	public FinancialSheet(String stockCode, String sheetType, int accountingYear, short accountingSeason) {
 		this.stockCode = stockCode;
 		this.sheetType = sheetType;
 		this.accountingYear = accountingYear;

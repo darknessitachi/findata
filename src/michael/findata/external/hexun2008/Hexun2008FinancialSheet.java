@@ -23,10 +23,10 @@ import java.util.*;
  * To change this template use File | Settings | File Templates.
  */
 public class Hexun2008FinancialSheet extends FinancialSheet {
-	public static final String [] FINANCIAL_SHEETNAMES = new String [] {michael.findata.util.FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET,
-																				michael.findata.util.FinDataConstants.FINANCIAL_SHEET_PROFIT_AND_LOSS,
-																				michael.findata.util.FinDataConstants.FINANCIAL_SHEET_CASH_FLOW,
-																				michael.findata.util.FinDataConstants.FINANCIAL_SHEET_PROVISION};
+	public static final String[] FINANCIAL_SHEETNAMES = new String[]{michael.findata.util.FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET,
+			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_PROFIT_AND_LOSS,
+			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_CASH_FLOW,
+			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_PROVISION};
 	private String st, ap;
 	private Map<String, Number> data;
 	private List<String> name;
@@ -46,12 +46,12 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 		} else if (FinDataConstants.FINANCIAL_SHEET_PROVISION.equals(sheetType)) {
 			// 资产减值，拨备等
 			st = "zcjz";
-		}else {
+		} else {
 			st = sheetType;
 		}
 
 		switch (accountingSeason) {
-			case 1 :
+			case 1:
 				ap = accountingYear + ".03.15";
 				break;
 			case 2:
@@ -85,7 +85,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 
 	@Override
 	public String getURL() {
-		return "http://stockdata.stock.hexun.com/2008/"+st+".aspx?stockid="+stockCode+"&accountdate="+ap;
+		return "http://stockdata.stock.hexun.com/2008/" + st + ".aspx?stockid=" + stockCode + "&accountdate=" + ap;
 	}
 
 	@Override
@@ -93,14 +93,14 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 		return "hexun2008";
 	}
 
-	private void getData () {
+	private void getData() {
 		DecimalFormat df = new DecimalFormat("###,###.00");
 		DOMParser parser = new DOMParser();
 		try {
 			parser.parse(getURL());
 		} catch (FileNotFoundException e) {
 			// No such stock
-			System.out.println("Error in getting data for "+stockCode+" "+this.accountingYear+" "+this.accountingSeason+" "+this.getSheetType());
+			System.out.println("Error in getting data for " + stockCode + " " + this.accountingYear + " " + this.accountingSeason + " " + this.getSheetType());
 			return;
 		} catch (SAXException e) {
 			e.printStackTrace();
