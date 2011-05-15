@@ -30,7 +30,7 @@ enum CodeListFileType {
 }
 
 public class FinDataExtractor {
-	public static void main (String args[]) throws IOException, SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, URISyntaxException, DocumentException, SAXException, ParseException {
+	public static void main(String args[]) throws IOException, SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, URISyntaxException, DocumentException, SAXException, ParseException {
 //		Connection con = jdbcConnection();
 //		Statement st = con.createStatement();
 //		ResultSet rs = st.executeQuery("select name from stock where id < 10000");
@@ -44,7 +44,7 @@ public class FinDataExtractor {
 		refreshStockCode(true);
 	}
 
-	public static void test () throws IOException, DocumentException, SAXException, SQLException {
+	public static void test() throws IOException, DocumentException, SAXException, SQLException {
 		DOMParser parser = new DOMParser();
 		parser.parse("http://stockdata.stock.hexun.com/2008/lr.aspx?stockid=600016&accountdate=2005.12.31");
 		DOMReader domReader = new DOMReader();
@@ -66,14 +66,14 @@ public class FinDataExtractor {
 		for (Element e : (List<Element>) o) {
 			nameElement = (Element) fieldNamePath.evaluate(e);
 			valueElement = (Element) fieldValuePath.evaluate(e);
-			System.out.print (nameElement.getText());
-			System.out.print (" ");
-			System.out.println (valueElement.getText());
+			System.out.print(nameElement.getText());
+			System.out.print(" ");
+			System.out.println(valueElement.getText());
 		}
 	}
 
 	// Refresh Stock Code every 2 months
-	public static void refreshStockCode (boolean codeOnly) throws IOException, SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
+	public static void refreshStockCode(boolean codeOnly) throws IOException, SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(ResourceUtil.getString(FinDataConstants.STOCK_LIST_FILE))));
 		Connection con = jdbcConnection();
 		String line;
@@ -92,51 +92,51 @@ public class FinDataExtractor {
 		br.reset();
 
 		switch (fileType) {
-		case THS:
-			// Getting codes from THS
-			StringTokenizer tk;
-			String temp[];
-			int start, end;
-			boolean enterMarket = false;
-			DecimalFormat dm = new DecimalFormat("000000");
-			while ((line = br.readLine()) != null) {
-				if (line.contains("[Market_16_17]") || line.contains("[Market_16_18]") || line.contains("[Market_32_33]") || line.contains("[Market_32_36]")) {
-					enterMarket = true;
-				} else if (line.length() < 3) {
-					enterMarket = false;
-				} else if (enterMarket && line.startsWith("CodeList")) {
-					tk = new StringTokenizer(line, "=,", false);
-					tk.nextToken();
-					while (tk.hasMoreTokens()) {
-						line = tk.nextToken();
-						if (line.contains("-")) {
-							temp = line.split("-");
-							start = Integer.parseInt(temp[0]);
-							end = Integer.parseInt(temp[1]);
-							for (int i = start; i <= end; i++) {
-								codeList.add(""+i);
-								System.out.println("Added "+dm.format(i)+" to list");
+			case THS:
+				// Getting codes from THS
+				StringTokenizer tk;
+				String temp[];
+				int start, end;
+				boolean enterMarket = false;
+				DecimalFormat dm = new DecimalFormat("000000");
+				while ((line = br.readLine()) != null) {
+					if (line.contains("[Market_16_17]") || line.contains("[Market_16_18]") || line.contains("[Market_32_33]") || line.contains("[Market_32_36]")) {
+						enterMarket = true;
+					} else if (line.length() < 3) {
+						enterMarket = false;
+					} else if (enterMarket && line.startsWith("CodeList")) {
+						tk = new StringTokenizer(line, "=,", false);
+						tk.nextToken();
+						while (tk.hasMoreTokens()) {
+							line = tk.nextToken();
+							if (line.contains("-")) {
+								temp = line.split("-");
+								start = Integer.parseInt(temp[0]);
+								end = Integer.parseInt(temp[1]);
+								for (int i = start; i <= end; i++) {
+									codeList.add("" + i);
+									System.out.println("Added " + dm.format(i) + " to list");
+								}
+							} else {
+								codeList.add(line);
+								System.out.println("Added " + line + " to list");
 							}
-						} else {
-							codeList.add(line);
-							System.out.println("Added "+line+" to list");
 						}
 					}
 				}
-			}
-			break;
-		case TDX:
-			// Getting codes from TDX
-			while ((line = br.readLine()) != null) {
-				if (line.length() < 6 || line.startsWith("1") || line.startsWith("5")) continue;
-				codeList.add(line.substring (0, 6));
-			}
+				break;
+			case TDX:
+				// Getting codes from TDX
+				while ((line = br.readLine()) != null) {
+					if (line.length() < 6 || line.startsWith("1") || line.startsWith("5")) continue;
+					codeList.add(line.substring(0, 6));
+				}
 		}
 
 		System.exit(0);
 
-		PreparedStatement pInsertStock = con.prepareStatement ("INSERT INTO stock (code) VALUES (?)");
-		PreparedStatement pUpdateStock = con.prepareStatement ("UPDATE stock SET name=?, current_price=? WHERE code=?");
+		PreparedStatement pInsertStock = con.prepareStatement("INSERT INTO stock (code) VALUES (?)");
+		PreparedStatement pUpdateStock = con.prepareStatement("UPDATE stock SET name=?, current_price=? WHERE code=?");
 //		PreparedStatement pInsertPrice = con.prepareStatement ("INSERT INTO stock_price (stock_id, price_date, price) VALUES (?, ?, ?) ");
 		con.setAutoCommit(false);
 		for (String code : codeList) {
@@ -153,8 +153,8 @@ public class FinDataExtractor {
 				}
 			}
 			if (updateCount == 0 || updateCount == 1) {
-				if (updateCount == 1){
-					System.out.print (" inserted.");
+				if (updateCount == 1) {
+					System.out.print(" inserted.");
 				} else {
 					// Some notification, telling user that record already exists
 				}
@@ -165,14 +165,14 @@ public class FinDataExtractor {
 					pUpdateStock.setString(3, code);
 					updateCount = pUpdateStock.executeUpdate();
 					if (updateCount != 1) {
-						System.out.print ("\tunable to update name. "+updateCount+" rows updated.");
+						System.out.print("\tunable to update name. " + updateCount + " rows updated.");
 					} else {
-						System.out.print ("\tname updated.");
+						System.out.print("\tname updated.");
 					}
 				}
-				System.out.println ();
+				System.out.println();
 			} else {
-				System.out.println (" unexpected update count: "+updateCount+" has been produced.");
+				System.out.println(" unexpected update count: " + updateCount + " has been produced.");
 			}
 			con.commit();
 		}
@@ -182,15 +182,15 @@ public class FinDataExtractor {
 	public static void updateFinData() throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		Connection con = jdbcConnection();
 		String code;
-		int id, currentYear = new java.util.Date ().getYear() + 1900;
-		PreparedStatement pInsertFinData, pUpdateStock = con.prepareStatement ("UPDATE stock SET latest_year=?, latest_season=? WHERE id=?");
+		int id, currentYear = new java.util.Date().getYear() + 1900;
+		PreparedStatement pInsertFinData, pUpdateStock = con.prepareStatement("UPDATE stock SET latest_year=?, latest_season=? WHERE id=?");
 		con.setAutoCommit(false);
 		Statement sStock = con.createStatement();
 		Statement sCreateFinData = con.createStatement();
 		ResultSet rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season FROM stock ORDER BY id");
 		FinancialSheet sheet;
 		int aYear, order, latestYear, latestSeason, cYear = -1;
-		short seasons [] = new short [] {4, 1, 2, 3}, cSeason = -1;
+		short seasons[] = new short[]{4, 1, 2, 3}, cSeason = -1;
 		boolean someSheetsAreEmpty;
 		Iterator<String> it;
 		String tableName;
@@ -199,38 +199,38 @@ public class FinDataExtractor {
 			code = rs.getString(2);
 			latestYear = rs.getInt(3);
 			latestSeason = rs.getInt(4);
-			tableName = "fin_data_"+code;
+			tableName = "fin_data_" + code;
 			System.out.println(code);
 			// Create table just in case
 			sCreateFinData.execute(
-				"CREATE TABLE IF NOT EXISTS "+tableName+" (\n" +
-				"\tid INT AUTO_INCREMENT,\n" +
-				"\tstock_id INT,\n" +
-				"\tfin_year INT,\n" +
-				"\tfin_season INT(1),\n" +
-				"\tfin_sheet VARCHAR(255),\n" +
-				"\tsource VARCHAR(255),\n" +
-				"\tname VARCHAR(255),\n" +
-				"\tvalue DOUBLE,\n" +
-				"\torder_ INT,\n" +
-				"\tPRIMARY KEY (id),\n" +
-				"\tFOREIGN KEY (stock_id) REFERENCES stock(id),\n" +
-				"\tUNIQUE (stock_id, fin_year, fin_season, source, fin_sheet, name)\n" +
-				")"
+					"CREATE TABLE IF NOT EXISTS " + tableName + " (\n" +
+							"\tid INT AUTO_INCREMENT,\n" +
+							"\tstock_id INT,\n" +
+							"\tfin_year INT,\n" +
+							"\tfin_season INT(1),\n" +
+							"\tfin_sheet VARCHAR(255),\n" +
+							"\tsource VARCHAR(255),\n" +
+							"\tname VARCHAR(255),\n" +
+							"\tvalue DOUBLE,\n" +
+							"\torder_ INT,\n" +
+							"\tPRIMARY KEY (id),\n" +
+							"\tFOREIGN KEY (stock_id) REFERENCES stock(id),\n" +
+							"\tUNIQUE (stock_id, fin_year, fin_season, source, fin_sheet, name)\n" +
+							")"
 			);
 
 			// TEMP
 			try {
-				sCreateFinData.executeUpdate("UPDATE "+tableName+" SET fin_season = '4';");
-				sCreateFinData.execute("ALTER TABLE "+tableName+" CHANGE COLUMN fin_season fin_season INT(1);");
+				sCreateFinData.executeUpdate("UPDATE " + tableName + " SET fin_season = '4';");
+				sCreateFinData.execute("ALTER TABLE " + tableName + " CHANGE COLUMN fin_season fin_season INT(1);");
 			} catch (Exception e) {
-				System.out.println("Code "+code+" needs confirmation.");
+				System.out.println("Code " + code + " needs confirmation.");
 			}
 			// END TEMP
 
 			// delete invalid rows from the table
-			System.out.println ("delete >"+latestYear);
-			sCreateFinData.execute("DELETE FROM "+tableName+" WHERE fin_year*10 + fin_season > "+(latestYear*10+latestSeason));
+			System.out.println("delete >" + latestYear);
+			sCreateFinData.execute("DELETE FROM " + tableName + " WHERE fin_year*10 + fin_season > " + (latestYear * 10 + latestSeason));
 
 //			switch (latestSeason) {
 //				case first :
@@ -247,19 +247,17 @@ public class FinDataExtractor {
 //			}
 
 			// update data
-			pInsertFinData = con.prepareStatement ("INSERT INTO "+tableName+" (stock_id, fin_year, fin_season, fin_sheet, source, name, value, order_) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+			pInsertFinData = con.prepareStatement("INSERT INTO " + tableName + " (stock_id, fin_year, fin_season, fin_sheet, source, name, value, order_) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
 			cYear = -1;
 			cSeason = -1;
-			for (aYear = latestYear; aYear <= currentYear; aYear ++)
-			{
+			for (aYear = latestYear; aYear <= currentYear; aYear++) {
 				for (short aSeason : seasons) {
-					if (aYear == latestYear && (aSeason <= latestSeason) ) {
+					if (aYear == latestYear && (aSeason <= latestSeason)) {
 						continue;
 					}
 					someSheetsAreEmpty = false;
-					for (String sheetName: Hexun2008FinancialSheet.FINANCIAL_SHEETNAMES)
-					{
-						System.out.println(code+"\t"+aYear+"\t"+aSeason+"\t"+sheetName);
+					for (String sheetName : Hexun2008FinancialSheet.FINANCIAL_SHEETNAMES) {
+						System.out.println(code + "\t" + aYear + "\t" + aSeason + "\t" + sheetName);
 						sheet = new Hexun2008FinancialSheet(code, sheetName, aYear, aSeason);
 						it = sheet.getDatumNames();
 						String name;
@@ -275,7 +273,7 @@ public class FinDataExtractor {
 							pInsertFinData.setObject(7, sheet.getValue(name));
 							pInsertFinData.setInt(8, order);
 							pInsertFinData.executeUpdate();
-							order ++;
+							order++;
 						}
 						someSheetsAreEmpty = someSheetsAreEmpty || (order == 0);
 					}
@@ -289,7 +287,7 @@ public class FinDataExtractor {
 					}
 				}
 			}
-			if (cYear != -1 && cSeason != -1){
+			if (cYear != -1 && cSeason != -1) {
 				pUpdateStock.setInt(1, cYear);
 				pUpdateStock.setShort(2, cSeason);
 				pUpdateStock.setInt(3, id);
