@@ -11,7 +11,6 @@ import org.xml.sax.SAXException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.*;
 
@@ -23,7 +22,8 @@ import java.util.*;
  * To change this template use File | Settings | File Templates.
  */
 public class Hexun2008FinancialSheet extends FinancialSheet {
-	public static final String[] FINANCIAL_SHEETNAMES = new String[]{michael.findata.util.FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET,
+	public static final String[] FINANCIAL_SHEETNAMES = new String[]{
+			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET,
 			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_PROFIT_AND_LOSS,
 			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_CASH_FLOW,
 			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_PROVISION};
@@ -94,7 +94,6 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 	}
 
 	private void getData() {
-		DecimalFormat df = new DecimalFormat("###,###.00");
 		DOMParser parser = new DOMParser();
 		try {
 			parser.parse(getURL());
@@ -130,7 +129,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 				continue;
 			}
 			try {
-				value = df.parse(valueElement.getText());
+				value = Hexun2008Constants.normalDecimalFormat.parse(valueElement.getText());
 			} catch (NumberFormatException ex) {
 				value = null;
 			} catch (ParseException e1) {

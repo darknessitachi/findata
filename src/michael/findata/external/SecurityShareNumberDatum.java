@@ -2,14 +2,14 @@ package michael.findata.external;
 
 /**
  * Created by IntelliJ IDEA.
- * User: michaelc
- * Date: 2010-11-17
- * Time: 18:14:18
+ * User: Michael
+ * Date: 5/16/11
+ * Time: 8:25 PM
  * To change this template use File | Settings | File Templates.
  */
-public abstract class SecurityTradingDatum extends SecuritySnapshotDatum {
+public abstract class SecurityShareNumberDatum extends SecuritySnapshotDatum{
 	@Override
 	public String getName() {
-		return "price";
+		return "number of shares";
 	}
 }

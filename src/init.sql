@@ -1,12 +1,14 @@
+-- Must use utf-8 encoding for these tables
+
 CREATE TABLE stock (
 	id INT AUTO_INCREMENT,
 	code VARCHAR(20),
 	name VARCHAR(20),
 	current_price FLOAT,
+	number_of_shares FLOAT,
 	latest_year INT,
 	latest_season VARCHAR(255),
 	UNIQUE (code),
-	UNIQUE (name),
 	PRIMARY KEY (id)
 );
 
@@ -66,7 +68,7 @@ CREATE TABLE fin_data (
 -- 	fin_period_id INT,
 -- 	fin_sheet_id INT,
 	fin_year INT,
-	fin_season VARCHAR(255),
+	fin_season INT(1),
 	fin_sheet VARCHAR(255),
 	source VARCHAR(255),
 	name VARCHAR(255),

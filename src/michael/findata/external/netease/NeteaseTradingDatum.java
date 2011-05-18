@@ -36,12 +36,18 @@ public class NeteaseTradingDatum extends SecurityTradingDatum {
 			is.read(in);
 			String s = "{" + new String(in);
 			data = (JSONObject) JSONValue.parse(s);
+			is.close();
 		} catch (Exception e) {
 		}
 	}
 
 	public String getStockCode() {
 		return stockCode;
+	}
+
+	@Override
+	public Double getValue() {
+		return (Double) getProperty("price");
 	}
 
 	public String getStockName() {

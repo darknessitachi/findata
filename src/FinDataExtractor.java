@@ -1,6 +1,7 @@
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 import michael.findata.external.FinancialSheet;
 import michael.findata.external.hexun2008.Hexun2008FinancialSheet;
+import michael.findata.external.hexun2008.Hexun2008ShareNumberDatum;
 import michael.findata.external.netease.NeteaseTradingDatum;
 import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
@@ -26,7 +27,8 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 enum CodeListFileType {
-	THS, TDX
+	THS, // Tong Hua Shun
+	TDX  // Tong Da Xin
 }
 
 public class FinDataExtractor {
@@ -38,10 +40,11 @@ public class FinDataExtractor {
 //			System.out.println (rs.getString(1));
 //		}
 //		refreshStockCode(false);
-//		DecimalFormat df = new DecimalFormat("###,###.00");
-//		Number n = df.parse("19,597,000,000.00");
+//		DecimalFormat normalDecimalFormat = new DecimalFormat("###,###.00");
+//		Number n = normalDecimalFormat.parse("19,597,000,000.00");
 //		System.out.println ();
-		refreshStockCode(true);
+//		refreshStockCode(false);
+		updateFinData();
 	}
 
 	public static void test() throws IOException, DocumentException, SAXException, SQLException {
@@ -73,6 +76,17 @@ public class FinDataExtractor {
 	}
 
 	// Refresh Stock Code every 2 months
+
+	/**
+	 * Refresh stock code table from stock data software (Tong Da Xin or Tong Hua Shun)
+	 * @param codeOnly true: only refresh stock codes
+	 * 				   false: refresh stock code and get latest price and current stock name
+	 * @throws IOException
+	 * @throws SQLException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 * @throws InstantiationException
+	 */
 	public static void refreshStockCode(boolean codeOnly) throws IOException, SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(ResourceUtil.getString(FinDataConstants.STOCK_LIST_FILE))));
 		Connection con = jdbcConnection();
@@ -100,7 +114,7 @@ public class FinDataExtractor {
 				boolean enterMarket = false;
 				DecimalFormat dm = new DecimalFormat("000000");
 				while ((line = br.readLine()) != null) {
-					if (line.contains("[Market_16_17]") || line.contains("[Market_16_18]") || line.contains("[Market_32_33]") || line.contains("[Market_32_36]")) {
+					if (line.contains("[Market_16_17]") || line.contains("[Market_16_18]") || line.contains("[Market_32_33]") || line.contains("[Market_32_34]")) {
 						enterMarket = true;
 					} else if (line.length() < 3) {
 						enterMarket = false;
@@ -114,7 +128,7 @@ public class FinDataExtractor {
 								start = Integer.parseInt(temp[0]);
 								end = Integer.parseInt(temp[1]);
 								for (int i = start; i <= end; i++) {
-									codeList.add("" + i);
+									codeList.add(dm.format(i));
 									System.out.println("Added " + dm.format(i) + " to list");
 								}
 							} else {
@@ -133,10 +147,8 @@ public class FinDataExtractor {
 				}
 		}
 
-		System.exit(0);
-
 		PreparedStatement pInsertStock = con.prepareStatement("INSERT INTO stock (code) VALUES (?)");
-		PreparedStatement pUpdateStock = con.prepareStatement("UPDATE stock SET name=?, current_price=? WHERE code=?");
+		PreparedStatement pUpdateStock = con.prepareStatement("UPDATE stock SET name=?, current_price=? , number_of_shares=? WHERE code=?");
 //		PreparedStatement pInsertPrice = con.prepareStatement ("INSERT INTO stock_price (stock_id, price_date, price) VALUES (?, ?, ?) ");
 		con.setAutoCommit(false);
 		for (String code : codeList) {
@@ -160,14 +172,16 @@ public class FinDataExtractor {
 				}
 				if (!codeOnly) {
 					NeteaseTradingDatum td = new NeteaseTradingDatum(code);
+					Hexun2008ShareNumberDatum snd = new Hexun2008ShareNumberDatum(code);
 					pUpdateStock.setString(1, td.getStockName());
 					pUpdateStock.setObject(2, td.getCurrent());
-					pUpdateStock.setString(3, code);
+					pUpdateStock.setObject(3, snd.getValue());
+					pUpdateStock.setString(4, code);
 					updateCount = pUpdateStock.executeUpdate();
 					if (updateCount != 1) {
-						System.out.print("\tunable to update name. " + updateCount + " rows updated.");
+						System.out.print("\tunable to update name and price. " + updateCount + " rows updated.");
 					} else {
-						System.out.print("\tname updated.");
+						System.out.print("\tname, price and total number of shares updated.");
 					}
 				}
 				System.out.println();
@@ -182,12 +196,16 @@ public class FinDataExtractor {
 	public static void updateFinData() throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		Connection con = jdbcConnection();
 		String code;
-		int id, currentYear = new java.util.Date().getYear() + 1900;
+		java.util.Date cDate = new java.util.Date();
+		int id, currentYear = cDate.getYear() + 1900, currentMonth = cDate.getMonth() + 1;
 		PreparedStatement pInsertFinData, pUpdateStock = con.prepareStatement("UPDATE stock SET latest_year=?, latest_season=? WHERE id=?");
 		con.setAutoCommit(false);
 		Statement sStock = con.createStatement();
 		Statement sCreateFinData = con.createStatement();
-		ResultSet rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season FROM stock ORDER BY id");
+		sStock.execute("UPDATE stock SET latest_year = 1999, latest_season = 0 WHERE latest_year IS NULL");
+		sStock.execute("UPDATE stock SET latest_season = 0 WHERE latest_season IS NULL");
+		con.commit();
+		ResultSet rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season FROM stock ORDER BY id DESC");
 		FinancialSheet sheet;
 		int aYear, order, latestYear, latestSeason, cYear = -1;
 		short seasons[] = new short[]{4, 1, 2, 3}, cSeason = -1;
@@ -219,17 +237,8 @@ public class FinDataExtractor {
 							")"
 			);
 
-			// TEMP
-			try {
-				sCreateFinData.executeUpdate("UPDATE " + tableName + " SET fin_season = '4';");
-				sCreateFinData.execute("ALTER TABLE " + tableName + " CHANGE COLUMN fin_season fin_season INT(1);");
-			} catch (Exception e) {
-				System.out.println("Code " + code + " needs confirmation.");
-			}
-			// END TEMP
-
 			// delete invalid rows from the table
-			System.out.println("delete >" + latestYear);
+			System.out.println("delete all data later than " + latestYear + "-" + latestSeason);
 			sCreateFinData.execute("DELETE FROM " + tableName + " WHERE fin_year*10 + fin_season > " + (latestYear * 10 + latestSeason));
 
 //			switch (latestSeason) {
@@ -253,7 +262,10 @@ public class FinDataExtractor {
 			for (aYear = latestYear; aYear <= currentYear; aYear++) {
 				for (short aSeason : seasons) {
 					if (aYear == latestYear && (aSeason <= latestSeason)) {
-						continue;
+						continue; // We already have this
+					}
+					if (aYear == currentYear && (currentMonth < aSeason * 3)) {
+						continue; // Season hasn't finished yet, no need to try to get reports not existing
 					}
 					someSheetsAreEmpty = false;
 					for (String sheetName : Hexun2008FinancialSheet.FINANCIAL_SHEETNAMES) {
@@ -275,7 +287,7 @@ public class FinDataExtractor {
 							pInsertFinData.executeUpdate();
 							order++;
 						}
-						someSheetsAreEmpty = someSheetsAreEmpty || (order == 0);
+						someSheetsAreEmpty = someSheetsAreEmpty || (order == 0 && (sheetName == FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET || sheetName == FinDataConstants.FINANCIAL_SHEET_CASH_FLOW || sheetName == FinDataConstants.FINANCIAL_SHEET_PROFIT_AND_LOSS));
 					}
 					if (!someSheetsAreEmpty) {
 						cYear = aYear;
