@@ -8,6 +8,7 @@ CREATE TABLE stock (
 	number_of_shares FLOAT,
 	latest_year INT,
 	latest_season VARCHAR(255),
+	is_financial BIT,
 	UNIQUE (code),
 	PRIMARY KEY (id)
 );

@@ -16,7 +16,7 @@ public class FinDataAnalyzer {
 		Connection con = jdbcConnection();
 		Statement st = con.createStatement();
 		Statement stCodes = con.createStatement();
-		ResultSet rsCodes = stCodes.executeQuery("select code from stock where id < 940");
+		ResultSet rsCodes = stCodes.executeQuery("select code from stock where latest_year = '2011' and not is_financial order by code");
 		ResultSet rsResult;
 		CallableStatement cs;
 		String param_stock_code;
@@ -45,13 +45,25 @@ public class FinDataAnalyzer {
 //					"f.fin_year = g.fin_year and f.fin_season = g.fin_season");
 			if (rsResult.next()) {
 				System.out.print(param_stock_code+"\t" +
+						rsResult.getString(2) + "\t" +
 						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(3)) + "\t" +
 						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(4)) + "\t" +
 						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(5)) + "\t" +
 						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(6)) + "\t" +
 						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(7)) + "\t" +
 						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(8)) + "\t" +
-						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(9)) + "\n");
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(9)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(10)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(11)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(12)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(13)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(14)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(15)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(16)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(17)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(18)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(19)) + "\t" +
+						Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(20)) + "\n");
 			}
 		}
 		fw.flush();

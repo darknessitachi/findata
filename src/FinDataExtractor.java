@@ -43,8 +43,8 @@ public class FinDataExtractor {
 //		DecimalFormat normalDecimalFormat = new DecimalFormat("###,###.00");
 //		Number n = normalDecimalFormat.parse("19,597,000,000.00");
 //		System.out.println ();
-//		refreshStockCode(false);
-		updateFinData();
+		refreshStockCode(false);
+//		updateFinData();
 	}
 
 	public static void test() throws IOException, DocumentException, SAXException, SQLException {
@@ -205,7 +205,7 @@ public class FinDataExtractor {
 		sStock.execute("UPDATE stock SET latest_year = 1999, latest_season = 0 WHERE latest_year IS NULL");
 		sStock.execute("UPDATE stock SET latest_season = 0 WHERE latest_season IS NULL");
 		con.commit();
-		ResultSet rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season FROM stock ORDER BY id DESC");
+		ResultSet rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season FROM stock ORDER BY code");
 		FinancialSheet sheet;
 		int aYear, order, latestYear, latestSeason, cYear = -1;
 		short seasons[] = new short[]{4, 1, 2, 3}, cSeason = -1;

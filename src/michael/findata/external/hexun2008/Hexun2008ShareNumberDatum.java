@@ -24,7 +24,7 @@ public class Hexun2008ShareNumberDatum extends SecurityShareNumberDatum {
 			do {
 				line = br.readLine();
 //				System.out.println(line);
-			} while (line != null && !line.contains("变动时间")); // ????
+			} while (line != null && !line.contains("<td class=\"bgcolor\" width=\"69%\"><strong>"));
 			if (line == null) {
 				throw new Hexun2008DataException("Cannot find total number of shares for " + stockCode);
 			}
