@@ -1,4 +1,4 @@
--- Must use utf-8 encoding for these tables
+-- Must use UTF-8 encoding for these tables
 
 CREATE TABLE stock (
 	id INT AUTO_INCREMENT,
