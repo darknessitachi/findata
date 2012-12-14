@@ -14,41 +14,42 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
 
-/**
- * Created by IntelliJ IDEA.
- * User: michaelc
- * Date: 2010-12-28
- * Time: 16:46:18
- * To change this template use File | Settings | File Templates.
- */
+import static michael.findata.util.FinDataConstants.SheetType;
+
 public class Hexun2008FinancialSheet extends FinancialSheet {
-	public static final String[] FINANCIAL_SHEETNAMES = new String[]{
-			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET,
-			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_PROFIT_AND_LOSS,
-			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_CASH_FLOW,
-			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_PROVISION};
+//	public static final String[] FINANCIAL_SHEETNAMES = new String[]{
+//			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET,
+//			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_PROFIT_AND_LOSS,
+//			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_CASH_FLOW,
+//			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_PROVISION};
 	private String st, ap;
 	private Map<String, Number> data;
 	private List<String> name;
 
-	public Hexun2008FinancialSheet(String stockCode, String sheetType, int accountingYear, short season) {
+	public Hexun2008FinancialSheet(String stockCode, SheetType sheetType, int accountingYear, short season) {
 		super(stockCode, sheetType, accountingYear, season);
 
-		if (FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET.equals(sheetType)) {
-			// 资产负债
-			st = "zcfz";
-		} else if (FinDataConstants.FINANCIAL_SHEET_PROFIT_AND_LOSS.equals(sheetType)) {
-			// 利润
-			st = "lr";
-		} else if (FinDataConstants.FINANCIAL_SHEET_CASH_FLOW.equals(sheetType)) {
-			// 现金流
-			st = "xjll";
-		} else if (FinDataConstants.FINANCIAL_SHEET_PROVISION.equals(sheetType)) {
-			// 资产减值，拨备等
-			st = "zcjz";
-		} else {
-			st = sheetType;
+		switch (sheetType) {
+			case balance_sheet:
+				st = "zcfz";
+				break;
+			case profit_and_loss:
+				st = "lr";
+				break;
+			case cash_flow:
+				st = "xjll";
+				break;
+			case provision:
+				st = "zcjz";
+				break;
 		}
+
+//		if (FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET.equals(sheetType)) {
+//		} else if (FinDataConstants.FINANCIAL_SHEET_PROFIT_AND_LOSS.equals(sheetType)) {
+//		} else if (FinDataConstants.FINANCIAL_SHEET_CASH_FLOW.equals(sheetType)) {
+//		} else if (FinDataConstants.FINANCIAL_SHEET_PROVISION.equals(sheetType)) {
+//		} else {
+//		}
 
 		switch (accountingSeason) {
 			case 1:
@@ -67,8 +68,8 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 				ap = String.valueOf(accountingYear);
 		}
 		if (data == null) {
-			data = new HashMap<String, Number>();
-			name = new ArrayList<String>();
+			data = new HashMap<>();
+			name = new ArrayList<>();
 		}
 		getData();
 	}
@@ -112,18 +113,23 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 		XPath tablePath = doc.createXPath("//DIV[@id=\"zaiyaocontent\"]//TBODY/TR");
 		XPath fieldNamePath = doc.createXPath(".//STRONG[1]");
 		XPath fieldValuePath = doc.createXPath("./TD[2]/DIV");
-		Element nameElement, valueElement;
+		Element valueElement;
 		Object o = tablePath.evaluate(doc);
 		Number value;
+		String datumName;
 		if (data == null) {
-			data = new HashMap<String, Number>();
-			name = new ArrayList<String>();
+			data = new HashMap<>();
+			name = new ArrayList<>();
 		}
 		data.clear();
 		name.clear();
 		for (Element e : (List<Element>) o) {
 			try {
-				nameElement = (Element) fieldNamePath.evaluate(e);
+//				nameElement = ;
+				datumName = ((Element) fieldNamePath.evaluate(e)).getText();
+				if ("会计年度".equals(datumName) || "备注".equals(datumName) || "报告年度".equals(datumName) || "发布日期".equals(datumName)) {
+					continue;
+				}
 				valueElement = (Element) fieldValuePath.evaluate(e);
 			} catch (ClassCastException ex) {
 				continue;
@@ -135,8 +141,8 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 			} catch (ParseException e1) {
 				value = null;
 			}
-			data.put(nameElement.getText(), value);
-			name.add(nameElement.getText());
+			data.put(datumName, value);
+			name.add(datumName);
 		}
 	}
 }

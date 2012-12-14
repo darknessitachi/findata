@@ -4,14 +4,12 @@ import java.io.IOException;
 import java.util.Properties;
 
 /**
- * 资源文件工具类
  *
  * @author Michael
  * @version 1.0 2020.10.27
  * @see ResourceUtil
  */
 public final class ResourceUtil {
-	// 资源文件
 	private static Properties resource = null;
 
 	static {
@@ -23,7 +21,6 @@ public final class ResourceUtil {
 	}
 
 	/**
-	 * 获取资源文件
 	 *
 	 * @return
 	 * @throws IOException
@@ -37,8 +34,6 @@ public final class ResourceUtil {
 	}
 
 	/**
-	 * 获取配置信息
-	 * 根据key获取key对应的值，当值不存在时返回key
 	 *
 	 * @param key
 	 * @return
@@ -54,8 +49,6 @@ public final class ResourceUtil {
 	}
 
 	/**
-	 * 获取整型数据
-	 *
 	 * @param key
 	 * @return
 	 */
@@ -63,11 +56,5 @@ public final class ResourceUtil {
 		String value = getString(key);
 		int intValue = Integer.valueOf(value);
 		return intValue;
-	}
-
-	/**
-	 * 私有构造函数
-	 */
-	private ResourceUtil() {
 	}
 }

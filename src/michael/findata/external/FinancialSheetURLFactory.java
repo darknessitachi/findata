@@ -1,12 +1,5 @@
 package michael.findata.external;
 
-/**
- * Created by IntelliJ IDEA.
- * User: michaelc
- * Date: 2010-12-23
- * Time: 18:38:59
- * To change this template use File | Settings | File Templates.
- */
 public abstract class FinancialSheetURLFactory {
 
 	protected final String stockCode, sheetType, accountingPeriod;

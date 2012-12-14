@@ -1,14 +1,11 @@
 package michael.findata.external;
 
+import michael.findata.util.FinDataConstants;
+
 import java.util.Iterator;
 
-/**
- * Created by IntelliJ IDEA.
- * User: michaelc
- * Date: 2010-12-28
- * Time: 17:09:28
- * To change this template use File | Settings | File Templates.
- */
+import static michael.findata.util.FinDataConstants.SheetType;
+
 public abstract class FinancialSheet {
 	public abstract Iterator<String> getDatumNames();
 
@@ -17,11 +14,9 @@ public abstract class FinancialSheet {
 	public abstract String getURL();
 
 	public abstract String getName();
-//	public enum AccountingSeason {
-//		first, second, third, fourth;
-//	};
 
-	protected String stockCode, sheetType;
+	protected String stockCode;
+	protected SheetType sheetType;
 	protected int accountingYear = 0;
 	protected short accountingSeason;
 
@@ -29,7 +24,7 @@ public abstract class FinancialSheet {
 		return stockCode;
 	}
 
-	public final String getSheetType() {
+	public final SheetType getSheetType() {
 		return sheetType;
 	}
 
@@ -41,7 +36,7 @@ public abstract class FinancialSheet {
 		return accountingYear;
 	}
 
-	public FinancialSheet(String stockCode, String sheetType, int accountingYear, short accountingSeason) {
+	public FinancialSheet(String stockCode, SheetType sheetType, int accountingYear, short accountingSeason) {
 		this.stockCode = stockCode;
 		this.sheetType = sheetType;
 		this.accountingYear = accountingYear;

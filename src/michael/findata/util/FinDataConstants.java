@@ -1,12 +1,11 @@
 package michael.findata.util;
 
-/**
- * Created by IntelliJ IDEA.
- * User: michaelt
- * Date: 2010-11-5
- * Time: 18:19:10
- * To change this template use File | Settings | File Templates.
- */
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.regex.Pattern;
+
 public final class FinDataConstants {
 
 	public static final String BASE_NAME = "/michael/findata/resource/init.properties";
@@ -19,83 +18,39 @@ public final class FinDataConstants {
 
 	public static final String STOCK_LIST_FILE = ResourceUtil.getString("michael.findata.stocklist");
 
-	public static final String FINANCIAL_SHEET_BALANCE_SHEET = "balance_sheet";
-	public static final String FINANCIAL_SHEET_PROFIT_AND_LOSS = "profit_and_loss";
-	public static final String FINANCIAL_SHEET_CASH_FLOW = "cash_flow";
-	public static final String FINANCIAL_SHEET_PROVISION = "provision";
+	public static final String THS_BASE_DIR = ResourceUtil.getString("michael.findata.thsbase");
 
-	/**
-	 * 密码
-	 */
-	public static final String PASSWORD = ResourceUtil.getString("com.maesinfo.user.password");
+	public static final String TDX_BASE_DIR = ResourceUtil.getString("michael.findata.tdxbase");
 
-	/**
-	 * 验证码URL
-	 */
-	public static final String CODE_URL = ResourceUtil.getString("com.maesinfo.code.url");
+	public static final Date currentTimeStamp = new Date();
+//	public static final String FINANCIAL_SHEET_BALANCE_SHEET = "balance_sheet";
+//	public static final String FINANCIAL_SHEET_PROFIT_AND_LOSS = "profit_and_loss";
+//	public static final String FINANCIAL_SHEET_CASH_FLOW = "cash_flow";
+//	public static final String FINANCIAL_SHEET_PROVISION = "provision";
 
-	/**
-	 * 下载验证码存放路径
-	 */
-	public static final String PATH = ResourceUtil.getString("com.maesinfo.code.path");
-
-	/**
-	 * 服务器
-	 */
-	public static final String SERVER = ResourceUtil.getString("com.maesinfo.site.server");
-
-	/**
-	 * 语言
-	 */
-	public static final String LANGUAGE = ResourceUtil.getString("com.maesinfo.site.language");
-
-	/**
-	 * 用户登录表单组建Key
-	 */
-
-	/**
-	 * 语言key
-	 */
-	public static final String LANGUAGE_KEY = ResourceUtil.getString("com.maesinfo.form.language.key");
-
-	/**
-	 * 管理员key
-	 */
-	public static final String ADMIN_KEY = ResourceUtil.getString("com.maesinfo.form.admin.key");
-
-	/**
-	 * 密码key
-	 */
-	public static final String PASSWORD_KEY = ResourceUtil.getString("com.maesinfo.form.password.key");
-
-	/**
-	 * 验证码key
-	 */
-	public static final String CHECKCODE_KEY = ResourceUtil.getString("com.maesinfo.form.checkcode.key");
-
-	/**
-	 * 密码加密key
-	 */
-	public static final String HIDKEY_KEY = ResourceUtil.getString("com.maesinfo.form.hidKey.key");
-
-	/**
-	 * 密码小写加密key
-	 */
-	public static final String HIDELOWERCASEPW_KEY = ResourceUtil.getString("com.maesinfo.form.hidLowerCasePW.key");
-
-	/**
-	 * 服务器key
-	 */
-	public static final String HIDSERVERKEY_KEY = ResourceUtil.getString("com.maesinfo.form.hidServerKey.key");
-
-	/**
-	 * 分隔符
-	 */
-	public static final String SPLIT = "'";
-
-	/**
-	 * 私有构造器
-	 */
-	private FinDataConstants() {
+	public static enum SheetType {
+		balance_sheet,
+		profit_and_loss,
+		cash_flow,
+		provision
 	}
+
+	public static enum CompanyType {
+		financial,
+		non_financial
+	}
+
+	public static DecimalFormat CommonDecimalFormat = new DecimalFormat("##,###.00");
+
+	public static SimpleDateFormat yyyyDashMMDashdd = new SimpleDateFormat("yyyy-MM-dd");
+
+	public static SimpleDateFormat yyyyMMdd = new SimpleDateFormat("yyyyMMdd");
+
+	public static String s1Report = "一季";
+	public static String s2Report = "半年";
+	public static String s2Report2 = "中期";
+	public static String s3Report = "三季";
+	public static String s4Report = "年度";
+
+	public static Pattern p = Pattern.compile("target=new>.*(\\d\\d\\d\\d).*年(.*)报告(摘要|正文|全文)?(（已取消）)?<.*(\\d\\d\\d\\d-\\d\\d-\\d\\d)");
 }
