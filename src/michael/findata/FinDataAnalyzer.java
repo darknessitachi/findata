@@ -1,3 +1,5 @@
+package michael.findata;
+
 import michael.findata.external.hexun2008.Hexun2008Constants;
 import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;

@@ -1,3 +1,5 @@
+package michael.findata;
+
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 import michael.findata.external.*;
 import michael.findata.external.hexun2008.Hexun2008DividendData;
