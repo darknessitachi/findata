@@ -23,13 +23,11 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.sql.*;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.*;
 import java.util.Date;
-import java.util.regex.Matcher;
 
 import static michael.findata.util.FinDataConstants.*;
 import static michael.findata.util.FinDataConstants.SheetType.*;
@@ -48,23 +46,9 @@ public class FinDataExtractor {
 //		refreshFinData();
 //		refreshDividendData();
 //		calculateAdjustmentFactor(2012);
-//		updateReportPubDates();
+		updateReportPubDates();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
-		refreshReportPubDatesForStockSH(jdbcConnection(), "000758", 1804, 2008);
-
-//		Connection con = jdbcConnection();
-//		String sql = "select name from stock where code IN (?, ?) order by code";
-//		PreparedStatement ps = con.prepareStatement(sql);
-//		ResultSet rs;
-//		for (Map.Entry<String, String> temp : FinDataConstants.ABShareCodeRef.entrySet()) {
-//			ps.setString(1, temp.getKey());
-//			ps.setString(2, temp.getValue());
-//			rs = ps.executeQuery();
-//			while (rs.next()) {
-//				System.out.print(rs.getString(1)+" ");
-//			}
-//			System.out.println("\n");
-//		}
+//		refreshReportPubDatesForStock(jdbcConnection(), "000758", 1804, 2008);
 	}
 
 	/**
@@ -510,7 +494,7 @@ public class FinDataExtractor {
 			System.out.println("Refreshing report publication dates.");
 			currentYear = new Date().getYear()+1900;
 			for (Map.Entry<String, Integer> entry: stocksToUpdateReportDates.entrySet()) {
-				refreshReportPubDatesForStockSH(con, entry.getKey(), entry.getValue(), currentYear);
+				refreshReportPubDatesForStock(con, entry.getKey(), entry.getValue(), currentYear);
 			}
 		}
 	}
@@ -639,11 +623,11 @@ public class FinDataExtractor {
 			if (stockCode.startsWith("9") || stockCode.startsWith("200")) {
 				stockCode = FinDataConstants.ABShareCodeRef.get(stockCode);
 			}
-			refreshReportPubDatesForStockSH(con, stockCode, stockId, y);
+			refreshReportPubDatesForStock(con, stockCode, stockId, y);
 		}
 	}
 
-	private static void refreshReportPubDatesForStockSH(Connection con, String stockCode, int stockId, int aroundYear) throws SQLException, IOException {
+	private static void refreshReportPubDatesForStock(Connection con, String stockCode, int stockId, int aroundYear) throws SQLException, IOException {
 		con.setAutoCommit(true);
 		PreparedStatement ps = con.prepareStatement("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES (?, ?, ?, ?)");
 		int season, year;
@@ -677,45 +661,6 @@ public class FinDataExtractor {
 			}
 		}
 	}
-
-//	private static void refreshReportPubDatesForStock(Connection con, String stockCode, int stockId, int aroundYear) throws IOException, SQLException {
-//		con.setAutoCommit(true);
-//		PreparedStatement ps = con.prepareStatement("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES (?, ?, ?, ?)");
-//		int season;
-//		SortedMap<String, String> rDates;
-//		int s;
-//		int year;
-//		System.out.println(stockCode);
-//		for (season = 4; season >0; season --) {
-//			rDates = extractReportDates(stockCode, season, aroundYear+1, aroundYear);
-//			for (Map.Entry<String, String> entry : rDates.entrySet()) {
-//				try {
-//					yyyyDashMMDashdd.parse(entry.getValue());
-//				} catch (ParseException ex) {
-//					break;
-//				}
-//				year = Integer.parseInt(entry.getKey().substring(0, 4));
-//				s = Integer.parseInt(entry.getKey().substring(5, 6));
-//				if (s != season) {
-//					System.out.println("Caution: requesting season: "+season+", while the following returned info is not for this season.");
-//				}
-//				System.out.println(entry.getKey()+" "+entry.getValue()+": "+year+" "+s);
-//				ps.setInt(1, stockId);
-//				ps.setInt(2, year);
-//				ps.setInt(3, s);
-//				ps.setString(4, entry.getValue());
-//				ps.addBatch();
-//			}
-//			try {
-//				ps.executeBatch();
-//			} catch (BatchUpdateException ex) {
-//				if (!ex.getMessage().contains("Duplicate entry")) {
-//					// We are requesting for info for the past 6 years, it's common to have quite a lot of duplicates that already exist in our database.
-//					System.out.println(ex.getMessage());
-//				}
-//			}
-//		}
-//	}
 
 	static final Date earliest = new Date(3, 3, 3);
 
@@ -779,67 +724,6 @@ public class FinDataExtractor {
 		ts.close();
 		st.close();
 	}
-
-	static URL cninfoListedCompanyReportUrl;
-
-	static {
-		try {
-			cninfoListedCompanyReportUrl = new URL("http://112.95.250.13/search/stockfulltext.jsp");
-//			cninfoListedCompanyReportUrl = new URL("http://www.cninfo.com.cn/search/stockfulltext.jsp");
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		}
-	}
-
-	static String [] seasonParam = {"010305","010303", "010307", "010301"};
-
-//	public static SortedMap<String, String> extractReportDates(String stockCode, int season, int endYear, int startYear) throws IOException {
-//
-//		String s;
-//		URLConnection connection = cninfoListedCompanyReportUrl.openConnection();
-//		connection.setDoOutput(true);
-//		OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream(), "gb2312");
-//		out.write("noticeType="+seasonParam[season-1]+"&stockCode="+stockCode+"&endTime="+endYear+"-12-31&startTime="+startYear+"-01-01&pageNo=1");
-//
-//		out.flush();
-//		out.close();
-//
-//		String sCurrentLine;
-//		InputStream l_urlStream;
-//		l_urlStream = connection.getInputStream();
-//
-//		Matcher m;
-//		BufferedReader l_reader = new BufferedReader(new InputStreamReader(l_urlStream));
-//		SortedMap<String, String> reportDates = new TreeMap<>();
-//		String year;
-//		while ((sCurrentLine = l_reader.readLine()) != null) {
-//			m = p.matcher(sCurrentLine);
-//			if (m.find()) {
-//				year = m.group(1);
-//				s = m.group(2);
-//				if (s.contains(s1Report)) {
-//						s = " 1";
-//				} else if (s.contains(s2Report) || s.contains(s2Report2)) {
-//						s = " 2";
-//				} else if (s.contains(s3Report)) {
-//						s = " 3";
-//				} else if (s.contains(s4Report)) {
-//						s = " 4";
-//				} else {
-//					s = " "+season;
-//				}
-//
-//				sCurrentLine = m.group(5);
-//				year = year + s;
-//				if (reportDates.get(year) == null || reportDates.get(year).compareTo(sCurrentLine) > 0) {
-//					reportDates.put(year, sCurrentLine);
-//				}
-//			}
-//		}
-//		l_reader.close();
-//		l_urlStream.close();
-//		return reportDates;
-//	}
 
 	public static void calculateAdjustmentFactor (int startPricingYear) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		Connection con = jdbcConnection();
@@ -921,33 +805,5 @@ public class FinDataExtractor {
 		Class.forName("com.mysql.jdbc.Driver").newInstance();
 		Connection con = DriverManager.getConnection(ResourceUtil.getString(JDBC_URL), ResourceUtil.getString(JDBC_USER), ResourceUtil.getString(JDBC_PASS));
 		return con;
-	}
-
-	public static void test() throws IOException, DocumentException, SAXException, SQLException {
-		DOMParser parser = new DOMParser();
-		parser.parse("http://stockdata.stock.hexun.com/2008/lr.aspx?stockid=600016&accountdate=2005.12.31");
-		DOMReader domReader = new DOMReader();
-		Document doc = domReader.read(parser.getDocument());
-		XPath tablePath = doc.createXPath("//DIV[@id=\"zaiyaocontent\"]//TBODY/TR[position()>1 and position()<last()]");
-		XPath fieldNamePath = doc.createXPath(".//STRONG[1]");
-		XPath fieldValuePath = doc.createXPath("./TD[2]/DIV");
-		Element nameElement, valueElement;
-		Object o = tablePath.evaluate(doc);
-
-//		Connection con = DriverManager.getConnection("jdbc.mysql://localhost/findata", "root", "108129");
-//		con.setAutoCommit(false);
-//		Statement stmt = con.createStatement();
-//		stmt.executeQuery("SELECT id, name FROM source ORDER BY id");
-//		stmt.executeQuery("SELECT code FROM stock ORDER BY id");
-//		stmt.executeQuery("SELECT name FROM fin_period ORDER BY id");
-//		stmt.executeQuery("SELECT id, name FROM fin_sheet ORDER BY id");
-
-		for (Element e : (List<Element>) o) {
-			nameElement = (Element) fieldNamePath.evaluate(e);
-			valueElement = (Element) fieldValuePath.evaluate(e);
-			System.out.print(nameElement.getText());
-			System.out.print(" ");
-			System.out.println(valueElement.getText());
-		}
 	}
 }

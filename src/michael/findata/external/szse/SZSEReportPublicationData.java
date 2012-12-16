@@ -25,7 +25,7 @@ public class SZSEReportPublicationData implements ReportPublicationData{
 	private static String s2Report2 = "中期";
 	private static String s3Report = "三季";
 	private static String s4Report = "年度";
-	public static Pattern p = Pattern.compile("target=\"new\">.*([\\d,O]{4})\\s*年(.*)报告(摘要|正文|全文)?(（更新后）|（已取消）|\\(修订版\\))?<.*");
+	public static Pattern p = Pattern.compile("target=\"new\">.*([\\d,O]{4})\\s*年?(.*)报告(摘要|正文|全文)?(（.）|\\(.\\))?<.*");
 	public static Pattern q = Pattern.compile("(\\d\\d\\d\\d-\\d\\d-\\d\\d)");
 
 	private ReportPublication rp;
@@ -79,7 +79,6 @@ public class SZSEReportPublicationData implements ReportPublicationData{
 		}
 		l_reader.close();
 		l_urlStream.close();
-System.out.println(d);
 		rp = new ReportPublication(FinDataConstants.yyyyDashMMDashdd.parse(d), code, y, season);
 	}
 
