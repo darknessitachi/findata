@@ -10,6 +10,6 @@ public class SZSEReportPublicationDataTest {
 		new SZSEReportPublicationData("000767", 2007, 1);
 		new SZSEReportPublicationData("000767", 2007, 2);
 		new SZSEReportPublicationData("000767", 2007, 3);
-		new SZSEReportPublicationData("000767", 2007, 4);
+//		new SZSEReportPublicationData("000767", 2007, 4);
 	}
 }
