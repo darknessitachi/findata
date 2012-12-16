@@ -1,11 +1,11 @@
 package michael.findata.external.tdx;
 
-import michael.findata.external.CommonPriceHistory;
+import michael.findata.external.PriceHistory;
 import michael.findata.external.SecurityTimeSeriesData;
 
 import static michael.findata.util.FinDataConstants.TDX_BASE_DIR;
 
-public class TDXPriceHistory extends CommonPriceHistory implements SecurityTimeSeriesData {
+public class TDXPriceHistory extends PriceHistory implements SecurityTimeSeriesData {
 
 	public TDXPriceHistory (String code)
 	{

@@ -1,22 +1,11 @@
 package michael.findata.external.ths;
 
-import michael.findata.external.CommonPriceHistory;
+import michael.findata.external.PriceHistory;
 import michael.findata.external.SecurityTimeSeriesData;
-import michael.findata.external.SecurityTimeSeriesDatum;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.IntBuffer;
-import java.nio.channels.FileChannel;
-import java.text.ParseException;
 
 import static michael.findata.util.FinDataConstants.THS_BASE_DIR;
-import static michael.findata.util.FinDataConstants.yyyyMMdd;
 
-public class THSPriceHistory extends CommonPriceHistory implements SecurityTimeSeriesData{
+public class THSPriceHistory extends PriceHistory implements SecurityTimeSeriesData{
 
 	public THSPriceHistory (String code) {
 		super(code);

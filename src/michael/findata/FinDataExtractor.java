@@ -6,6 +6,8 @@ import michael.findata.external.hexun2008.Hexun2008DividendData;
 import michael.findata.external.hexun2008.Hexun2008FinancialSheet;
 import michael.findata.external.hexun2008.Hexun2008ShareNumberDatum;
 import michael.findata.external.netease.NeteaseTradingDatum;
+import michael.findata.external.shse.SHSEReportPublicationData;
+import michael.findata.external.szse.SZSEReportPublicationData;
 import michael.findata.external.tdx.TDXPriceHistory;
 import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
@@ -41,13 +43,28 @@ public class FinDataExtractor {
 
 	public static void main(String args[]) throws IOException, SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, URISyntaxException, DocumentException, SAXException, ParseException {
 //		refreshStockCodes();
-//		refreshStockPriceHistories();
 //		refreshLatestPriceNameAndNumberOfShares();
+//		refreshStockPriceHistories();
 //		refreshFinData();
 //		refreshDividendData();
 //		calculateAdjustmentFactor(2012);
 //		updateReportPubDates();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
+		refreshReportPubDatesForStockSH(jdbcConnection(), "000758", 1804, 2008);
+
+//		Connection con = jdbcConnection();
+//		String sql = "select name from stock where code IN (?, ?) order by code";
+//		PreparedStatement ps = con.prepareStatement(sql);
+//		ResultSet rs;
+//		for (Map.Entry<String, String> temp : FinDataConstants.ABShareCodeRef.entrySet()) {
+//			ps.setString(1, temp.getKey());
+//			ps.setString(2, temp.getValue());
+//			rs = ps.executeQuery();
+//			while (rs.next()) {
+//				System.out.print(rs.getString(1)+" ");
+//			}
+//			System.out.println("\n");
+//		}
 	}
 
 	/**
@@ -181,7 +198,7 @@ public class FinDataExtractor {
 		d.setHours(15);
 		d.setMinutes(0);
 		d.setSeconds(0);
-		p.setDate(1, new java.sql.Date(d.getTime()));
+		p.setDate(1, today);
 		rs = p.executeQuery();
 		ResultSet shareNumberChangeRs;
 		String code;
@@ -216,6 +233,7 @@ public class FinDataExtractor {
 							updateShareNumberChange.executeUpdate();
 						} catch (SQLException e) {
 							if (e.getMessage().contains("Duplicate entry")) {
+								// Delete the duplicate entry and re-do the insert again.
 								deleteObsolete.setInt(1, stock_id);
 								deleteObsolete.setDate(2, new java.sql.Date(snd.getShareNumberChanges().get(i).getChangeDate().getTime()));
 								deleteObsolete.executeUpdate();
@@ -492,7 +510,7 @@ public class FinDataExtractor {
 			System.out.println("Refreshing report publication dates.");
 			currentYear = new Date().getYear()+1900;
 			for (Map.Entry<String, Integer> entry: stocksToUpdateReportDates.entrySet()) {
-				refreshReportPubDatesForStock(con, entry.getKey(), entry.getValue(), currentYear);
+				refreshReportPubDatesForStockSH(con, entry.getKey(), entry.getValue(), currentYear);
 			}
 		}
 	}
@@ -593,63 +611,111 @@ public class FinDataExtractor {
 	public static void updateReportPubDates() throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException, IOException {
 		Connection con = jdbcConnection();
 		Statement st = con.createStatement();
-		ResultSet rs = st.executeQuery("SELECT id, code FROM stock WHERE true and code IN (select\n" +
-				"s.code\n" +
+		int y;
+		ResultSet rs = st.executeQuery(
+				"select\n" +
+				"  s.id id,\n" +
+				"  s.code code,\n" +
+				"  s.name,\n" +
+				"  c.fin_year year,\n" +
+				"  c.count,\n" +
+				"  m.min_y,\n" +
+				"  m.max_y\n" +
 				"from\n" +
-				"(select min(fin_year) min_y, max(fin_year) max_y, stock_id from report_pub_dates group by stock_id) m,\n" +
-				"(select count(*) count, stock_id, fin_year from report_pub_dates group by stock_id, fin_year) c,\n" +
-				"stock s\n" +
+				"    (select min(fin_year) min_y, max(fin_year) max_y, stock_id from report_pub_dates group by stock_id) m,\n" +
+				"    (select count(*) count, stock_id, fin_year from report_pub_dates group by stock_id, fin_year) c,\n" +
+				"    stock s\n" +
 				"where\n" +
-				"s.id = m.stock_id and\n" +
-				"m.stock_id = c.stock_id and\n" +
-				"c.fin_year < max_y and c.fin_year > min_y and count <> 4 and not s.is_ignored\n" +
-				"order by s.code, c.fin_year) ORDER BY code");
+				"  s.id = m.stock_id and\n" +
+				"  m.stock_id = c.stock_id and\n" +
+				"  c.fin_year < max_y and c.fin_year > min_y and count <> 4 and not s.is_ignored\n" +
+				"order by s.code, c.fin_year;\n");
 		String stockCode;
 		int stockId, currentYear = new Date().getYear()+1900;
 		while (rs.next()) {
 			stockCode = rs.getString("code");
 			stockId = rs.getInt("id");
-//			refreshReportPubDatesForStock(con, stockCode, stockId, currentYear);
-			refreshReportPubDatesForStock(con, stockCode, stockId, 2006);
-			refreshReportPubDatesForStock(con, stockCode, stockId, 2012);
+			y = rs.getInt("year");
+			if (stockCode.startsWith("9") || stockCode.startsWith("200")) {
+				stockCode = FinDataConstants.ABShareCodeRef.get(stockCode);
+			}
+			refreshReportPubDatesForStockSH(con, stockCode, stockId, y);
 		}
 	}
 
-	private static void refreshReportPubDatesForStock(Connection con, String stockCode, int stockId, int aroundYear) throws IOException, SQLException {
+	private static void refreshReportPubDatesForStockSH(Connection con, String stockCode, int stockId, int aroundYear) throws SQLException, IOException {
 		con.setAutoCommit(true);
 		PreparedStatement ps = con.prepareStatement("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES (?, ?, ?, ?)");
-		int season;
-		SortedMap<String, String> rDates;
-		int s;
-		int year;
+		int season, year;
+		ReportPublication repPub;
 		System.out.println(stockCode);
-		for (season = 4; season >0; season --) {
-			rDates = extractReportDates2(stockCode, season, aroundYear, aroundYear-6);
-			for (Map.Entry<String, String> entry : rDates.entrySet()) {
-				try {
-					yyyyDashMMDashdd.parse(entry.getValue());
-				} catch (ParseException ex) {
-					break;
-				}
-				year = Integer.parseInt(entry.getKey().substring(0, 4));
-				s = Integer.parseInt(entry.getKey().substring(5, 6));
-				if (s != season) {
-					System.out.println("Caution!!!!");
-				}
-				System.out.println(entry.getKey()+" "+entry.getValue()+": "+year+" "+s);
-				ps.setInt(1, stockId);
-				ps.setInt(2, year);
-				ps.setInt(3, s);
-				ps.setString(4, entry.getValue());
-				ps.addBatch();
-			}
+		year = aroundYear;
+		for (season = 4; season > 0; season--) {
 			try {
-				ps.executeBatch();
-			} catch (BatchUpdateException ex) {
+				if (stockCode.startsWith("6") || stockCode.startsWith("9")) {
+					repPub = new SHSEReportPublicationData(stockCode, year, season).getReportPublication();
+				} else {
+					repPub = new SZSEReportPublicationData(stockCode, year, season).getReportPublication();
+				}
+			} catch (ParseException e) {
+				continue;
+			}
+			System.out.println(repPub.getDate() + ": " + year + " " + season);
+			ps.setInt(1, stockId);
+			ps.setInt(2, repPub.getYear());
+			ps.setInt(3, repPub.getSeason());
+			ps.setDate(4, new java.sql.Date(repPub.getDate().getTime()));
+			ps.addBatch();
+		}
+
+		try {
+			ps.executeBatch();
+		} catch (BatchUpdateException ex) {
+			if (!ex.getMessage().contains("Duplicate entry")) {
+				// We are requesting for info for the past 6 years, it's common to have quite a lot of duplicates that already exist in our database.
 				System.out.println(ex.getMessage());
 			}
 		}
 	}
+
+//	private static void refreshReportPubDatesForStock(Connection con, String stockCode, int stockId, int aroundYear) throws IOException, SQLException {
+//		con.setAutoCommit(true);
+//		PreparedStatement ps = con.prepareStatement("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES (?, ?, ?, ?)");
+//		int season;
+//		SortedMap<String, String> rDates;
+//		int s;
+//		int year;
+//		System.out.println(stockCode);
+//		for (season = 4; season >0; season --) {
+//			rDates = extractReportDates(stockCode, season, aroundYear+1, aroundYear);
+//			for (Map.Entry<String, String> entry : rDates.entrySet()) {
+//				try {
+//					yyyyDashMMDashdd.parse(entry.getValue());
+//				} catch (ParseException ex) {
+//					break;
+//				}
+//				year = Integer.parseInt(entry.getKey().substring(0, 4));
+//				s = Integer.parseInt(entry.getKey().substring(5, 6));
+//				if (s != season) {
+//					System.out.println("Caution: requesting season: "+season+", while the following returned info is not for this season.");
+//				}
+//				System.out.println(entry.getKey()+" "+entry.getValue()+": "+year+" "+s);
+//				ps.setInt(1, stockId);
+//				ps.setInt(2, year);
+//				ps.setInt(3, s);
+//				ps.setString(4, entry.getValue());
+//				ps.addBatch();
+//			}
+//			try {
+//				ps.executeBatch();
+//			} catch (BatchUpdateException ex) {
+//				if (!ex.getMessage().contains("Duplicate entry")) {
+//					// We are requesting for info for the past 6 years, it's common to have quite a lot of duplicates that already exist in our database.
+//					System.out.println(ex.getMessage());
+//				}
+//			}
+//		}
+//	}
 
 	static final Date earliest = new Date(3, 3, 3);
 
@@ -714,12 +780,12 @@ public class FinDataExtractor {
 		st.close();
 	}
 
-	static URL url;
+	static URL cninfoListedCompanyReportUrl;
 
 	static {
 		try {
-			url = new URL("http://112.95.250.13/search/stockfulltext.jsp");
-//			url = new URL("http://www.cninfo.com.cn/search/stockfulltext.jsp");
+			cninfoListedCompanyReportUrl = new URL("http://112.95.250.13/search/stockfulltext.jsp");
+//			cninfoListedCompanyReportUrl = new URL("http://www.cninfo.com.cn/search/stockfulltext.jsp");
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		}
@@ -727,85 +793,53 @@ public class FinDataExtractor {
 
 	static String [] seasonParam = {"010305","010303", "010307", "010301"};
 
-	private static SortedMap<String, Integer> extractReportDates (String stockCode, int season, int endYear, int startYear) throws IOException {
-
-		URLConnection connection = url.openConnection();
-		connection.setDoOutput(true);
-		OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream(), "gb2312");
-		out.write("noticeType="+seasonParam[season-1]+"&stockCode="+stockCode+"&endTime="+endYear+"-12-31&startTime="+startYear+"-01-01&pageNo=1");
-
-		out.flush();
-		out.close();
-
-		String sCurrentLine;
-		sCurrentLine = "";
-		InputStream l_urlStream;
-		l_urlStream = connection.getInputStream();
-
-		BufferedReader l_reader = new BufferedReader(new InputStreamReader(l_urlStream));
-		SortedMap<String, Integer> reportDates = new TreeMap<>();
-		int index;
-		String year;
-		Set<String> yearSet = new HashSet<>();
-		while ((sCurrentLine = l_reader.readLine()) != null) {
-			if (sCurrentLine.contains("<span class=\"time\">")) {
-				index = sCurrentLine.indexOf("<span class=\"time\">");
-				sCurrentLine = sCurrentLine.substring(index+19,index+29);
-				year = sCurrentLine.substring(0,4);
-				if (!yearSet.contains(year)) {
-					yearSet.add(year);
-					reportDates.put(sCurrentLine, season);
-				}
-			}
-		}
-		return reportDates;
-	}
-	public static SortedMap<String, String> extractReportDates2 (String stockCode, int season, int endYear, int startYear) throws IOException {
-
-		String s;
-		URLConnection connection = url.openConnection();
-		connection.setDoOutput(true);
-		OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream(), "gb2312");
-		out.write("noticeType="+seasonParam[season-1]+"&stockCode="+stockCode+"&endTime="+endYear+"-12-31&startTime="+startYear+"-01-01&pageNo=1");
-
-		out.flush();
-		out.close();
-
-		String sCurrentLine;
-		InputStream l_urlStream;
-		l_urlStream = connection.getInputStream();
-
-		Matcher m;
-		BufferedReader l_reader = new BufferedReader(new InputStreamReader(l_urlStream));
-		SortedMap<String, String> reportDates = new TreeMap<>();
-		String year;
-		while ((sCurrentLine = l_reader.readLine()) != null) {
-			m = p.matcher(sCurrentLine);
-			if (m.find()) {
-				year = m.group(1);
-				s = m.group(2);
-				if (s.contains(s1Report)) {
-						s = " 1";
-				} else if (s.contains(s2Report) || s.contains(s2Report2)) {
-						s = " 2";
-				} else if (s.contains(s3Report)) {
-						s = " 3";
-				} else if (s.contains(s4Report)) {
-						s = " 4";
-				} else {
-					s = " "+season;
-				}
-
-				sCurrentLine = m.group(5);
-				if (reportDates.get(year) == null || reportDates.get(year).compareTo(sCurrentLine) > 0) {
-					reportDates.put(year+s, sCurrentLine);
-				}
-			}
-		}
-		l_reader.close();
-		l_urlStream.close();
-		return reportDates;
-	}
+//	public static SortedMap<String, String> extractReportDates(String stockCode, int season, int endYear, int startYear) throws IOException {
+//
+//		String s;
+//		URLConnection connection = cninfoListedCompanyReportUrl.openConnection();
+//		connection.setDoOutput(true);
+//		OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream(), "gb2312");
+//		out.write("noticeType="+seasonParam[season-1]+"&stockCode="+stockCode+"&endTime="+endYear+"-12-31&startTime="+startYear+"-01-01&pageNo=1");
+//
+//		out.flush();
+//		out.close();
+//
+//		String sCurrentLine;
+//		InputStream l_urlStream;
+//		l_urlStream = connection.getInputStream();
+//
+//		Matcher m;
+//		BufferedReader l_reader = new BufferedReader(new InputStreamReader(l_urlStream));
+//		SortedMap<String, String> reportDates = new TreeMap<>();
+//		String year;
+//		while ((sCurrentLine = l_reader.readLine()) != null) {
+//			m = p.matcher(sCurrentLine);
+//			if (m.find()) {
+//				year = m.group(1);
+//				s = m.group(2);
+//				if (s.contains(s1Report)) {
+//						s = " 1";
+//				} else if (s.contains(s2Report) || s.contains(s2Report2)) {
+//						s = " 2";
+//				} else if (s.contains(s3Report)) {
+//						s = " 3";
+//				} else if (s.contains(s4Report)) {
+//						s = " 4";
+//				} else {
+//					s = " "+season;
+//				}
+//
+//				sCurrentLine = m.group(5);
+//				year = year + s;
+//				if (reportDates.get(year) == null || reportDates.get(year).compareTo(sCurrentLine) > 0) {
+//					reportDates.put(year, sCurrentLine);
+//				}
+//			}
+//		}
+//		l_reader.close();
+//		l_urlStream.close();
+//		return reportDates;
+//	}
 
 	public static void calculateAdjustmentFactor (int startPricingYear) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		Connection con = jdbcConnection();

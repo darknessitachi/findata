@@ -12,7 +12,7 @@ import java.text.ParseException;
 
 import static michael.findata.util.FinDataConstants.yyyyMMdd;
 
-public abstract class CommonPriceHistory implements SecurityTimeSeriesData{
+public abstract class PriceHistory implements SecurityTimeSeriesData{
 	private int headerSize = 184, recordSize = 168;
 	private int coeff = 1;
 	protected int[] records = null;
@@ -23,7 +23,7 @@ public abstract class CommonPriceHistory implements SecurityTimeSeriesData{
 	protected long count;
 	protected ByteBuffer bb = null;
 
-	public CommonPriceHistory (String code) {
+	public PriceHistory(String code) {
 		headerSize = getHeaderSize();
 		recordSize = getRecordSize();
 		this.code = code;
