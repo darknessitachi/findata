@@ -6,8 +6,10 @@ import michael.findata.external.hexun2008.Hexun2008DividendData;
 import michael.findata.external.hexun2008.Hexun2008FinancialSheet;
 import michael.findata.external.hexun2008.Hexun2008ShareNumberDatum;
 import michael.findata.external.netease.NeteaseTradingDatum;
-import michael.findata.external.shse.SHSEReportPublicationData;
-import michael.findata.external.szse.SZSEReportPublicationData;
+import michael.findata.external.shse.SHSEFinancialReportDailyList;
+import michael.findata.external.shse.SHSEReportPublication;
+import michael.findata.external.szse.SZSEFinancialReportDailyList;
+import michael.findata.external.szse.SZSEReportPublication;
 import michael.findata.external.tdx.TDXPriceHistory;
 import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
@@ -23,13 +25,11 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.sql.*;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.*;
 import java.util.Date;
-import java.util.regex.Matcher;
 
 import static michael.findata.util.FinDataConstants.*;
 import static michael.findata.util.FinDataConstants.SheetType.*;
@@ -45,26 +45,15 @@ public class FinDataExtractor {
 //		refreshStockCodes();
 //		refreshLatestPriceNameAndNumberOfShares();
 //		refreshStockPriceHistories();
-//		refreshFinData();
+//		updateFindataWithDates(); // get SZ findata and report dates
+//		refreshFinData(null, true); // get SH findata and report dates
+		calculateAdjustmentFactor(2013);
 //		refreshDividendData();
-//		calculateAdjustmentFactor(2012);
-//		updateReportPubDates();
+//		updateMissingReportPubDatesAccordingToFindata();
+//		updateMissingReportPubDatesAccordingToFindata2();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
-		refreshReportPubDatesForStockSH(jdbcConnection(), "000758", 1804, 2008);
+//		refreshReportPubDatesForStock(jdbcConnection(), "000758", 1804, 2008);
 
-//		Connection con = jdbcConnection();
-//		String sql = "select name from stock where code IN (?, ?) order by code";
-//		PreparedStatement ps = con.prepareStatement(sql);
-//		ResultSet rs;
-//		for (Map.Entry<String, String> temp : FinDataConstants.ABShareCodeRef.entrySet()) {
-//			ps.setString(1, temp.getKey());
-//			ps.setString(2, temp.getValue());
-//			rs = ps.executeQuery();
-//			while (rs.next()) {
-//				System.out.print(rs.getString(1)+" ");
-//			}
-//			System.out.println("\n");
-//		}
 	}
 
 	/**
@@ -263,17 +252,18 @@ public class FinDataExtractor {
 	 * @throws ClassNotFoundException
 	 * @throws IllegalAccessException
 	 * @throws InstantiationException
+	 * @param stockCodesToUpdateFindata
 	 */
-	public static void refreshFinData() throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException {
+	public static void refreshFinData(HashSet<String> stockCodesToUpdateFindata, boolean updateReportPublicationDates) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException {
 		Connection con = jdbcConnection();
 		String code;
-		java.util.Date cDate = new java.util.Date();
+		java.util.Date cDate = FinDataConstants.currentTimeStamp;
 		int id, currentYear = cDate.getYear() + 1900, currentMonth = cDate.getMonth() + 1;
 		PreparedStatement pInsertPLNF, pInsertBSNF, pInsertCFNF, pInsertPLF, pInsertBSF, pInsertCFF, pInsertProvision, pInsert, pUpdateStock = con.prepareStatement("UPDATE stock SET latest_year=?, latest_season=? WHERE id=?");
 		con.setAutoCommit(false);
 		Statement sStock = con.createStatement();
 		Statement sCreateFinData = con.createStatement();
-		sStock.execute("UPDATE stock SET latest_year = 2008, latest_season = 0 WHERE latest_year IS NULL");
+		sStock.execute("UPDATE stock SET latest_year = "+ (currentYear - 3) +", latest_season = 0 WHERE latest_year IS NULL");
 		sStock.execute("UPDATE stock SET latest_season = 0 WHERE latest_season IS NULL");
 		con.commit();
 		TreeMap<String, Integer> stocksToUpdateReportDates = new TreeMap<>();
@@ -288,9 +278,17 @@ public class FinDataExtractor {
 
 		FinancialSheet sheet;
 		int aYear, order, latestYear, latestSeason, cYear = -1;
-//		rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season FROM stock WHERE code = 000568 ORDER BY code DESC");
 		System.out.println("Current report season: "+currentYear+" "+currentMonth/3);
-		rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE (latest_year*12+latest_season*3) < "+(currentYear*12+currentMonth/3*3)+" AND NOT is_ignored ORDER BY code ASC");
+//		rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE (latest_year*12+latest_season*3) < "+(currentYear*12+currentMonth/3*3)+" AND NOT is_ignored ORDER BY code ASC");
+		if (stockCodesToUpdateFindata == null || stockCodesToUpdateFindata.isEmpty()) {
+			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE (code LIKE '9%' OR code LIKE '6%') AND (latest_year != 2012 OR latest_season != 4) AND NOT is_ignored ORDER BY code");
+		} else {
+			String temp = "";
+			for (String s : stockCodesToUpdateFindata) {
+				temp += "'" + s + "', ";
+			}
+			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE code IN ("+temp+"' ') ORDER BY code");
+		}
 		short cSeason = -1;
 		boolean someSheetsAreEmpty;
 		boolean isFinancial;
@@ -506,11 +504,11 @@ public class FinDataExtractor {
 
 			con.commit();
 		}
-		if (!stocksToUpdateReportDates.isEmpty()) {
+		if (updateReportPublicationDates && !stocksToUpdateReportDates.isEmpty()) {
 			System.out.println("Refreshing report publication dates.");
 			currentYear = new Date().getYear()+1900;
 			for (Map.Entry<String, Integer> entry: stocksToUpdateReportDates.entrySet()) {
-				refreshReportPubDatesForStockSH(con, entry.getKey(), entry.getValue(), currentYear);
+				refreshReportPubDatesForStock(con, entry.getKey(), entry.getValue(), currentYear);
 			}
 		}
 	}
@@ -608,19 +606,139 @@ public class FinDataExtractor {
 		c.close();
 	}
 
-	public static void updateReportPubDates() throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException, IOException {
+	// Used daily during the earnings report seasons. Going through the daily digests of SH and SZ stock exchanges are grab the financial report publication dates,
+	// after which corresponding new fin data are grabbed.
+	public static void updateFindataWithDates() throws SQLException, IllegalAccessException, ClassNotFoundException, InstantiationException, IOException, ParseException {
+		Connection con = jdbcConnection();
+		con.setAutoCommit(true);
+		Statement st = con.createStatement();
+		PreparedStatement ps = con.prepareStatement("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)");
+		// Figure out the last date when we did this
+		ResultSet rs = st.executeQuery("SELECT max(_date) FROM fin_data_updates");
+		rs.next();
+		GregorianCalendar last = new GregorianCalendar();
+		last.setTimeInMillis(rs.getDate(1).getTime());
+		last.add(Calendar.DATE, -1);
+
+		HashSet<String> stocksToUpdateFindata = new HashSet<>();
+		HashSet<ReportPublication> pubs = new HashSet<>();
+		do {
+			System.out.println("Getting report dates for "+FinDataConstants.yyyyDashMMDashdd.format(last.getTime())+"...");
+			pubs.addAll(new SHSEFinancialReportDailyList(last.getTime()).getReportPublications());
+			pubs.addAll(new SZSEFinancialReportDailyList(last.getTime()).getReportPublications());
+			last.add(Calendar.DATE, 1);
+		} while (last.getTimeInMillis()<FinDataConstants.currentTimeStamp.getTime());
+
+		for (ReportPublication p : pubs) {
+			ps.setString(1, p.getCode());
+			ps.setInt(2, p.getYear());
+			ps.setInt(3, p.getSeason());
+			ps.setDate(4, new java.sql.Date(p.getDate().getTime()));
+			System.out.println(p.getCode() + " " + FinDataConstants.yyyyDashMMDashdd.format(p.getDate()) + ": " + p.getYear() + " " + p.getSeason());
+			try {
+				ps.executeUpdate();
+				stocksToUpdateFindata.add(p.getCode());
+			} catch (SQLException ex) {
+				if (!ex.getMessage().contains("Duplicate entry")) {
+					// We are making some overlap to ensure all dates are captured.
+					System.out.println(ex.getMessage());
+				}
+			}
+		}
+
+		// Finally a timestamp
+		st.executeUpdate("UPDATE fin_data_updates SET _date = current_date()");
+		con.close();
+
+		if (!stocksToUpdateFindata.isEmpty()) {
+			refreshFinData(stocksToUpdateFindata, false);
+		}
+	}
+
+	// fix report data publication dates according to financial report data. If there are records in financial report data for a particular stock, year, season but
+	// there is no corresponding report publication dates for them, populate report_pub_dates table for that combination.
+	public static void updateMissingReportPubDatesAccordingToFindata2 () throws ClassNotFoundException, SQLException, InstantiationException, IllegalAccessException, IOException {
+		Connection con = jdbcConnection();
+		Statement st = con.createStatement();
+		int y, season;
+		ResultSet rs = st.executeQuery(
+						"select s.id, s.code, fr.stock_id, fr.fin_year, fr.fin_season\n" +
+						"from stock s join fin_rep_f fr on s.id = fr.stock_id left outer join report_pub_dates rpd\n" +
+						"on rpd.stock_id = fr.stock_id and fr.fin_year = rpd.fin_year and fr.fin_season = rpd.fin_season\n" +
+						"where rpd.stock_id is null\n" +
+						"union\n" +
+						"select s.id, s.code, fr.stock_id, fr.fin_year, fr.fin_season\n" +
+						"from stock s join fin_rep_nf fr on s.id = fr.stock_id left outer join report_pub_dates rpd\n" +
+						"on rpd.stock_id = fr.stock_id and fr.fin_year = rpd.fin_year and fr.fin_season = rpd.fin_season\n" +
+						"where rpd.stock_id is null order by fin_year desc, fin_season desc, code");
+		String stockCode;
+		int stockId;
+		while (rs.next()) {
+			stockCode = rs.getString("code");
+			stockId = rs.getInt("id");
+			y = rs.getInt("fin_year");
+			season = rs.getInt("fin_season");
+
+			if (stockCode.startsWith("9") || stockCode.startsWith("200")) {
+				stockCode = FinDataConstants.BAShareCodeRef.get(stockCode);
+			}
+			if (stockCode == null) {
+				System.out.println("Can't find corresponding A share for stock "+rs.getString("code"));
+			} else {
+				refreshReportPubDatesForStock(con, stockCode, stockId, y, season);
+			}
+		}
+	}
+
+	private static void refreshReportPubDatesForStock(Connection con, String stockCode, int stockId, int year, int season) throws SQLException, IOException {
+		con.setAutoCommit(true);
+		PreparedStatement ps = con.prepareStatement("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES (?, ?, ?, ?)");
+		ReportPublication repPub;
+		System.out.println(stockCode);
+		try {
+			if (stockCode.startsWith("6") || stockCode.startsWith("9")) {
+				repPub = new SHSEReportPublication(stockCode, year, season);
+			} else {
+				repPub = new SZSEReportPublication(stockCode, year, season);
+			}
+		} catch (ParseException e) {
+			System.out.println("ParseException " + e.getMessage() + " when trying to get report publication date for " + stockCode + " " + year + " " + season);
+			return;
+		} catch (FileNotFoundException e) {
+			System.out.println("FileNotFoundException " + e.getMessage() + " when trying to get report publication date for " + stockCode + " " + year + " " + season);
+			return;
+		}
+		System.out.println(repPub.getDate() + ": " + year + " " + season);
+		ps.setInt(1, stockId);
+		ps.setInt(2, repPub.getYear());
+		ps.setInt(3, repPub.getSeason());
+		ps.setDate(4, new java.sql.Date(repPub.getDate().getTime()));
+		ps.addBatch();
+
+		try {
+			ps.executeBatch();
+		} catch (BatchUpdateException ex) {
+			if (!ex.getMessage().contains("Duplicate entry")) {
+				// We are requesting for info for the past 6 years, it's common to have quite a lot of duplicates that already exist in our database.
+				System.out.println(ex.getMessage());
+			}
+		}
+	}
+
+	public static void updateMissingReportPubDatesAccordingToFindata() throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException, IOException {
 		Connection con = jdbcConnection();
 		Statement st = con.createStatement();
 		int y;
 		ResultSet rs = st.executeQuery(
+				"select s.id, s.code, s.latest_year year from report_pub_dates rpd right outer join stock s on s.id = rpd.stock_id and rpd.fin_year = s.latest_year and rpd.fin_season = s.latest_season where rpd.stock_id is null and not s.is_ignored union \n"+
 				"select\n" +
 				"  s.id id,\n" +
 				"  s.code code,\n" +
-				"  s.name,\n" +
-				"  c.fin_year year,\n" +
-				"  c.count,\n" +
-				"  m.min_y,\n" +
-				"  m.max_y\n" +
+//				"  s.name,\n" +
+				"  c.fin_year year\n" +
+//				"  c.count,\n" +
+//				"  m.min_y,\n" +
+//				"  m.max_y\n" +
 				"from\n" +
 				"    (select min(fin_year) min_y, max(fin_year) max_y, stock_id from report_pub_dates group by stock_id) m,\n" +
 				"    (select count(*) count, stock_id, fin_year from report_pub_dates group by stock_id, fin_year) c,\n" +
@@ -628,22 +746,27 @@ public class FinDataExtractor {
 				"where\n" +
 				"  s.id = m.stock_id and\n" +
 				"  m.stock_id = c.stock_id and\n" +
-				"  c.fin_year < max_y and c.fin_year > min_y and count <> 4 and not s.is_ignored\n" +
-				"order by s.code, c.fin_year;\n");
+				"  c.fin_year < max_y and c.fin_year > min_y and count <> 4 and\n" +
+				"  not s.is_ignored\n");
 		String stockCode;
 		int stockId, currentYear = new Date().getYear()+1900;
 		while (rs.next()) {
 			stockCode = rs.getString("code");
 			stockId = rs.getInt("id");
 			y = rs.getInt("year");
+
 			if (stockCode.startsWith("9") || stockCode.startsWith("200")) {
-				stockCode = FinDataConstants.ABShareCodeRef.get(stockCode);
+				stockCode = FinDataConstants.BAShareCodeRef.get(stockCode);
 			}
-			refreshReportPubDatesForStockSH(con, stockCode, stockId, y);
+			if (stockCode == null) {
+				System.out.println("Can't find corresponding A share for stock "+rs.getString("code"));
+			} else {
+				refreshReportPubDatesForStock(con, stockCode, stockId, y);
+			}
 		}
 	}
 
-	private static void refreshReportPubDatesForStockSH(Connection con, String stockCode, int stockId, int aroundYear) throws SQLException, IOException {
+	private static void refreshReportPubDatesForStock(Connection con, String stockCode, int stockId, int aroundYear) throws SQLException, IOException {
 		con.setAutoCommit(true);
 		PreparedStatement ps = con.prepareStatement("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES (?, ?, ?, ?)");
 		int season, year;
@@ -653,11 +776,15 @@ public class FinDataExtractor {
 		for (season = 4; season > 0; season--) {
 			try {
 				if (stockCode.startsWith("6") || stockCode.startsWith("9")) {
-					repPub = new SHSEReportPublicationData(stockCode, year, season).getReportPublication();
+					repPub = new SHSEReportPublication(stockCode, year, season);
 				} else {
-					repPub = new SZSEReportPublicationData(stockCode, year, season).getReportPublication();
+					repPub = new SZSEReportPublication(stockCode, year, season);
 				}
 			} catch (ParseException e) {
+				System.out.println("ParseException "+e.getMessage()+" when trying to get report publication date for "+stockCode+" "+year+" "+season);
+				continue;
+			} catch (FileNotFoundException e) {
+				System.out.println("FileNotFoundException "+e.getMessage()+" when trying to get report publication date for "+stockCode+" "+year+" "+season);
 				continue;
 			}
 			System.out.println(repPub.getDate() + ": " + year + " " + season);
@@ -731,6 +858,7 @@ public class FinDataExtractor {
 		int currentYear = new Date().getYear()+1900;
 		int priceYear;
 		ResultSet rs;
+
 		for (int y = currentYear; y >= 1991; y --) {
 			rs = s.executeQuery("SELECT max(date) FROM stock_price_"+y+" WHERE stock_id = "+stockId);
 			if (rs.next()) {
@@ -741,6 +869,7 @@ public class FinDataExtractor {
 				}
 			}
 		}
+
 		if (latest == null) {
 			latest = earliest;
 		}
@@ -751,8 +880,9 @@ public class FinDataExtractor {
 		while (ts.hasNext()) {
 			temp = ts.next();
 			priceYear = temp.getDate().getYear()+1900;
+
 			if (temp.getDate().after(latest)) {
-				System.out.println(""+priceYear + (temp.getDate().getMonth() + 1) + temp.getDate().getDate());
+				System.out.println(priceYear + " " + (temp.getDate().getMonth() + 1) + " " + temp.getDate().getDate());
 			} else {
 				break;
 			}
@@ -772,8 +902,16 @@ public class FinDataExtractor {
 //			ps.executeUpdate();
 			ps.addBatch();
 		}
-		for (PreparedStatement p : pm.values()) {
-			p.executeBatch();
+		for (Map.Entry<Integer, PreparedStatement> e : pm.entrySet()) {
+			PreparedStatement p = e.getValue();
+			try {
+				p.executeBatch();
+				System.out.println(code + " "+ e.getKey()+" updated.");
+			}
+			catch (BatchUpdateException exx)
+			{
+				System.out.println(exx.getMessage());
+			}
 		}
 		con.commit();
 		ts.close();
@@ -845,7 +983,8 @@ public class FinDataExtractor {
 		Connection con = jdbcConnection();
 		con.setAutoCommit(false);
 		Statement st = con.createStatement();
-		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 3) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1999-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
+//		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1999-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
+		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1992-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
 		int stockId = -1;
 		String stockName = null;
 		String stockCode = null;

@@ -5,6 +5,14 @@ CREATE TABLE source (
 	PRIMARY KEY (id)
 );
 
+CREATE TABLE fin_data_updates (
+  id INT AUTO_INCREMENT,
+  _date DATE,
+  PRIMARY KEY (id)
+);
+
+insert into fin_data_updates (_date) values ('2013-01-18');
+
 CREATE TABLE fin_field (
 	id INT AUTO_INCREMENT,
 	fin_sheet VARCHAR(255),
@@ -140,6 +148,9 @@ CREATE TABLE IF NOT EXISTS stock_price (
 	close INT,
 	avg INT,
 	adjustment_factor FLOAT,
+  pe_last_4_seasons FLOAT,
+  pe_l4s_max FLOAT,
+  pe_l4s_min FLOAT,
 	FOREIGN KEY (stock_id) REFERENCES stock(id),
 	PRIMARY KEY (id),
 	UNIQUE (stock_id, date)
@@ -828,3 +839,6 @@ INSERT INTO analysis_field (name, description) VALUES ('Seasonal PM SoS Delta', 
 -- INSERT INTO source_fin_sheet (source_id, fin_sheet_id, text_pattern) VALUES (1,1, 'zcfz');
 -- INSERT INTO source_fin_sheet (source_id, fin_sheet_id, text_pattern) VALUES (1,2, 'lr');
 -- INSERT INTO source_fin_sheet (source_id, fin_sheet_id, text_pattern) VALUES (1,3, 'xjll');
+select name, code, fin_year, c from stock s, (select count(*) c, stock_id, fin_year from report_pub_dates group by stock_id, fin_year having (fin_year >= 2002 and fin_year < 2012 and c < 4)) cnt where cnt.stock_id = s.id order by code, fin_year;
+
+select name, code, fin_year, c from stock s, (select count(*) c, stock_id, fin_year from report_pub_dates group by stock_id, fin_year having (fin_year < 2002 and c < 2)) cnt where cnt.stock_id = s.id order by code, fin_year;

@@ -1,8 +1,7 @@
 package michael.findata.external.szse;
 
 import michael.findata.external.ReportPublication;
-import michael.findata.external.ReportPublicationData;
-import michael.findata.util.FinDataConstants;
+import michael.findata.external.ReportPublicationList;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -11,24 +10,19 @@ import java.net.URLConnection;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SZSEReportPublicationData implements ReportPublicationData{
+import static michael.findata.util.FinDataConstants.*;
+
+public class SZSEReportPublication extends ReportPublication {
 
 	private static URL szseListedCompanyReportUrl;
 	private static String [] seasonParam = {"010305","010303", "010307", "010301"};
-	private static String s1Report = "一季";
-	private static String s2Report = "半年";
-	private static String s2Report2 = "中期";
-	private static String s3Report = "三季";
-	private static String s4Report = "年度";
 	public static Pattern p = Pattern.compile("target=\"new\">.*([\\d,O]{4})\\s*年(.*)报告(摘要|正文|全文)?(（更新后）|（已取消）|\\(修订版\\))?<.*");
 	public static Pattern q = Pattern.compile("(\\d\\d\\d\\d-\\d\\d-\\d\\d)");
 
-	private ReportPublication rp;
+//	private ReportPublication rp;
 
 	static {
 		try {
@@ -38,7 +32,7 @@ public class SZSEReportPublicationData implements ReportPublicationData{
 		}
 	}
 
-	public SZSEReportPublicationData (String code, int y, int season) throws IOException, ParseException {
+	public SZSEReportPublication(String code, int y, int season) throws IOException, ParseException {
 		String s, d = "", dt = null;
 		URLConnection connection = szseListedCompanyReportUrl.openConnection();
 		connection.setDoOutput(true);
@@ -79,18 +73,23 @@ public class SZSEReportPublicationData implements ReportPublicationData{
 		}
 		l_reader.close();
 		l_urlStream.close();
-System.out.println(d);
-		rp = new ReportPublication(FinDataConstants.yyyyDashMMDashdd.parse(d), code, y, season);
+//		System.out.println(d);
+//		rp = new ReportPublication(yyyyDashMMDashdd.parse(d), code, y, season);
+		super.setDate(yyyyDashMMDashdd.parse(d));
+		super.setCode(code);
+		super.setYear(y);
+		super.setSeason(season);
 	}
 
-	@Override
-	public Collection<ReportPublication> getReportPublications() {
-		ArrayList<ReportPublication> temp = new ArrayList<>();
-		temp.add(rp);
-		return temp;
-	}
+//	@Override
+//	public Collection<ReportPublication> getReportPublications() {
+//		ArrayList<ReportPublication> temp = new ArrayList<>();
+//		temp.add(rp);
+//		return temp;
+//	}
 
-	public ReportPublication getReportPublication () {
-		return rp;
-	}
+//	@Override
+//	public ReportPublication getReportPublication () {
+//		return rp;
+//	}
 }

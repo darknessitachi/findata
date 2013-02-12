@@ -7,7 +7,7 @@ import static michael.findata.util.FinDataConstants.SheetType.*;
 
 public class Hexun2008FinancialSheetTest {
 	public static void main(String[] args) {
-		FinancialSheet sheet = new Hexun2008FinancialSheet("600000", cash_flow, 2008, (short) 4);
+		FinancialSheet sheet = new Hexun2008FinancialSheet("000002", balance_sheet, 2008, (short) 4);
 		java.util.Iterator<String> it = sheet.getDatumNames();
 		String name;
 		while (it.hasNext()) {

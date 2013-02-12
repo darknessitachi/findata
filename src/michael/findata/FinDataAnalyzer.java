@@ -1,5 +1,6 @@
 package michael.findata;
 
+import com.mysql.jdbc.exceptions.jdbc4.MySQLSyntaxErrorException;
 import michael.findata.external.hexun2008.Hexun2008Constants;
 import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
@@ -14,14 +15,15 @@ import java.util.*;
 import java.util.Date;
 
 public class FinDataAnalyzer {
+
 	public static void main(String[] args) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException, ParseException {
 //		modify();
 //		growthAnalysis();
 //		analyzeGiven(false);
 //		analyze(args.length != 0 && args[0].equals("financial"));
-		analyzeThroughTime("200550", "2005-01-01");
+//		analyzeThroughTime("002024", "2004-09-01");
 //		analyzeAsOfTime(false, "2010-05-01");
-//		migrate();
+		migrate();
 	}
 
 	private static void analyzeAsOfTime(boolean isFinancial, String asOfDate) throws ParseException, ClassNotFoundException, SQLException, InstantiationException, IllegalAccessException {
@@ -48,12 +50,15 @@ public class FinDataAnalyzer {
 		Statement stCodes = con.createStatement();
 		ResultSet rsCodes;
 		if (financial) {
-			rsCodes = stCodes.executeQuery("SELECT code FROM stock WHERE latest_year >= 2011 AND is_financial AND (NOT name LIKE '%ST%') AND  NOT is_ignored ORDER BY code");
+			rsCodes = stCodes.executeQuery("SELECT code FROM stock WHERE latest_year >= 2011 AND is_financial AND (NOT name LIKE '%ST%') AND NOT is_ignored ORDER BY code");
 		} else {
-			rsCodes = stCodes.executeQuery("SELECT code FROM stock WHERE is_interesting AND latest_year >= 2011 AND (NOT name LIKE '%ST%') AND NOT (is_financial OR is_ignored) ORDER BY code");
+			rsCodes = stCodes.executeQuery("SELECT code FROM stock WHERE true AND latest_year >= 2011 AND (NOT name LIKE '%ST%') AND NOT (is_financial OR is_ignored) ORDER BY code");
 		}
 		String param_stock_code;
 		Date today = new Date();
+//		GregorianCalendar gc = new GregorianCalendar();
+//		gc.add(Calendar.DATE, -1);
+//		today = gc.getTime();
 		while (rsCodes.next()) {
 			param_stock_code = rsCodes.getString(1);
 			analyzeStock(financial, con, param_stock_code, today);
@@ -132,10 +137,12 @@ public class FinDataAnalyzer {
 					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(28)) + "\t" +
 					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(29)) + "\t" +
 					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(30)) + "\t" +
-					rsResult.getString(31) + "\t" +
-					rsResult.getString(32) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(33)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(34)) + "\t" +
+					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(31)) + "\t" +
+					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(32)) + "\t" +
+					rsResult.getString(33) + "\t" +
+					rsResult.getString(34) + "\t" +
+					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(35)) + "\t" +
+					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(36)) + "\t" +
 					dateString + "\n");
 		}
 	}
@@ -187,11 +194,14 @@ public class FinDataAnalyzer {
 		Calendar c = new GregorianCalendar();
 		c.setTime(start);
 		Date now = new Date();
+		Connection conn = jdbcConnection();
 		while (start.before(now)) {
-			analyzeStock(false, jdbcConnection(), stockCode, start);
+			analyzeStock(false, conn, stockCode, start);
 			c.add(Calendar.DATE, 5);
 			start = c.getTime();
 		}
+		analyzeStock(false, conn, stockCode, now);
+		conn.close();
 	}
 
 	public static void growthAnalysis() throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
@@ -345,18 +355,82 @@ public class FinDataAnalyzer {
 
 	public static void migrate () throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		Connection con = jdbcConnection();
+		con.setAutoCommit(false);
 		Statement st = con.createStatement();
+		PreparedStatement pst = null;
+		CallableStatement cst = null;
 		Statement st1 = con.createStatement();
-		ResultSet rs = st.executeQuery("SELECT code, id FROM stock WHERE is_financial AND code <> 601099 ORDER BY code");
-		int stockId;
+		int stockId, pid;
 		String stockCode;
-		String sql;
-		while (rs.next()) {
-			stockId = rs.getInt("id");
-			stockCode = rs.getString("code");
+		ResultSet rsCode = st1.executeQuery("SELECT code, id FROM stock WHERE code >= 000602 AND (NOT is_interesting) AND (NOT is_financial) ORDER BY code");
+		ResultSet rsPrice, analysis;
+		float usdX, hkdX, price, noShares, profit, ret, ret_max, ret_min;
+		Date start = new Date(), temp;
+		double time;
+		while (rsCode.next()) {
+			ret_max = -1000;
+			ret_min = 1000;
+			stockId = rsCode.getInt("id");
+			stockCode = rsCode.getString("code");
 			System.out.println(stockCode+" ...");
-			System.out.println(stockCode+" ... done");
+			for (int year = 1994; year <= 2013; year ++)
+			{
+				rsPrice = st.executeQuery(
+						"select s.code, p.date date, p.id pid\n" +
+						"from stock_price_"+year+" p inner join stock s on p.stock_id = s.id\n" +
+						"where p.pe_last_4_seasons is null and s.code = " + stockCode + "\n" +
+						"order by date;");
+				if (pst != null) {
+					pst.close();
+				}
+				pst = con.prepareStatement("UPDATE stock_price_"+year+" SET pe_last_4_seasons = ?, pe_l4s_max = ?, pe_l4s_min = ? WHERE id = ?");
+				while (rsPrice.next()) {
+					pid = rsPrice.getInt("pid");
+					try {
+						if (cst != null) cst.close();
+						cst = con.prepareCall("CALL analyze_nf ('" + stockCode + "', '"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"', 1)");
+						analysis = cst.executeQuery();
+					} catch (MySQLSyntaxErrorException ex) {
+						System.out.println("Can't calculate return for "+stockCode+" "+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")));
+						continue;
+					}
+					if (analysis.next()) {
+						price = analysis.getFloat("cp");
+						noShares = analysis.getFloat("number_of_sh");
+						profit = analysis.getFloat("recent_4_season_prof");
+						usdX = analysis.getFloat("usd_x");
+						hkdX = analysis.getFloat("hkd_x");
+						if (stockCode.startsWith("900")) {
+							price *= usdX;
+						} else if (stockCode.startsWith("200")) {
+							price *= hkdX;
+						}
+						// todo
+//						if ("1994-08-12".equals(FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")))) {
+//							System.out.println();
+//						}
+						ret = profit/noShares/price;
+						if (noShares == 0) {
+							continue;
+						}
+						if (ret > ret_max) ret_max = ret;
+						if (ret < ret_min && ret > 0) ret_min = ret;
+						pst.setFloat(1, ret);
+						pst.setFloat(2, ret_max);
+						pst.setFloat(3, ret_min);
+						pst.setInt(4, pid);
+						pst.executeUpdate();
+						System.out.println(stockCode+"\t"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"\t"+ ret + "\t"+ ret_max + "\t"+ ret_min + "\t");
+					}
+				}
+			}
+			con.commit();
+			temp = new Date();
+			time = (temp.getTime() - start.getTime())/1000;
+			start = temp;
+			System.out.println(stockCode+" "+time+" seconds ... done.");
 		}
+		con.close();
 	}
 
 	private static Connection jdbcConnection() throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {

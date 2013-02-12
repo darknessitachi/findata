@@ -13,6 +13,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static michael.findata.util.FinDataConstants.SheetType;
 
@@ -25,6 +27,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 	private String st, ap;
 	private Map<String, Number> data;
 	private List<String> name;
+	private int earliestYear = 1989;
 
 	public Hexun2008FinancialSheet(String stockCode, SheetType sheetType, int accountingYear, short season) {
 		super(stockCode, sheetType, accountingYear, season);
@@ -113,6 +116,17 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 		XPath tablePath = doc.createXPath("//DIV[@id=\"zaiyaocontent\"]//TBODY/TR");
 		XPath fieldNamePath = doc.createXPath(".//STRONG[1]");
 		XPath fieldValuePath = doc.createXPath("./TD[2]/DIV");
+
+		try {
+			Pattern p = Pattern.compile("\\['(\\d\\d\\d\\d)\\.\\d\\d.\\d\\d','\\d+.{1,5}¶È'\\]\\];$");
+			XPath scriptPath = doc.createXPath("//DIV[@id=\"zaiyaocontent\"]/SCRIPT[1]");
+			Matcher m = p.matcher(((Element)scriptPath.evaluate(doc)).getText());
+			if (m.find()) {
+				earliestYear = Integer.parseInt(m.group(1));
+			}
+		} catch (ClassCastException ex) {
+		}
+
 		Element valueElement;
 		Object o = tablePath.evaluate(doc);
 		Number value;
@@ -144,5 +158,9 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 			data.put(datumName, value);
 			name.add(datumName);
 		}
+	}
+
+	public int getEarliestYear () {
+		return earliestYear;
 	}
 }

@@ -8,6 +8,9 @@ public class ReportPublication {
 	private int year;
 	private int season;
 
+	public ReportPublication () {
+	}
+
 	public ReportPublication (Date date, String code, int year, int season) {
 		this.date = date;
 		this.code = code;
@@ -45,5 +48,15 @@ public class ReportPublication {
 
 	public void setSeason(int season) {
 		this.season = season;
+	}
+
+	@Override
+	public boolean equals (Object obj) {
+		if (obj instanceof ReportPublication) {
+			ReportPublication rpb = (ReportPublication) obj;
+			return rpb.getCode().equals(code) && rpb.getYear() == year && rpb.getSeason() == season;
+		} else {
+			return false;
+		}
 	}
 }
