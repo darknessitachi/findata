@@ -50,7 +50,7 @@ public class FinDataExtractor {
 		calculateAdjustmentFactor(2013);
 //		refreshDividendData();
 //		updateMissingReportPubDatesAccordingToFindata();
-//		updateMissingReportPubDatesAccordingToFindata2();
+		updateMissingReportPubDatesAccordingToFindata2();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
 //		refreshReportPubDatesForStock(jdbcConnection(), "000758", 1804, 2008);
 
