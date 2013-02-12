@@ -20,6 +20,14 @@ public class SZSEReportPublication extends ReportPublication {
 	private static URL szseListedCompanyReportUrl;
 	private static String [] seasonParam = {"010305","010303", "010307", "010301"};
 	public static Pattern p = Pattern.compile("target=\"new\">.*([\\d,O]{4})\\s*年(.*)报告(摘要|正文|全文)?(（更新后）|（已取消）|\\(修订版\\))?<.*");
+//=======
+//	private static String s1Report = "一季";
+//	private static String s2Report = "半年";
+//	private static String s2Report2 = "中期";
+//	private static String s3Report = "三季";
+//	private static String s4Report = "年度";
+//	public static Pattern p = Pattern.compile("target=\"new\">.*([\\d,O]{4})\\s*年?(.*)报告(摘要|正文|全文)?(（.）|\\(.\\))?<.*");
+//>>>>>>> origin/master:src/michael/findata/external/szse/SZSEReportPublicationData.java
 	public static Pattern q = Pattern.compile("(\\d\\d\\d\\d-\\d\\d-\\d\\d)");
 
 //	private ReportPublication rp;

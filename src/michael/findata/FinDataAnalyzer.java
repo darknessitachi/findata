@@ -362,7 +362,7 @@ public class FinDataAnalyzer {
 		Statement st1 = con.createStatement();
 		int stockId, pid;
 		String stockCode;
-		ResultSet rsCode = st1.executeQuery("SELECT code, id FROM stock WHERE code >= 000602 AND (NOT is_interesting) AND (NOT is_financial) ORDER BY code");
+		ResultSet rsCode = st1.executeQuery("SELECT code, id FROM stock WHERE code >= 000680 AND (NOT is_interesting) AND (NOT is_financial) ORDER BY code");
 		ResultSet rsPrice, analysis;
 		float usdX, hkdX, price, noShares, profit, ret, ret_max, ret_min;
 		Date start = new Date(), temp;
