@@ -47,10 +47,10 @@ public class FinDataExtractor {
 //		refreshStockPriceHistories();
 //		updateFindataWithDates(); // get SZ findata and report dates
 //		refreshFinData(null, true); // get SH findata and report dates
-		calculateAdjustmentFactor(2013);
+		calculateAdjustmentFactor(1991);
 //		refreshDividendData();
 //		updateMissingReportPubDatesAccordingToFindata();
-		updateMissingReportPubDatesAccordingToFindata2();
+//		updateMissingReportPubDatesAccordingToFindata2();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
 //		refreshReportPubDatesForStock(jdbcConnection(), "000758", 1804, 2008);
 
@@ -984,7 +984,7 @@ public class FinDataExtractor {
 		con.setAutoCommit(false);
 		Statement st = con.createStatement();
 //		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1999-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
-		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1992-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
+		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1991-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
 		int stockId = -1;
 		String stockName = null;
 		String stockCode = null;
@@ -1045,8 +1045,10 @@ public class FinDataExtractor {
 		PreparedStatement ps;
 		for (int y = startYear; y <= endYear; y++) {
 			if (end == null) {
+System.out.println("Update "+factor+" "+y+" "+start);
 				ps = con.prepareStatement("UPDATE stock_price_"+y+" SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ?");
 			} else {
+System.out.println("Update "+factor+" "+y+" "+start+" "+end);
 				ps = con.prepareStatement("UPDATE stock_price_"+y+" SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ? AND date < ?");
 				ps.setDate (3, end);
 			}
