@@ -17,11 +17,12 @@ import java.util.Date;
 public class FinDataAnalyzer {
 
 	public static void main(String[] args) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException, ParseException {
+//		analyze(true); // Financial
+//		analyze(false); // Non-financial
 //		modify();
 //		growthAnalysis();
 //		analyzeGiven(false);
-//		analyze(args.length != 0 && args[0].equals("financial"));
-//		analyzeThroughTime("002024", "2004-09-01");
+//		analyzeThroughTime("000001", "1994-01-01");
 //		analyzeAsOfTime(false, "2010-05-01");
 		migrate();
 	}
@@ -104,7 +105,8 @@ public class FinDataAnalyzer {
 			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(13)) + "\t" +
 			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(14)) + "\t" +
 			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(15)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(16)) + "\n");
+			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(16)) + "\t" +
+			dateString + "\n");
 		} else {
 			if (rsResult.getString(2) == null) return;
 			System.out.print(param_stock_code + "\t" +
@@ -195,12 +197,18 @@ public class FinDataAnalyzer {
 		c.setTime(start);
 		Date now = new Date();
 		Connection conn = jdbcConnection();
+		Statement st = conn.createStatement();
+		ResultSet rs = st.executeQuery("SELECT is_financial FROM stock WHERE code = "+stockCode);
+		boolean isFinancial = false;
+		if (rs.next()) {
+			isFinancial = rs.getBoolean(1);
+		}
 		while (start.before(now)) {
-			analyzeStock(false, conn, stockCode, start);
+			analyzeStock(isFinancial, conn, stockCode, start);
 			c.add(Calendar.DATE, 5);
 			start = c.getTime();
 		}
-		analyzeStock(false, conn, stockCode, now);
+		analyzeStock(isFinancial, conn, stockCode, now);
 		conn.close();
 	}
 
@@ -362,24 +370,26 @@ public class FinDataAnalyzer {
 		Statement st1 = con.createStatement();
 		int stockId, pid;
 		String stockCode;
-		ResultSet rsCode = st1.executeQuery("SELECT code, id FROM stock WHERE code >= 600145 AND (NOT is_interesting) AND (NOT is_financial) ORDER BY code");
+		ResultSet rsCode = st1.executeQuery("SELECT code, id, is_financial FROM stock WHERE code >= 000562 AND is_financial ORDER BY code");
 		ResultSet rsPrice, analysis;
 		float usdX, hkdX, price, noShares, profit, ret, ret_max, ret_min;
 		Date start = new Date(), temp;
 		double time;
+		boolean isFinancial;
 		while (rsCode.next()) {
 			ret_max = -1000;
 			ret_min = 1000;
 			stockId = rsCode.getInt("id");
 			stockCode = rsCode.getString("code");
+			isFinancial = rsCode.getBoolean("is_financial");
 			System.out.println(stockCode+" ...");
 			for (int year = 1994; year <= 2013; year ++)
 			{
 				rsPrice = st.executeQuery(
 						"select s.code, p.date date, p.id pid\n" +
 						"from stock_price_"+year+" p inner join stock s on p.stock_id = s.id\n" +
-						"where p.pe_last_4_seasons is null and s.code = " + stockCode + "\n" +
-						"order by date;");
+						"where s.code = " + stockCode + "\n" +
+						"order by date;"); // todo p.pe_last_4_seasons is null and
 				if (pst != null) {
 					pst.close();
 				}
@@ -388,7 +398,7 @@ public class FinDataAnalyzer {
 					pid = rsPrice.getInt("pid");
 					try {
 						if (cst != null) cst.close();
-						cst = con.prepareCall("CALL analyze_nf ('" + stockCode + "', '"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"', 1)");
+						cst = con.prepareCall((isFinancial? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"', 1)");
 						analysis = cst.executeQuery();
 					} catch (MySQLSyntaxErrorException ex) {
 						System.out.println("Can't calculate return for "+stockCode+" "+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")));
