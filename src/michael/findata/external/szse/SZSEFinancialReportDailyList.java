@@ -17,7 +17,7 @@ import static michael.findata.util.FinDataConstants.*;
 
 public class SZSEFinancialReportDailyList implements ReportPublicationList {
 	Pattern p1 = Pattern.compile("、\\(([\\d]{6})\\).+：([\\d]{4})(.+度).*主要.+");
-	Pattern p2 = Pattern.compile("、\\(([\\d]{6})、([\\d]{6})\\).+：([\\d]{4})(.+度).*主要.+");
+	Pattern p2 = Pattern.compile("、\\(([\\d]{6})、([\\d]{6}).+\\).+：([\\d]{4})(.+度).*主要.+");
 	ArrayList<ReportPublication> pbs;
 	public SZSEFinancialReportDailyList(Date date) throws IOException, ParseException {
 		pbs = new ArrayList<>();

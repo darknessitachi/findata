@@ -1,6 +1,7 @@
 package michael.findata;
 
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
+import com.mysql.jdbc.exceptions.jdbc4.MySQLSyntaxErrorException;
 import michael.findata.external.*;
 import michael.findata.external.hexun2008.Hexun2008DividendData;
 import michael.findata.external.hexun2008.Hexun2008FinancialSheet;
@@ -47,13 +48,13 @@ public class FinDataExtractor {
 //		refreshStockPriceHistories();
 //		updateFindataWithDates(); // get SZ findata and report dates
 //		refreshFinData(null, true); // get SH findata and report dates
-		calculateAdjustmentFactor(1991);
+//		calculateAdjustmentFactor(2013);
 //		refreshDividendData();
+		calculateMaxMinEPEB();
 //		updateMissingReportPubDatesAccordingToFindata();
 //		updateMissingReportPubDatesAccordingToFindata2();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
 //		refreshReportPubDatesForStock(jdbcConnection(), "000758", 1804, 2008);
-
 	}
 
 	/**
@@ -1056,6 +1057,92 @@ System.out.println("Update "+factor+" "+y+" "+start+" "+end);
 			ps.setDate(2, start);
 			ps.executeUpdate();
 		}
+	}
+
+	public static void calculateMaxMinEPEB () throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
+		Connection con = jdbcConnection();
+		con.setAutoCommit(false);
+		Statement st = con.createStatement();
+		PreparedStatement pst = null;
+		CallableStatement cst = null;
+		Statement st1 = con.createStatement();
+		int currentYear = FinDataConstants.currentTimeStamp.getYear() + 1900;
+		int stockId, pid;
+		String stockCode;
+		ResultSet rsCode = st1.executeQuery("SELECT code, id, is_financial FROM stock ORDER BY code");
+		ResultSet rsPrice, analysis, rs;
+		float usdX, hkdX, price, noShares, profit, ret, ret_max, ret_min;
+		Date start = new Date(), temp;
+		double time;
+		boolean isFinancial;
+		while (rsCode.next()) {
+			stockId = rsCode.getInt("id");
+			stockCode = rsCode.getString("code");
+			isFinancial = rsCode.getBoolean("is_financial");
+			rs = st.executeQuery("select max(ep_l4s_max) ep_l4s_max, min(ep_l4s_min) ep_l4s_min from (select max(ep_l4s_max) ep_l4s_max, min(ep_l4s_min) ep_l4s_min from stock_price_"+(currentYear-1)+" where stock_id = "+stockId+" union (select max(ep_l4s_max) ep_l4s_max, min(ep_l4s_min) ep_l4s_min from stock_price_"+currentYear+" where stock_id = "+stockId+")) stock_price");
+			if (rs.next()) {
+				ret_max = rs.getFloat("ep_l4s_max");
+				ret_min = rs.getFloat("ep_l4s_min");
+			} else {
+				ret_max = -1000;
+				ret_min = 1000;
+			}
+			System.out.println(stockCode+" ...");
+			for (int year = currentYear-1; year <= currentYear; year ++)
+			{
+				rsPrice = st.executeQuery(
+						"select s.code, p.date date, p.id pid\n" +
+								"from stock_price_"+year+" p inner join stock s on p.stock_id = s.id\n" +
+								"where p.ep_last_4_seasons is null and s.code = " + stockCode + "\n" +
+								"order by date;");
+				if (pst != null) {
+					pst.close();
+				}
+				pst = con.prepareStatement("UPDATE stock_price_"+year+" SET ep_last_4_seasons = ?, ep_l4s_max = ?, ep_l4s_min = ? WHERE id = ?");
+				while (rsPrice.next()) {
+					pid = rsPrice.getInt("pid");
+					try {
+						if (cst != null) cst.close();
+						cst = con.prepareCall((isFinancial? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"', 1)");
+						analysis = cst.executeQuery();
+					} catch (MySQLSyntaxErrorException ex) {
+						System.out.println("Can't calculate return for "+stockCode+" "+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")));
+						continue;
+					}
+					if (analysis.next()) {
+						price = analysis.getFloat("cp");
+						noShares = analysis.getFloat("number_of_sh");
+						profit = analysis.getFloat("recent_4_season_prof");
+						usdX = analysis.getFloat("usd_x");
+						hkdX = analysis.getFloat("hkd_x");
+						if (stockCode.startsWith("900")) {
+							price *= usdX;
+						} else if (stockCode.startsWith("200")) {
+							price *= hkdX;
+						}
+
+						ret = profit/noShares/price;
+						if (noShares == 0) {
+							continue;
+						}
+						if (ret > ret_max) ret_max = ret;
+						if (ret < ret_min && ret > 0) ret_min = ret;
+						pst.setFloat(1, ret);
+						pst.setFloat(2, ret_max);
+						pst.setFloat(3, ret_min);
+						pst.setInt(4, pid);
+						pst.executeUpdate();
+						System.out.println(stockCode+"\t"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"\t"+ ret + "\t"+ ret_max + "\t"+ ret_min + "\t");
+					}
+				}
+			}
+			con.commit();
+			temp = new Date();
+			time = (temp.getTime() - start.getTime())/1000;
+			start = temp;
+			System.out.println(stockCode+" "+time+" seconds ... done.");
+		}
+		con.close();
 	}
 
 	private static Connection jdbcConnection() throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {

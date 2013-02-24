@@ -22,7 +22,7 @@ public class FinDataAnalyzer {
 //		modify();
 //		growthAnalysis();
 //		analyzeGiven(false);
-//		analyzeThroughTime("000001", "1994-01-01");
+//		analyzeThroughTime("600060", "1998-01-01");
 //		analyzeAsOfTime(false, "2010-05-01");
 		migrate();
 	}
@@ -415,10 +415,7 @@ public class FinDataAnalyzer {
 						} else if (stockCode.startsWith("200")) {
 							price *= hkdX;
 						}
-						// todo
-//						if ("1994-08-12".equals(FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")))) {
-//							System.out.println();
-//						}
+
 						ret = profit/noShares/price;
 						if (noShares == 0) {
 							continue;
