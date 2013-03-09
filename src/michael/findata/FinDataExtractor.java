@@ -45,10 +45,10 @@ public class FinDataExtractor {
 	public static void main(String args[]) throws IOException, SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, URISyntaxException, DocumentException, SAXException, ParseException {
 //		refreshStockCodes();
 //		refreshLatestPriceNameAndNumberOfShares();
-//		refreshStockPriceHistories();
-//		updateFindataWithDates(); // get SZ findata and report dates
-//		refreshFinData(null, true); // get SH findata and report dates
-//		calculateAdjustmentFactor(2013);
+		refreshStockPriceHistories();
+//		updateFindataWithDates(); // Update findata and report pub dates during the earnings seasons
+//		refreshFinData(null, true);
+		calculateAdjustmentFactor(2013);
 //		refreshDividendData();
 		calculateMaxMinEPEB();
 //		updateMissingReportPubDatesAccordingToFindata();
@@ -178,7 +178,7 @@ public class FinDataExtractor {
 		con.setAutoCommit(false);
 		ResultSet rs;
 		int updateCount;
-		PreparedStatement p = con.prepareStatement("SELECT code, id FROM stock WHERE (last_updated < ? or last_updated is NULL) AND NOT is_ignored ORDER BY code");
+		PreparedStatement p = con.prepareStatement("SELECT code, id FROM stock WHERE last_updated < ? OR last_updated IS NULL ORDER BY code");
 		PreparedStatement pUpdateStock = con.prepareStatement("UPDATE stock SET name=?, current_price=?, number_of_shares=?, last_updated=? WHERE code=?");
 		PreparedStatement shareNumberChange = con.prepareStatement("SELECT count(*) FROM share_number_change WHERE stock_id = ?");
 		PreparedStatement updateShareNumberChange = con.prepareStatement("INSERT INTO share_number_change (stock_id, change_date, number_of_shares) VALUES (?, ?, ?)");
