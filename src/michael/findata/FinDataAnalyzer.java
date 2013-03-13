@@ -18,13 +18,13 @@ public class FinDataAnalyzer {
 
 	public static void main(String[] args) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException, ParseException {
 //		analyze(true); // Financial
-//		analyze(false); // Non-financial
+		analyze(false); // Non-financial
 //		modify();
 //		growthAnalysis();
 //		analyzeGiven(false);
-//		analyzeThroughTime("600060", "1998-01-01");
+//		analyzeThroughTime("601328", "2007-01-01");
 //		analyzeAsOfTime(false, "2010-05-01");
-		migrate();
+//		migrate();
 	}
 
 	private static void analyzeAsOfTime(boolean isFinancial, String asOfDate) throws ParseException, ClassNotFoundException, SQLException, InstantiationException, IllegalAccessException {
@@ -106,6 +106,7 @@ public class FinDataAnalyzer {
 			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(14)) + "\t" +
 			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(15)) + "\t" +
 			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(16)) + "\t" +
+			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(17)) + "\t" +
 			dateString + "\n");
 		} else {
 			if (rsResult.getString(2) == null) return;
