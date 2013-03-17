@@ -46,11 +46,11 @@ public class FinDataExtractor {
 //		refreshStockCodes();
 //		refreshLatestPriceNameAndNumberOfShares();
 //		refreshStockPriceHistories();
-		updateFindataWithDates(); // Update findata and report pub dates during the earnings seasons
-//		refreshFinData(null, true);
+//		updateFindataWithDates(); // get SZ findata and report dates
+//		refreshFinData(null, true); // get SH findata and report dates
 //		calculateAdjustmentFactor(2013);
-		refreshDividendData();
-//		calculateMaxMinEPEB();
+//		refreshDividendData();
+		calculateMaxMinEPEB();
 //		updateMissingReportPubDatesAccordingToFindata();
 //		updateMissingReportPubDatesAccordingToFindata2();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
