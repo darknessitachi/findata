@@ -51,9 +51,9 @@ public class FinDataAnalyzer {
 		Statement stCodes = con.createStatement();
 		ResultSet rsCodes;
 		if (financial) {
-			rsCodes = stCodes.executeQuery("SELECT code FROM stock WHERE latest_year >= 2011 AND is_financial AND (NOT name LIKE '%ST%') AND NOT is_ignored ORDER BY code");
+			rsCodes = stCodes.executeQuery("SELECT code FROM stock WHERE latest_year >= 2011 AND is_financial AND (NOT name LIKE '%ST%') ORDER BY code");
 		} else {
-			rsCodes = stCodes.executeQuery("SELECT code FROM stock WHERE true AND latest_year >= 2011 AND (NOT name LIKE '%ST%') AND NOT (is_financial OR is_ignored) ORDER BY code");
+			rsCodes = stCodes.executeQuery("SELECT code FROM stock WHERE true AND latest_year >= 2011 AND (NOT name LIKE '%ST%') AND NOT is_financial ORDER BY code");
 		}
 		String param_stock_code;
 		Date today = new Date();

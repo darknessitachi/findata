@@ -40,17 +40,23 @@ enum CodeListFileType {
 	TDX  // Tong Da Xin
 }
 
+enum StyleRefreshFinData {
+	FULL,
+	FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE,
+	FILL_GIVEN
+}
+
 public class FinDataExtractor {
 
 	public static void main(String args[]) throws IOException, SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, URISyntaxException, DocumentException, SAXException, ParseException {
 //		refreshStockCodes();
 //		refreshLatestPriceNameAndNumberOfShares();
 //		refreshStockPriceHistories();
-//		updateFindataWithDates(); // get SZ findata and report dates
-//		refreshFinData(null, true); // get SH findata and report dates
+//		updateFindataWithDates();
+		refreshFinData(StyleRefreshFinData.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
 //		calculateAdjustmentFactor(2013);
 //		refreshDividendData();
-		calculateMaxMinEPEB();
+//		calculateMaxMinEPEB();
 //		updateMissingReportPubDatesAccordingToFindata();
 //		updateMissingReportPubDatesAccordingToFindata2();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
@@ -255,7 +261,7 @@ public class FinDataExtractor {
 	 * @throws InstantiationException
 	 * @param stockCodesToUpdateFindata
 	 */
-	public static void refreshFinData(HashSet<String> stockCodesToUpdateFindata, boolean updateReportPublicationDates) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException {
+	public static void refreshFinData(StyleRefreshFinData style, HashSet<String> stockCodesToUpdateFindata, boolean updateReportPublicationDates) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException {
 		Connection con = jdbcConnection();
 		String code;
 		java.util.Date cDate = FinDataConstants.currentTimeStamp;
@@ -280,15 +286,19 @@ public class FinDataExtractor {
 		FinancialSheet sheet;
 		int aYear, order, latestYear, latestSeason, cYear = -1;
 		System.out.println("Current report season: "+currentYear+" "+currentMonth/3);
-//		rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE (latest_year*12+latest_season*3) < "+(currentYear*12+currentMonth/3*3)+" AND NOT is_ignored ORDER BY code ASC");
-		if (stockCodesToUpdateFindata == null || stockCodesToUpdateFindata.isEmpty()) {
-			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE (code LIKE '9%' OR code LIKE '6%') AND (latest_year != 2012 OR latest_season != 4) AND NOT is_ignored ORDER BY code");
-		} else {
+
+		if (style == style.FILL_GIVEN && stockCodesToUpdateFindata != null && !stockCodesToUpdateFindata.isEmpty()){
 			String temp = "";
 			for (String s : stockCodesToUpdateFindata) {
 				temp += "'" + s + "', ";
 			}
 			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE code IN ("+temp+"' ') ORDER BY code");
+		} else if (style == style.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE) {
+			// Fill Missing
+			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock s, (select max(fin_year*10+fin_season) d, stock_id from report_pub_dates group by stock_id order by stock_id) rpd WHERE rpd.stock_id = s.id AND latest_year * 10 + latest_season < rpd.d ORDER BY code");
+		} else {
+			// Full
+			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE (latest_year != 2012 OR latest_season != 4) ORDER BY code");
 		}
 		short cSeason = -1;
 		boolean someSheetsAreEmpty;
@@ -619,7 +629,7 @@ public class FinDataExtractor {
 		rs.next();
 		GregorianCalendar last = new GregorianCalendar();
 		last.setTimeInMillis(rs.getDate(1).getTime());
-		last.add(Calendar.DATE, -1);
+		last.add(Calendar.DATE, -2);
 
 		HashSet<String> stocksToUpdateFindata = new HashSet<>();
 		HashSet<ReportPublication> pubs = new HashSet<>();
@@ -647,12 +657,13 @@ public class FinDataExtractor {
 			}
 		}
 
-		// Finally a timestamp
+		// Finally a timestamp and delete meaningless data
 		st.executeUpdate("UPDATE fin_data_updates SET _date = current_date()");
+		st.executeUpdate("DELETE FROM report_pub_dates WHERE stock_id IS NULL;");
 		con.close();
 
 		if (!stocksToUpdateFindata.isEmpty()) {
-			refreshFinData(stocksToUpdateFindata, false);
+			refreshFinData(StyleRefreshFinData.FILL_GIVEN, stocksToUpdateFindata, false);
 		}
 	}
 

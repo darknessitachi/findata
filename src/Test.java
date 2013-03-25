@@ -40,10 +40,10 @@ public class Test {
 //		System.out.println(m.group(3));
 //		System.out.println(m.group(4));
 //		Pattern p1 = Pattern.compile("<td class=\"td_text\"><a href=\"/f10/ggmx_(\\d{6})_[\\d_]+.html\" target=\"_blank\" title='.+([\\d?一二三四五六七八九０１２３４５６７８９]{4})年.+'>");
-//		Pattern p2 = Pattern.compile("<td class=\"align_c\">(\\d\\d\\d\\d-\\d\\d-\\d\\d)</td>");
+		Pattern p2 = Pattern.compile("、\\(([0|1|2|3][\\d]{5})、.*([0|1|2|3][\\d]{5}).*\\).+：([\\d]{4})(.+度).*主要.+");
 //		Pattern p3 = Pattern.compile("<td class=\"td_text\">(一季度报告|中期报告|三季度报告|年度报告)</td>");
-//		Matcher m = p1.matcher("                    <td class=\"td_text\"><a href=\"/f10/ggmx_000002_164892.html\" target=\"_blank\" title='万科企业股份有限公司二??六年度中期报告'>万科企业股份有限公司二??六年度中期报告</a><a href=\"http://file.ws.126.net/quotes/pdf/sz/2006/2006-8/2006-08-01/164892.pdf\" class=\"pdf\" target=\"_blank\">查看PDF公告</a></a></td>\n");
-//		System.out.println(m.find());
+		Matcher m = p2.matcher("二十四、(112132、300147) 香雪制药：2012年年度报告主要财务指标及分配预案");
+		System.out.println(m.find());
 //		System.out.println(m.group(1));
 //		System.out.println(m.group(2));
 //		m = p2.matcher("                    <td class=\"align_c\">2003-04-11</td>");
@@ -55,23 +55,23 @@ public class Test {
 //		Integer.parseInt("ss");
 //	refreshFinData(null);
 
-		URL url = new URL("http://query.sse.com.cn/infodisplay/queryLatestBulletin.do?jsonCallBack=&isPagination=false&productId=&reportType2=DQGG&reportType=ALL&beginDate=2012-08-31&endDate=2012-08-31&pageHelp.pageSize=2000&pageHelp.beginPage=1&pageHelp.endPage=1&_=1359207649232");
-		URLConnection con = url.openConnection();
-		con.setRequestProperty("Referer", "http://www.sse.com.cn/disclosure/listedinfo/announcement/search_result_index.shtml?x=1&productId=&startDate=2012-02-09&endDate=2012-02-09&reportType2=%E5%AE%9A%E6%9C%9F%E5%85%AC%E5%91%8A&reportType=ALL&moreConditions=true");
+//		URL url = new URL("http://query.sse.com.cn/infodisplay/queryLatestBulletin.do?jsonCallBack=&isPagination=false&productId=&reportType2=DQGG&reportType=ALL&beginDate=2012-08-31&endDate=2012-08-31&pageHelp.pageSize=2000&pageHelp.beginPage=1&pageHelp.endPage=1&_=1359207649232");
+//		URLConnection con = url.openConnection();
+//		con.setRequestProperty("Referer", "http://www.sse.com.cn/disclosure/listedinfo/announcement/search_result_index.shtml?x=1&productId=&startDate=2012-02-09&endDate=2012-02-09&reportType2=%E5%AE%9A%E6%9C%9F%E5%85%AC%E5%91%8A&reportType=ALL&moreConditions=true");
 //		BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF-8"));
 //		String line;
 //		while ((line = br.readLine()) != null) {
 //			System.out.println(line);
 //		}
-		JSONObject obj = (JSONObject) JSONValue.parse(new InputStreamReader(con.getInputStream(), "UTF-8"));
-		JSONArray array = (JSONArray)obj.get("result");
-		for (Object o : array) {
-			obj = (JSONObject) o;
-			System.out.println(obj.get("URL"));
-		}
+//		JSONObject obj = (JSONObject) JSONValue.parse(new InputStreamReader(con.getInputStream(), "UTF-8"));
+//		JSONArray array = (JSONArray)obj.get("result");
+//		for (Object o : array) {
+//			obj = (JSONObject) o;
+//			System.out.println(obj.get("URL"));
+//		}
 //		JSONObject obj = (JSONObject) JSONObject.fromObject(new InputStreamReader(new URL("http://query.sse.com.cn/infodisplay/queryLatestBulletin.do?jsonCallBack=&isPagination=false&productId=&reportType2=DQGG&reportType=ALL&beginDate=2012-07-25&endDate=2012-07-25&_=1359207649232").openStream()));
 //		JSONObject obj = JSONObject.fromObject("{\"actionErrors\":[],\"actionMessages\":[],\"beginDate\":\"2013-01-19\",\"endDate\":\"2013-08-19\",\"errorMessages\":[],\"errors\":{},\"fieldErrors\":{},\"isPagination\":\"false\",\"issueHomeFlag\":null,\"jsonCallBack\":\"jsonpCallback38623\",\"locale\":\"zh_CN\",\"pageHelp\":{\"beginPage\":1,\"cacheSize\":5,\"data\":null,\"endDate\":\"2013-01-19\",\"endPage\":null,\"objectResult\":null,\"pageCount\":1,\"pageNo\":1,\"pageSize\":20,\"searchDate\":null,\"sort\":null,\"startDate\":\"2013-01-19\",\"total\":2},\"productId\":\"\",\"reportType\":\"ALL\",\"reportType2\":\"DQGG\",\"result\":[{\"INDEXCLASS\":\"M_Bulletin_L_Comp\",\"PLAN_Date\":null,\"PLAN_Year\":null,\"SSEDate\":\"2013-01-19\",\"SSETime\":\"\",\"SSETimeStr\":null,\"URL\":\"http:\\/\\/static.sse.com.cn\\/disclosure\\/listedinfo\\/announcement\\/c\\/2013-01-19\\/600803_2012_nzy.pdf\",\"author\":null,\"book_Name\":null,\"bulletinHeading\":\"定期报告\",\"bulletinType\":\"年报摘要\",\"bulletin_No\":null,\"bulletin_Type\":\"年报摘要\",\"bulletin_Year\":\"2012\",\"category_A\":null,\"category_B\":null,\"category_C\":null,\"category_D\":null,\"chapter_No\":null,\"companyAbbr\":null,\"dispatch_Organ\":null,\"file_Serial\":null,\"finish_Time\":null,\"initial_Date\":null,\"isChangeFlag\":null,\"journal_Issue\":null,\"journal_Name\":null,\"journal_Section\":null,\"journal_Year\":null,\"keyWord\":\"\",\"key_Word\":\"\",\"language\":null,\"lemma_CN\":null,\"lemma_EN\":null,\"publishing_Comp\":null,\"question\":null,\"question_Class\":null,\"read_Status\":null,\"save_Time\":null,\"section\":null,\"security_Code\":\"600803\",\"source\":null,\"spareVolEnd\":null,\"title\":\"威远生化年报摘要\",\"title_ETC\":null,\"title_PY\":null,\"unit_Code\":null,\"unit_Type\":null},{\"INDEXCLASS\":\"M_Bulletin_L_Comp\",\"PLAN_Date\":null,\"PLAN_Year\":null,\"SSEDate\":\"2013-01-19\",\"SSETime\":\"\",\"SSETimeStr\":null,\"URL\":\"http:\\/\\/static.sse.com.cn\\/disclosure\\/listedinfo\\/announcement\\/c\\/2013-01-19\\/600803_2012_n.pdf\",\"author\":null,\"book_Name\":null,\"bulletinHeading\":\"定期报告\",\"bulletinType\":\"年报\",\"bulletin_No\":null,\"bulletin_Type\":\"年报\",\"bulletin_Year\":\"2012\",\"category_A\":null,\"category_B\":null,\"category_C\":null,\"category_D\":null,\"chapter_No\":null,\"companyAbbr\":null,\"dispatch_Organ\":null,\"file_Serial\":null,\"finish_Time\":null,\"initial_Date\":null,\"isChangeFlag\":null,\"journal_Issue\":null,\"journal_Name\":null,\"journal_Section\":null,\"journal_Year\":null,\"keyWord\":\"\",\"key_Word\":\"\",\"language\":null,\"lemma_CN\":null,\"lemma_EN\":null,\"publishing_Comp\":null,\"question\":null,\"question_Class\":null,\"read_Status\":null,\"save_Time\":null,\"section\":null,\"security_Code\":\"600803\",\"source\":null,\"spareVolEnd\":null,\"title\":\"威远生化年报\",\"title_ETC\":null,\"title_PY\":null,\"unit_Code\":null,\"unit_Type\":null}],\"texts\":null,\"type\":\"\"}");
-		System.out.println();
+//		System.out.println();
 	}
 
 	public static void refreshFinData(HashSet<String> stockCodesToUpdateFindata) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException {
