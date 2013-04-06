@@ -52,10 +52,10 @@ public class FinDataExtractor {
 //		refreshStockCodes();
 //		refreshLatestPriceNameAndNumberOfShares();
 //		refreshStockPriceHistories();
-//		updateFindataWithDates();
-		refreshFinData(StyleRefreshFinData.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
-//		calculateAdjustmentFactor(2013);
+		updateFindataWithDates();
+//		refreshFinData(StyleRefreshFinData.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
 //		refreshDividendData();
+//		calculateAdjustmentFactor(2013);
 //		calculateMaxMinEPEB();
 //		updateMissingReportPubDatesAccordingToFindata();
 //		updateMissingReportPubDatesAccordingToFindata2();
@@ -292,13 +292,13 @@ public class FinDataExtractor {
 			for (String s : stockCodesToUpdateFindata) {
 				temp += "'" + s + "', ";
 			}
-			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE code IN ("+temp+"' ') ORDER BY code");
+			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE code IN ("+temp+"' ') ORDER BY code DESC");
 		} else if (style == style.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE) {
 			// Fill Missing
-			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock s, (select max(fin_year*10+fin_season) d, stock_id from report_pub_dates group by stock_id order by stock_id) rpd WHERE rpd.stock_id = s.id AND latest_year * 10 + latest_season < rpd.d ORDER BY code");
+			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock s, (select max(fin_year*10+fin_season) d, stock_id from report_pub_dates group by stock_id order by stock_id) rpd WHERE rpd.stock_id = s.id AND latest_year * 10 + latest_season < rpd.d ORDER BY code DESC");
 		} else {
 			// Full
-			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE (latest_year != 2012 OR latest_season != 4) ORDER BY code");
+			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE (latest_year != 2012 OR latest_season != 4) ORDER BY code DESC");
 		}
 		short cSeason = -1;
 		boolean someSheetsAreEmpty;
