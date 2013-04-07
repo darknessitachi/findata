@@ -52,11 +52,11 @@ public class FinDataExtractor {
 //		refreshStockCodes();
 //		refreshLatestPriceNameAndNumberOfShares();
 //		refreshStockPriceHistories();
-		updateFindataWithDates();
+//		updateFindataWithDates();
 //		refreshFinData(StyleRefreshFinData.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
 //		refreshDividendData();
 //		calculateAdjustmentFactor(2013);
-//		calculateMaxMinEPEB();
+		calculateMaxMinEPEB();
 //		updateMissingReportPubDatesAccordingToFindata();
 //		updateMissingReportPubDatesAccordingToFindata2();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
@@ -863,46 +863,52 @@ public class FinDataExtractor {
 //		SecurityTimeSeriesData ts = new THSPriceHistory(code);
 		SecurityTimeSeriesData ts = new TDXPriceHistory(code);
 		Statement st = con.createStatement();
-		HashMap<Integer, PreparedStatement> pm = new HashMap<>();
-		PreparedStatement ps;
+//		HashMap<Integer, PreparedStatement> pm = new HashMap<>();
+		PreparedStatement ps = con.prepareStatement("INSERT INTO stock_price (stock_id, date, open, high, low, close, avg, adjustment_factor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
 		Statement s = con.createStatement();
 		Date latest = null;
 		int currentYear = new Date().getYear()+1900;
-		int priceYear;
+//		int priceYear;
 		ResultSet rs;
 
-		for (int y = currentYear; y >= 1991; y --) {
-			rs = s.executeQuery("SELECT max(date) FROM stock_price_"+y+" WHERE stock_id = "+stockId);
-			if (rs.next()) {
-				latest = rs.getDate(1);
-				if (latest != null) {
-					System.out.println("Got: "+yyyyMMdd.format(rs.getDate(1)));
-					break;
-				}
-			}
+//		for (int y = currentYear; y >= 1991; y --) {
+//			rs = s.executeQuery("SELECT max(date) FROM stock_price WHERE stock_id = "+stockId);
+//			if (rs.next()) {
+//				latest = rs.getDate(1);
+//				if (latest != null) {
+//					System.out.println("Got: "+yyyyMMdd.format(rs.getDate(1)));
+//					break;
+//				}
+//			}
+//		}
+
+		rs = s.executeQuery("SELECT max(date) FROM stock_price WHERE stock_id = "+stockId);
+		if (rs.next()) {
+			latest = rs.getDate(1);
 		}
 
 		if (latest == null) {
 			latest = earliest;
 		}
+
 		System.out.println("Latest: " + yyyyMMdd.format(latest));
 		con.setAutoCommit(false);
 //		System.out.println((fc.size()-headerSize)/recordSize);
 		SecurityTimeSeriesDatum temp;
 		while (ts.hasNext()) {
 			temp = ts.next();
-			priceYear = temp.getDate().getYear()+1900;
+//			priceYear = temp.getDate().getYear()+1900;
 
 			if (temp.getDate().after(latest)) {
-				System.out.println(priceYear + " " + (temp.getDate().getMonth() + 1) + " " + temp.getDate().getDate());
+				System.out.println((temp.getDate().getYear()+1900) + " " + (temp.getDate().getMonth() + 1) + " " + temp.getDate().getDate());
 			} else {
 				break;
 			}
-			ps = pm.get(priceYear);
-			if (ps == null) {
-				ps = con.prepareStatement("INSERT INTO stock_price_"+priceYear+" (stock_id, date, open, high, low, close, avg, adjustment_factor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-				pm.put(priceYear, ps);
-			}
+//			ps = pm.get(priceYear);
+//			if (ps == null) {
+//				ps = con.prepareStatement("INSERT INTO stock_price_"+priceYear+" (stock_id, date, open, high, low, close, avg, adjustment_factor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+//				pm.put(priceYear, ps);
+//			}
 			ps.setInt(1, stockId);
 			ps.setDate(2, temp.getDate());
 			ps.setInt(3, temp.getOpen());
@@ -914,16 +920,24 @@ public class FinDataExtractor {
 //			ps.executeUpdate();
 			ps.addBatch();
 		}
-		for (Map.Entry<Integer, PreparedStatement> e : pm.entrySet()) {
-			PreparedStatement p = e.getValue();
-			try {
-				p.executeBatch();
-				System.out.println(code + " "+ e.getKey()+" updated.");
-			}
-			catch (BatchUpdateException exx)
-			{
-				System.out.println(exx.getMessage());
-			}
+//		for (Map.Entry<Integer, PreparedStatement> e : pm.entrySet()) {
+//			PreparedStatement p = e.getValue();
+//			try {
+//				p.executeBatch();
+//				System.out.println(code + " "+ e.getKey()+" updated.");
+//			}
+//			catch (BatchUpdateException exx)
+//			{
+//				System.out.println(exx.getMessage());
+//			}
+//		}
+		try {
+			ps.executeBatch();
+			System.out.println(code + " updated.");
+		}
+		catch (BatchUpdateException exx)
+		{
+			System.out.println(exx.getMessage());
 		}
 		con.commit();
 		ts.close();
@@ -996,16 +1010,17 @@ public class FinDataExtractor {
 		con.setAutoCommit(false);
 		Statement st = con.createStatement();
 //		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1999-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
-		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1991-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
+		ResultSet rs = st.executeQuery("SELECT s.id stock_id, s.code code, s.name name, d.payment_date payment_date, round(d.bonus + d.split + 1, 4) fct, p.last_fct_date last_fct_date FROM dividend d, stock s, (select max(date) last_fct_date, stock_id from stock_price group by stock_id) p WHERE p.stock_id = s.id AND d.stock_id = s.id AND payment_date >= '1991-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
 		int stockId = -1;
 		String stockName = null;
 		String stockCode = null;
 		java.sql.Date dStart = null;
 		java.sql.Date dEnd = null;
+		java.sql.Date dLastFactored = null;
 		float currentAdjFactor = 1;
 		while (rs.next()) {
 			dStart = dEnd;
-
+			dLastFactored = rs.getDate("last_fct_date");
 			if (stockId != rs.getInt("stock_id")) {
 				// new Stock coming in
 				if (stockId != -1) {
@@ -1029,11 +1044,13 @@ public class FinDataExtractor {
 
 			dEnd = rs.getDate("payment_date");
 			if (dStart != null) {
-				System.out.println("Stock "+stockId+" - "+stockCode+" - "+stockName);
-				System.out.println("\tStart: "+ dStart);
-				System.out.println("\tEnd: "+ dEnd);
-				System.out.println("\tFactor: "+currentAdjFactor);
-				adjustStockPriceHistory(stockId, dStart, dEnd, currentAdjFactor, con, startPricingYear);
+				if (dStart.after(dLastFactored)) {
+					System.out.println("Stock "+stockId+" - "+stockCode+" - "+stockName);
+					System.out.println("\tStart: "+ dStart);
+					System.out.println("\tEnd: "+ dEnd);
+					System.out.println("\tFactor: "+currentAdjFactor);
+					adjustStockPriceHistory(stockId, dStart, dEnd, currentAdjFactor, con, startPricingYear);
+				}
 			}
 			currentAdjFactor *= rs.getFloat("fct");
 		}
@@ -1044,7 +1061,8 @@ public class FinDataExtractor {
 		System.out.println("\tFactor: "+currentAdjFactor);
 		adjustStockPriceHistory(stockId, dEnd, null, currentAdjFactor, con, startPricingYear);
 		// fill in 1 as adjustment factors for the nulls
-		st.executeUpdate("UPDATE stock_price_"+startPricingYear+" SET adjustment_factor = 1 WHERE adjustment_factor is NULL");
+//		st.executeUpdate("UPDATE stock_price_"+startPricingYear+" SET adjustment_factor = 1 WHERE adjustment_factor is NULL");
+		st.executeUpdate("UPDATE stock_price SET adjustment_factor = 1 WHERE adjustment_factor is NULL");
 		con.commit();
 	}
 
@@ -1055,98 +1073,116 @@ public class FinDataExtractor {
 		}
 		int endYear = (end == null? FinDataConstants.currentTimeStamp.getYear() : end.getYear()) + 1900;
 		PreparedStatement ps;
-		for (int y = startYear; y <= endYear; y++) {
-			if (end == null) {
-System.out.println("Update "+factor+" "+y+" "+start);
-				ps = con.prepareStatement("UPDATE stock_price_"+y+" SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ?");
-			} else {
-System.out.println("Update "+factor+" "+y+" "+start+" "+end);
-				ps = con.prepareStatement("UPDATE stock_price_"+y+" SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ? AND date < ?");
-				ps.setDate (3, end);
-			}
-			ps.setFloat(1, factor);
-			ps.setDate(2, start);
-			ps.executeUpdate();
+//		for (int y = startYear; y <= endYear; y++) {
+//			if (end == null) {
+//				System.out.println("Update "+factor+" "+y+" "+start);
+//				ps = con.prepareStatement("UPDATE stock_price_"+y+" SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ?");
+//			} else {
+//				System.out.println("Update "+factor+" "+y+" "+start+" "+end);
+//				ps = con.prepareStatement("UPDATE stock_price_"+y+" SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ? AND date < ?");
+//				ps.setDate (3, end);
+//			}
+//			ps.setFloat(1, factor);
+//			ps.setDate(2, start);
+//			ps.executeUpdate();
+//		}
+		if (end == null) {
+			System.out.println("Update "+factor+" "+start);
+			ps = con.prepareStatement("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ?");
+		} else {
+			System.out.println("Update "+factor+" "+start+" "+end);
+			ps = con.prepareStatement("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ? AND date < ?");
+			ps.setDate (3, end);
 		}
+		ps.setFloat(1, factor);
+		ps.setDate(2, start);
+		ps.executeUpdate();
 	}
 
 	public static void calculateMaxMinEPEB () throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		Connection con = jdbcConnection();
 		con.setAutoCommit(false);
-		Statement st = con.createStatement();
-		PreparedStatement pst = null;
+		PreparedStatement pstUpdateRow = con.prepareStatement("UPDATE stock_price SET ep_last_4_seasons = ?, ep_l4s_max = ?, ep_l4s_min = ? WHERE id = ?");
+		PreparedStatement pstGetPreviousMaxMin = con.prepareStatement("SELECT ep_l4s_max, ep_l4s_min, date FROM stock_price WHERE stock_id = ? AND ep_l4s_max IS NOT NULL AND ep_l4s_min IS NOT NULL ORDER BY DATE DESC LIMIT 1");
+		PreparedStatement pstGetRowsToUpdate = con.prepareStatement(
+				"select s.code, p.date date, p.id pid " +
+				"from stock_price p inner join stock s on p.stock_id = s.id " +
+				"where p.ep_last_4_seasons is null and s.code = ? AND date > ? " +
+				"order by date");
 		CallableStatement cst = null;
 		Statement st1 = con.createStatement();
-		int currentYear = FinDataConstants.currentTimeStamp.getYear() + 1900;
+//		int currentYear = FinDataConstants.currentTimeStamp.getYear() + 1900;
 		int stockId, pid;
 		String stockCode;
-		ResultSet rsCode = st1.executeQuery("SELECT code, id, is_financial FROM stock ORDER BY code");
+		ResultSet rsCode = st1.executeQuery("SELECT code, id, is_financial FROM stock where true ORDER BY code");
 		ResultSet rsPrice, analysis, rs;
 		float usdX, hkdX, price, noShares, profit, ret, ret_max, ret_min;
 		Date start = new Date(), temp;
+		java.sql.Date dLastCalculated;
 		double time;
 		boolean isFinancial;
 		while (rsCode.next()) {
 			stockId = rsCode.getInt("id");
 			stockCode = rsCode.getString("code");
 			isFinancial = rsCode.getBoolean("is_financial");
-			rs = st.executeQuery("select max(ep_l4s_max) ep_l4s_max, min(ep_l4s_min) ep_l4s_min from (select max(ep_l4s_max) ep_l4s_max, min(ep_l4s_min) ep_l4s_min from stock_price_"+(currentYear-1)+" where stock_id = "+stockId+" union (select max(ep_l4s_max) ep_l4s_max, min(ep_l4s_min) ep_l4s_min from stock_price_"+currentYear+" where stock_id = "+stockId+")) stock_price");
+			System.out.println(stockCode+" ...");
+			pstGetPreviousMaxMin.setInt(1, stockId);
+			rs = pstGetPreviousMaxMin.executeQuery();
 			if (rs.next()) {
 				ret_max = rs.getFloat("ep_l4s_max");
 				ret_min = rs.getFloat("ep_l4s_min");
+				dLastCalculated = rs.getDate("date");
 			} else {
 				ret_max = -1000;
 				ret_min = 1000;
+				dLastCalculated = null; // todo
 			}
-			System.out.println(stockCode+" ...");
-			for (int year = currentYear-1; year <= currentYear; year ++)
-			{
-				rsPrice = st.executeQuery(
-						"select s.code, p.date date, p.id pid\n" +
-								"from stock_price_"+year+" p inner join stock s on p.stock_id = s.id\n" +
-								"where p.ep_last_4_seasons is null and s.code = " + stockCode + "\n" +
-								"order by date;");
-				if (pst != null) {
-					pst.close();
+//			for (int year = currentYear-1; year <= currentYear; year ++)
+//			{
+			pstGetRowsToUpdate.setString(1, stockCode);
+			pstGetRowsToUpdate.setDate(2, dLastCalculated);
+			rsPrice = pstGetRowsToUpdate.executeQuery();
+//			if (pstUpdateRow != null) {
+//				pstUpdateRow.close();
+//			}
+//			pstUpdateRow = con.prepareStatement("UPDATE stock_price_"+year+" SET ep_last_4_seasons = ?, ep_l4s_max = ?, ep_l4s_min = ? WHERE id = ?");
+			while (rsPrice.next()) {
+				pid = rsPrice.getInt("pid");
+				try {
+					if (cst != null) cst.close();
+					cst = con.prepareCall((isFinancial ? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '" + FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")) + "', 1)");
+					analysis = cst.executeQuery();
+				} catch (MySQLSyntaxErrorException ex) {
+					System.out.println("Can't calculate return for " + stockCode + " " + FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")));
+					continue;
 				}
-				pst = con.prepareStatement("UPDATE stock_price_"+year+" SET ep_last_4_seasons = ?, ep_l4s_max = ?, ep_l4s_min = ? WHERE id = ?");
-				while (rsPrice.next()) {
-					pid = rsPrice.getInt("pid");
-					try {
-						if (cst != null) cst.close();
-						cst = con.prepareCall((isFinancial? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"', 1)");
-						analysis = cst.executeQuery();
-					} catch (MySQLSyntaxErrorException ex) {
-						System.out.println("Can't calculate return for "+stockCode+" "+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")));
+				if (analysis.next()) {
+					price = analysis.getFloat("cp");
+					noShares = analysis.getFloat("number_of_sh");
+					profit = analysis.getFloat("recent_4_season_prof");
+					usdX = analysis.getFloat("usd_x");
+					hkdX = analysis.getFloat("hkd_x");
+					if (stockCode.startsWith("900")) {
+						price *= usdX;
+					} else if (stockCode.startsWith("200")) {
+						price *= hkdX;
+					}
+
+					ret = profit / noShares / price;
+					if (noShares == 0) {
 						continue;
 					}
-					if (analysis.next()) {
-						price = analysis.getFloat("cp");
-						noShares = analysis.getFloat("number_of_sh");
-						profit = analysis.getFloat("recent_4_season_prof");
-						usdX = analysis.getFloat("usd_x");
-						hkdX = analysis.getFloat("hkd_x");
-						if (stockCode.startsWith("900")) {
-							price *= usdX;
-						} else if (stockCode.startsWith("200")) {
-							price *= hkdX;
-						}
-
-						ret = profit/noShares/price;
-						if (noShares == 0) {
-							continue;
-						}
-						if (ret > ret_max) ret_max = ret;
-						if (ret < ret_min && ret > 0) ret_min = ret;
-						pst.setFloat(1, ret);
-						pst.setFloat(2, ret_max);
-						pst.setFloat(3, ret_min);
-						pst.setInt(4, pid);
-						pst.executeUpdate();
-						System.out.println(stockCode+"\t"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"\t"+ ret + "\t"+ ret_max + "\t"+ ret_min + "\t");
-					}
+					if (ret > ret_max) ret_max = ret;
+					if (ret < ret_min && ret > 0) ret_min = ret;
+					pstUpdateRow.setFloat(1, ret);
+					pstUpdateRow.setFloat(2, ret_max);
+					pstUpdateRow.setFloat(3, ret_min);
+					pstUpdateRow.setInt(4, pid);
+					pstUpdateRow.executeUpdate();
+					System.out.println(stockCode + "\t" + FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")) + "\t" + ret + "\t" + ret_max + "\t" + ret_min + "\t");
 				}
 			}
+//			}
 			con.commit();
 			temp = new Date();
 			time = (temp.getTime() - start.getTime())/1000;

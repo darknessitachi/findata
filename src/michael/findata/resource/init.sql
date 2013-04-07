@@ -1,12 +1,12 @@
 -- Must use UTF-8 encoding for these tables
 CREATE TABLE source (
-	id INT AUTO_INCREMENT,
+	id INT UNSIGNED AUTO_INCREMENT,
 	class_name VARCHAR(255),
 	PRIMARY KEY (id)
 );
 
 CREATE TABLE fin_data_updates (
-  id INT AUTO_INCREMENT,
+  id INT UNSIGNED AUTO_INCREMENT,
   _date DATE,
   PRIMARY KEY (id)
 );
@@ -14,7 +14,7 @@ CREATE TABLE fin_data_updates (
 insert into fin_data_updates (_date) values ('2013-01-18');
 
 CREATE TABLE fin_field (
-	id INT AUTO_INCREMENT,
+	id INT UNSIGNED AUTO_INCREMENT,
 	fin_sheet VARCHAR(255),
 	name VARCHAR(255),
 	PRIMARY KEY (id),
@@ -22,18 +22,18 @@ CREATE TABLE fin_field (
 );
 
 CREATE TABLE share_number_change (
-	id INT AUTO_INCREMENT,
-	stock_id INT,
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
 	change_date DATE,
-	number_of_shares BIGINT,
+	number_of_shares BIGINT UNSIGNED,
 	FOREIGN KEY (stock_id) REFERENCES stock(id),
 	UNIQUE (stock_id, change_date),
 	PRIMARY KEY (id)
 );
 
 CREATE TABLE dividend (
-	id INT AUTO_INCREMENT,
-	stock_id INT,
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
 	announcement_date DATE,
 	amount FLOAT,
 	bonus FLOAT,
@@ -45,13 +45,13 @@ CREATE TABLE dividend (
 );
 
 CREATE TABLE stock (
-	id INT AUTO_INCREMENT,
+	id INT UNSIGNED AUTO_INCREMENT,
 	code VARCHAR(20),
 	name VARCHAR(20),
 	current_price FLOAT,
 	number_of_shares FLOAT,
-	latest_year INT,
-	latest_season VARCHAR(255),
+	latest_year MEDIUMINT UNSIGNED,
+	latest_season TINYINT UNSIGNED,
 	is_financial BIT,
 	is_ignored BIT,
 	last_updated TIMESTAMP,
@@ -60,77 +60,45 @@ CREATE TABLE stock (
 );
 
 CREATE TABLE report_pub_dates (
-	id INT AUTO_INCREMENT,
-	stock_id INT,
-	fin_year INT,
-	fin_season INT(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	fin_date DATE,
 	FOREIGN KEY (stock_id) REFERENCES stock(id),
 	PRIMARY KEY (id),
 	UNIQUE (stock_id, fin_year, fin_season)
 );
 
-CREATE TABLE analysis_field (
-	id INT AUTO_INCREMENT,
-	name VARCHAR(255),
-	description TEXT,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE analysis (
-	id INT AUTO_INCREMENT,
-	stock_id INT,
-	fin_year INT(5),
-	fin_season INT(1),
-	analysis_field_id INT,
-	value DOUBLE,
-	FOREIGN KEY (stock_id) REFERENCES stock(id),
-	FOREIGN KEY (analysis_field_id) REFERENCES analysis_field(id),
-	PRIMARY KEY (id),
-	UNIQUE (stock_id, fin_year, fin_season, analysis_field_id)
-);
-
--- CREATE TABLE fin_sheet (
--- 	id INT AUTO_INCREMENT,
--- 	name VARCHAR(20),
--- 	PRIMARY KEY (id),
--- 	UNIQUE (name)
--- );
-
--- CREATE TABLE fin_period (
--- 	id INT AUTO_INCREMENT,
--- 	name VARCHAR(10),
--- 	annual BOOLEAN,
--- 	PRIMARY KEY (id),
--- 	UNIQUE (name)
--- );
-
--- CREATE TABLE source (
--- 	id INT AUTO_INCREMENT,
--- 	name VARCHAR(255),
--- 	url VARCHAR(255),
--- 	PRIMARY KEY (id)
--- );
-
--- CREATE TABLE source_fin_sheet (
--- 	id INT AUTO_INCREMENT,
--- 	source_id INT,
--- 	fin_sheet_id INT,
--- 	text_pattern VARCHAR(255),
--- 	PRIMARY KEY (id),
--- 	FOREIGN KEY (source_id) REFERENCES source(id),
--- 	FOREIGN KEY (fin_sheet_id) REFERENCES fin_sheet(id)
--- );
+# CREATE TABLE analysis_field (
+# 	id INT UNSIGNED AUTO_INCREMENT,
+# 	name VARCHAR(255),
+# 	description TEXT,
+# 	PRIMARY KEY (id)
+# );
+#
+# CREATE TABLE analysis (
+# 	id INT UNSIGNED AUTO_INCREMENT,
+# 	stock_id INT UNSIGNED,
+# 	fin_year INT UNSIGNED(5),
+# 	fin_season INT UNSIGNED(1),
+# 	analysis_field_id INT UNSIGNED,
+# 	value DOUBLE,
+# 	FOREIGN KEY (stock_id) REFERENCES stock(id),
+# 	FOREIGN KEY (analysis_field_id) REFERENCES analysis_field(id),
+# 	PRIMARY KEY (id),
+# 	UNIQUE (stock_id, fin_year, fin_season, analysis_field_id)
+# );
 
 CREATE TABLE fin_data (
-	id INT AUTO_INCREMENT,
-	stock_id INT,
-	source_id INT,
-	fin_field_id INT,
-	fin_year INT,
-	fin_season INT(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	source_id INT UNSIGNED,
+	fin_field_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	value DOUBLE,
-	order_ INT,
+	order_ INT UNSIGNED,
 	PRIMARY KEY (id),
 	FOREIGN KEY (stock_id) REFERENCES stock(id),
 	FOREIGN KEY (source_id) REFERENCES source(id),
@@ -139,14 +107,14 @@ CREATE TABLE fin_data (
 );
 
 CREATE TABLE IF NOT EXISTS stock_price (
-	id INT AUTO_INCREMENT,
-	stock_id INT,
-	date DATE,
-	open INT,
-	high INT,
-	low INT,
-	close INT,
-	avg INT,
+	id BIGINT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	open INT UNSIGNED,
+	high INT UNSIGNED,
+	low INT UNSIGNED,
+	close INT UNSIGNED,
+	avg INT UNSIGNED,
 	adjustment_factor FLOAT,
   ep_last_4_seasons FLOAT,
   ep_l4s_max FLOAT,
@@ -154,16 +122,62 @@ CREATE TABLE IF NOT EXISTS stock_price (
   eb FLOAT,
   eb_max FLOAT,
   eb_min FLOAT,
-	FOREIGN KEY (stock_id) REFERENCES stock(id),
-	PRIMARY KEY (id),
+--	FOREIGN KEY (stock_id) REFERENCES stock(id), -- FOREIGN KEY is not yet supported with PARTITION
+	PRIMARY KEY (id, date), -- have to add 'date' into primary key otherwise mysql wont allow partitioning
+  INDEX (date),
 	UNIQUE (stock_id, date)
+)
+PARTITION BY RANGE (UNIX_TIMESTAMP(date)) (
+PARTITION p00 VALUES LESS THAN (UNIX_TIMESTAMP('1995-01-01 00:00:00')),
+PARTITION p01 VALUES LESS THAN (UNIX_TIMESTAMP('1998-01-01 00:00:00')),
+PARTITION p02 VALUES LESS THAN (UNIX_TIMESTAMP('1999-01-01 00:00:00')),
+PARTITION p03 VALUES LESS THAN (UNIX_TIMESTAMP('2000-01-01 00:00:00')),
+PARTITION p04 VALUES LESS THAN (UNIX_TIMESTAMP('2001-01-01 00:00:00')),
+PARTITION p05 VALUES LESS THAN (UNIX_TIMESTAMP('2002-01-01 00:00:00')),
+PARTITION p06 VALUES LESS THAN (UNIX_TIMESTAMP('2003-01-01 00:00:00')),
+PARTITION p07 VALUES LESS THAN (UNIX_TIMESTAMP('2004-01-01 00:00:00')),
+PARTITION p08 VALUES LESS THAN (UNIX_TIMESTAMP('2005-01-01 00:00:00')),
+PARTITION p09 VALUES LESS THAN (UNIX_TIMESTAMP('2006-01-01 00:00:00')),
+PARTITION p10 VALUES LESS THAN (UNIX_TIMESTAMP('2007-01-01 00:00:00')),
+PARTITION p11 VALUES LESS THAN (UNIX_TIMESTAMP('2008-01-01 00:00:00')),
+PARTITION p12 VALUES LESS THAN (UNIX_TIMESTAMP('2009-01-01 00:00:00')),
+PARTITION p13 VALUES LESS THAN (UNIX_TIMESTAMP('2010-01-01 00:00:00')),
+PARTITION p14 VALUES LESS THAN (UNIX_TIMESTAMP('2011-01-01 00:00:00')),
+PARTITION p15 VALUES LESS THAN (UNIX_TIMESTAMP('2012-01-01 00:00:00')),
+PARTITION p16 VALUES LESS THAN (UNIX_TIMESTAMP('2013-01-01 00:00:00')),
+PARTITION p17 VALUES LESS THAN (UNIX_TIMESTAMP('2014-01-01 00:00:00')),
+PARTITION p18 VALUES LESS THAN (UNIX_TIMESTAMP('2015-01-01 00:00:00')),
+PARTITION p19 VALUES LESS THAN (UNIX_TIMESTAMP('2016-01-01 00:00:00')),
+PARTITION p20 VALUES LESS THAN (UNIX_TIMESTAMP('2017-01-01 00:00:00')),
+PARTITION p21 VALUES LESS THAN (UNIX_TIMESTAMP('2018-01-01 00:00:00')),
+PARTITION p22 VALUES LESS THAN (UNIX_TIMESTAMP('2019-01-01 00:00:00')),
+PARTITION p23 VALUES LESS THAN (UNIX_TIMESTAMP('2020-01-01 00:00:00')),
+PARTITION p24 VALUES LESS THAN (UNIX_TIMESTAMP('2021-01-01 00:00:00')),
+PARTITION p25 VALUES LESS THAN (UNIX_TIMESTAMP('2022-01-01 00:00:00')),
+PARTITION p26 VALUES LESS THAN (UNIX_TIMESTAMP('2023-01-01 00:00:00')),
+PARTITION p27 VALUES LESS THAN (UNIX_TIMESTAMP('2024-01-01 00:00:00')),
+PARTITION p28 VALUES LESS THAN (UNIX_TIMESTAMP('2025-01-01 00:00:00')),
+PARTITION p29 VALUES LESS THAN (UNIX_TIMESTAMP('2026-01-01 00:00:00')),
+PARTITION p30 VALUES LESS THAN (UNIX_TIMESTAMP('2027-01-01 00:00:00')),
+PARTITION p31 VALUES LESS THAN (UNIX_TIMESTAMP('2028-01-01 00:00:00')),
+PARTITION p32 VALUES LESS THAN (UNIX_TIMESTAMP('2029-01-01 00:00:00')),
+PARTITION p33 VALUES LESS THAN (UNIX_TIMESTAMP('2030-01-01 00:00:00')),
+PARTITION p34 VALUES LESS THAN (UNIX_TIMESTAMP('2031-01-01 00:00:00')),
+PARTITION p35 VALUES LESS THAN (UNIX_TIMESTAMP('2032-01-01 00:00:00')),
+PARTITION p36 VALUES LESS THAN (UNIX_TIMESTAMP('2033-01-01 00:00:00')),
+PARTITION p37 VALUES LESS THAN (UNIX_TIMESTAMP('2034-01-01 00:00:00')),
+PARTITION p38 VALUES LESS THAN (UNIX_TIMESTAMP('2035-01-01 00:00:00')),
+PARTITION p39 VALUES LESS THAN (UNIX_TIMESTAMP('2036-01-01 00:00:00')),
+PARTITION p40 VALUES LESS THAN (UNIX_TIMESTAMP('2037-01-01 00:00:00')),
+PARTITION p41 VALUES LESS THAN (UNIX_TIMESTAMP('2038-01-01 00:00:00')),
+PARTITION p99 VALUES LESS THAN (MAXVALUE)
 );
 
 create table profit_and_loss_nf (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	pl01 double,
 	pl02 double,
 	pl03 double,
@@ -197,10 +211,10 @@ create table profit_and_loss_nf (
 );
 
 create table profit_and_loss_f (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	pl01 double,
 	pl02 double,
 	pl03 double,
@@ -254,10 +268,10 @@ create table profit_and_loss_f (
 );
 
 create table balance_sheet_nf (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	bs01 double,
 	bs02 double,
 	bs03 double,
@@ -331,10 +345,10 @@ create table balance_sheet_nf (
 );
 
 create table balance_sheet_f (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	bs01 double,
 	bs02 double,
 	bs03 double,
@@ -430,10 +444,10 @@ create table balance_sheet_f (
 );
 
 create table cash_flow_nf (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	cf01 double,
 	cf02 double,
 	cf03 double,
@@ -499,10 +513,10 @@ create table cash_flow_nf (
 );
 
 create table cash_flow_f (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	cf01 double,
 	cf02 double,
 	cf03 double,
@@ -556,10 +570,10 @@ create table cash_flow_f (
 );
 
 create table provision (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	pv01 double,
 	pv02 double,
 	pv03 double,
@@ -582,10 +596,10 @@ create table provision (
 );
 
 create table profit_and_loss_single_season_nf (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	pl01 double,
 	pl02 double,
 	pl03 double,
@@ -619,10 +633,10 @@ create table profit_and_loss_single_season_nf (
 );
 
 create table profit_and_loss_single_season_f (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	pl01 double,
 	pl02 double,
 	pl03 double,
@@ -676,10 +690,10 @@ create table profit_and_loss_single_season_f (
 );
 
 create table cash_flow_single_season_nf (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	cf01 double,
 	cf02 double,
 	cf03 double,
@@ -745,10 +759,10 @@ create table cash_flow_single_season_nf (
 );
 
 create table cash_flow_single_season_f (
-	id int auto_increment,
-	stock_id int,
-	fin_year int(2),
-	fin_season int(1),
+	id INT UNSIGNED AUTO_INCREMENT,
+	stock_id INT UNSIGNED,
+	fin_year MEDIUMINT UNSIGNED,
+	fin_season TINYINT UNSIGNED,
 	cf01 double,
 	cf02 double,
 	cf03 double,

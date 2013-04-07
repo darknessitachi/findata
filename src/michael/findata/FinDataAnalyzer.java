@@ -17,12 +17,12 @@ import java.util.Date;
 public class FinDataAnalyzer {
 
 	public static void main(String[] args) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException, ParseException {
-//		analyze(true); // Financial
-		analyze(false); // Non-financial
+		analyze(true); // Financial
+//		analyze(false); // Non-financial
 //		modify();
 //		growthAnalysis();
 //		analyzeGiven(false);
-//		analyzeThroughTime("601328", "2007-01-01");
+//		analyzeThroughTime("600519", "2000-01-01");
 //		analyzeAsOfTime(false, "2010-05-01");
 //		migrate();
 	}
@@ -362,6 +362,7 @@ public class FinDataAnalyzer {
 		}
 	}
 
+	// todo if this method is ever gonna be used again, you need to get rid of the price_year thing
 	public static void migrate () throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		Connection con = jdbcConnection();
 		con.setAutoCommit(false);
