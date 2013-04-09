@@ -49,18 +49,21 @@ enum StyleRefreshFinData {
 public class FinDataExtractor {
 
 	public static void main(String args[]) throws IOException, SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, URISyntaxException, DocumentException, SAXException, ParseException {
+
+		Date dt = new Date();
 //		refreshStockCodes();
 //		refreshLatestPriceNameAndNumberOfShares();
-//		refreshStockPriceHistories();
+		refreshStockPriceHistories();
 //		updateFindataWithDates();
 //		refreshFinData(StyleRefreshFinData.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
 //		refreshDividendData();
 //		calculateAdjustmentFactor(2013);
-		calculateMaxMinEPEB();
+//		calculateMaxMinEPEB();
 //		updateMissingReportPubDatesAccordingToFindata();
 //		updateMissingReportPubDatesAccordingToFindata2();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
 //		refreshReportPubDatesForStock(jdbcConnection(), "000758", 1804, 2008);
+		System.out.printf("%d",(new Date().getTime() - dt.getTime()));
 	}
 
 	/**
@@ -594,7 +597,9 @@ public class FinDataExtractor {
 	public static void refreshStockPriceHistories() throws IOException, SQLException, ParseException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		Connection c = jdbcConnection();
 		Statement s = c.createStatement();
+		Date dt = new Date();
 		ResultSet rs = s.executeQuery("SELECT code, id, name FROM stock ORDER BY code");
+		System.out.println((new Date().getTime() - dt.getTime()));
 		int id;
 		String code, name;
 		while (rs.next()) {
@@ -612,7 +617,7 @@ public class FinDataExtractor {
 //			} else {
 //				System.out.println("... No pricing data for this stock...");
 //			}
-			refreshStockPriceHistory(id, code, c);
+//			refreshStockPriceHistory(id, code, c);
 		}
 		c.close();
 	}

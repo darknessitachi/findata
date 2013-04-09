@@ -1,0 +1,20 @@
+<component name="libraryTable">
+  <library name="Hibernate Validator.4.2.0-Hibernate Validator.4.2.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/activation-1.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/hibernate-validator-4.2.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/hibernate-validator-annotation-processor-4.2.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jaxb-api-2.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jaxb-impl-2.1.12.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/joda-time-1.6.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jsoup-1.5.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/log4j-1.2.16.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.6.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-log4j12-1.6.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/stax-api-1.0-2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/validation-api-1.0.0.GA.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
