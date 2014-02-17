@@ -1,5 +1,6 @@
 package michael.findata.external.hexun2008;
 
+import michael.findata.external.ExternalDataException;
 import michael.findata.external.SecurityShareNumberChange;
 import michael.findata.external.SecurityShareNumberChangesData;
 import michael.findata.external.SecurityShareNumberDatum;
@@ -25,6 +26,7 @@ public class Hexun2008ShareNumberDatum extends SecurityShareNumberDatum implemen
 
 	public Hexun2008ShareNumberDatum(String stockCode) {
 		this.stockCode = stockCode;
+		shareNumberChanges = new ArrayList<>();
 
 		String [] characteristicsString = {
 				"<td class=\"bgcolor\" width=\"69%\"><strong>",
@@ -41,7 +43,6 @@ public class Hexun2008ShareNumberDatum extends SecurityShareNumberDatum implemen
 			int index, changeCounter = 0;
 			Number nos;
 			Date changeDate = null;
-			shareNumberChanges = new ArrayList<SecurityShareNumberChange>();
 			while (line != null) {
 //				System.out.println(line);
 				if (line.contains(">--<")) break;

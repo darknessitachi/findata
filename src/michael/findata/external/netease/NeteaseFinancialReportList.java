@@ -23,11 +23,11 @@ import static michael.findata.util.FinDataConstants.s4Report;
 public class NeteaseFinancialReportList implements ReportPublicationList{
 
 	//todo: '?' from the web page still cannot be recognized.
-	private static Pattern p1 = Pattern.compile("<td class=\"td_text\"><a href=\"/f10/ggmx_(\\d{6})_[\\d_]+.html\" target=\"_blank\" title='.+([\\d?一二三四五六七八九０１２３４５６７８９]{4})年.+'>");
+	private static Pattern p1 = Pattern.compile("<td class=\"td_text\"><a href=\"/f10/ggmx_(\\d{6})_[\\d_]+.html\" target=\"_blank\" title='.+([\\d?一二三四五六七八九０１２３４５６７８９]{4})年?.+'>");
 	private static Pattern p2 = Pattern.compile("<td class=\"align_c\">(\\d\\d\\d\\d-\\d\\d-\\d\\d)</td>");
 	private static Pattern p3 = Pattern.compile("<td class=\"td_text\">(一季度报告|中期报告|三季度报告|年度报告)</td>");
 	HashSet<ReportPublication> pbs;
-	public NeteaseFinancialReportList (String code) throws IOException, ParseException {
+	public NeteaseFinancialReportList (String code) throws IOException {
 		String d = "", dt = null;
 		pbs = new HashSet<>();
 		int year, season;
@@ -62,7 +62,13 @@ public class NeteaseFinancialReportList implements ReportPublicationList{
 						);
 					}
 //					System.out.println(m2.group(1));
-					date = FinDataConstants.yyyyDashMMDashdd.parse(m2.group(1));
+
+					try {
+						date = FinDataConstants.yyyyDashMMDashdd.parse(m2.group(1));
+					} catch (ParseException e) {
+						System.out.println("Cannot understand "+m2.group(1)+" for date.");
+						continue;
+					}
 					switch (m3.group(1)) {
 						case "一季度报告":
 							season = 1;
@@ -80,7 +86,7 @@ public class NeteaseFinancialReportList implements ReportPublicationList{
 							System.out.println("Cannot understand "+m3.group(1)+" for season.");
 							continue;
 					}
-					pbs.add(new ReportPublication(date, code, year, season));
+					pbs.add(new ReportPublication(date, code, null, year, season));
 				}
 				sBuffer1 = sBuffer2;
 				sBuffer2 = sBuffer3;

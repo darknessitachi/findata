@@ -1,6 +1,5 @@
 package michael.findata;
 
-import com.mysql.jdbc.exceptions.jdbc4.MySQLSyntaxErrorException;
 import michael.findata.external.hexun2008.Hexun2008Constants;
 import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
@@ -17,12 +16,20 @@ import java.util.Date;
 public class FinDataAnalyzer {
 
 	public static void main(String[] args) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException, ParseException {
-		analyze(true); // Financial
-//		analyze(false); // Non-financial
+		if (args.length != 1) {
+			System.err.println("Usage: [command] true|false");
+			return;
+		}
+		if ("true".equals(args[0])) {
+			analyze(true); // Financial
+		} else if ("false".equals(args[0])) {
+			analyze(false); // Non-financial
+		}
+
 //		modify();
 //		growthAnalysis();
 //		analyzeGiven(false);
-//		analyzeThroughTime("600519", "2000-01-01");
+//		analyzeThroughTime("000568", "2000-01-01");
 //		analyzeAsOfTime(false, "2010-05-01");
 //		migrate();
 	}
@@ -402,7 +409,7 @@ public class FinDataAnalyzer {
 						if (cst != null) cst.close();
 						cst = con.prepareCall((isFinancial? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"', 1)");
 						analysis = cst.executeQuery();
-					} catch (MySQLSyntaxErrorException ex) {
+					} catch (SQLSyntaxErrorException ex) {
 						System.out.println("Can't calculate return for "+stockCode+" "+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")));
 						continue;
 					}

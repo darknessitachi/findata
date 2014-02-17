@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
 import static michael.findata.util.FinDataConstants.*;
 
 public class SZSEFinancialReportDailyList implements ReportPublicationList {
+	public static String pt = "finalpage/(\\d\\d\\d\\d-\\d\\d-\\d\\d)/\\d+.PDF' target=new>(.{2,8})：(\\d\\d\\d\\d)年?(第一季|半年|第三季|年)度报告";
+
 	Pattern p1 = Pattern.compile("、\\(([0|2|3][\\d]{5})\\).+：([\\d]{4})(.+度).*主要.+");
 	Pattern p2 = Pattern.compile("、\\(([0|1|2|3][\\d]{5})、.*([0|1|2|3][\\d]{5}).*\\).+：([\\d]{4})(.+度).*主要.+");
 	ArrayList<ReportPublication> pbs;
@@ -30,23 +32,26 @@ public class SZSEFinancialReportDailyList implements ReportPublicationList {
 		} catch (FileNotFoundException ex) {
 			return;
 		}
-		String sBuffer3;
+		String sBuffer3, sBufferPrev = "", sLine;
 		String code1, code2, fin_year, fin_season;
 		int season;
-		BufferedReader l_reader = new BufferedReader(new InputStreamReader(is));
+		BufferedReader l_reader = new BufferedReader(new InputStreamReader(is, "GB2312"));
 		Matcher matcher;
 
 		while ((sBuffer3 = l_reader.readLine()) != null) {
 			code1 = "";
 			code2 = "";
 //			System.out.println(sBuffer3);
-			matcher = p1.matcher(sBuffer3);
+			sLine = sBufferPrev + sBuffer3;
+			System.out.println(sLine);
+			sBufferPrev = sBuffer3;
+			matcher = p1.matcher(sLine);
 			if (matcher.find()) {
 				code1 = matcher.group(1);
 				fin_year = matcher.group(2);
 				fin_season = matcher.group(3);
 			} else {
-				matcher = p2.matcher(sBuffer3);
+				matcher = p2.matcher(sLine);
 				if (matcher.find()) {
 					code1 = matcher.group(1);
 					code2 = matcher.group(2);
@@ -68,10 +73,10 @@ public class SZSEFinancialReportDailyList implements ReportPublicationList {
 				System.out.println("Can't figure out season: " + code1 + " " + code2 + date + " " + fin_season);
 				continue;
 			}
-			pbs.add(new ReportPublication(date, code1, Integer.parseInt(fin_year), season));
+			pbs.add(new ReportPublication(date, code1, null, Integer.parseInt(fin_year), season));
 //			System.out.println(code1 + " " + fin_year + " " + fin_season + " " + FinDataConstants.yyyyDashMMDashdd.format(date));
 			if (!code2.equals("")) {
-				pbs.add(new ReportPublication(date, code2, Integer.parseInt(fin_year), season));
+				pbs.add(new ReportPublication(date, code2, null, Integer.parseInt(fin_year), season));
 //				System.out.println(code2 + " " + fin_year + " " + fin_season + " " + FinDataConstants.yyyyDashMMDashdd.format(date));
 			}
 		}

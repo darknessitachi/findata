@@ -19,7 +19,8 @@ public class SZSEReportPublication extends ReportPublication {
 
 	private static URL szseListedCompanyReportUrl;
 	private static String [] seasonParam = {"010305","010303", "010307", "010301"};
-	public static Pattern p = Pattern.compile("target=\"new\">.*([\\d,O]{4})\\s*年(.*)报告(摘要|正文|全文)?(（更新后）|（已取消）|\\(修订版\\))?<.*");
+//	public static Pattern p = Pattern.compile("target=\"new\">.*([\\d,O]{4})\\s*年?(.*)报告(摘要|正文|全文)?(|（更新后）|（已取消）|\\(修订版\\))?<.*");
+	public static Pattern p = Pattern.compile("target=\"new\">.*([\\d,O]{4})\\s*年?(.*)报告");
 //=======
 //	private static String s1Report = "一季";
 //	private static String s2Report = "半年";
@@ -46,6 +47,7 @@ public class SZSEReportPublication extends ReportPublication {
 		connection.setDoOutput(true);
 		OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream(), "gb2312");
 		out.write("leftid=1&lmid=drgg&pageNo=1&stockCode="+code+"&keyword=&noticeType="+seasonParam[season-1]+"&startTime="+y+"-01-01&endTime="+(y+1)+"-12-31&tzy=&imageField.x=16&imageField.y=8");
+//		out.write("leftid=1&lmid=drgg&pageNo=1&stockCode="+code+"&keyword=&noticeType=&startTime="+y+"-01-01&endTime="+(y+1)+"-12-31&tzy=&imageField.x=16&imageField.y=8");
 		out.flush();
 		out.close();
 
@@ -54,9 +56,10 @@ public class SZSEReportPublication extends ReportPublication {
 		l_urlStream = connection.getInputStream();
 
 		Matcher m, n;
-		BufferedReader l_reader = new BufferedReader(new InputStreamReader(l_urlStream));
+		BufferedReader l_reader = new BufferedReader(new InputStreamReader(l_urlStream, "GB2312"));
 		String year;
 		while ((sBuffer3 = l_reader.readLine()) != null) {
+//			System.out.println(sBuffer3);
 			m = p.matcher(sBuffer1);
 			n = q.matcher(sBuffer3);
 			if (m.find() && n.find()) {

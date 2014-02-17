@@ -1,10 +1,9 @@
-import michael.findata.service.ReportPubDateService;
-import michael.findata.service.StockPriceService;
-import michael.findata.service.StockService;
+import michael.findata.service.*;
 import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.tdx.TDXPriceHistory;
 import michael.findata.model.Stock;
+import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
 import org.cyberneko.html.parsers.DOMParser;
 import org.dom4j.Document;
@@ -24,6 +23,8 @@ import java.sql.*;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static michael.findata.util.FinDataConstants.*;
 
@@ -32,24 +33,40 @@ public class Test {
 	private static EntityManagerFactory entityManagerFactory;
 
 	public static void main (String [] args) throws ClassNotFoundException, SQLException, InstantiationException, IOException, IllegalAccessException, ParseException {
-//		Pattern p2 = Pattern.compile("、\\(([0|1|2|3][\\d]{5})、.*([0|1|2|3][\\d]{5}).*\\).+：([\\d]{4})(.+度).*主要.+");
-//		Matcher m = p2.matcher("二十四、(112132、300147) 香雪制药：2012年年度报告主要财务指标及分配预案");
+//		Pattern p2 = Pattern.compile("target=\"new\">.*([\\d,O]{4})\\s*年?(.*)报告(摘要|正文|全文)?(（更新后）|（已取消）|\\(修订版\\))?<.*");
+//		Matcher m = p2.matcher("target=\"new\">路翔股份：2012年年半年度报告</a>&nbsp;&nbsp;&nbsp;<img width=\"19\" height=\"21\" border=\"0\"  src=\"images2008/pdf.jpg\"  onerror=\"this.src='images2008/otherfile.jpg'\"/>");
 //		System.out.println(m.find());
+//		System.out.println(m.group());
+//		System.out.println(m.find());
+//		System.out.println(m.group());
+//		System.out.println(m.find());
+//		System.out.println(m.group());
 
 //		Date dt = new Date();
 //		refreshStockPriceHistories();
 //		System.out.printf("%d",(new Date().getTime() - dt.getTime()));
 
-//		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/findata_spring.xml");
-//		ReportPubDateService spds = (ReportPubDateService) context.getBean("reportPubDateService");
-//		StockPriceService sps = (StockPriceService) context.getBean("stockPriceService");
-//		StockService ss = (StockService) context.getBean("stockService");
-//
-//		ss.refreshStockCodes();
-//		sps.refreshStockPriceHistories();
-//		ss.updateFindataWithDates();
+		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/findata_spring.xml");
+		ReportPubDateService spds = (ReportPubDateService) context.getBean("reportPubDateService");
+		StockPriceService sps = (StockPriceService) context.getBean("stockPriceService");
+		StockService ss = (StockService) context.getBean("stockService");
+		FinDataService fds = (FinDataService) context.getBean("finDataService");
+		DividendService ds = (DividendService) context.getBean("dividendService");
+		ShareNumberChangeService sncs = (ShareNumberChangeService) context.getBean("shareNumberChangeService");
 
-        System.out.println("你来了？");
+		// The following are used regularly throughout the year
+//		ss.refreshStockCodes();
+//		ss.refreshLatestPriceAndName();
+//		sncs.refreshNumberOfShares();
+//		sps.refreshStockPriceHistories();
+//		ds.refreshDividendData();
+
+		// The following are used mainly during and immediately after earnings report seasons
+//		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
+//		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
+//		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false);
+		fds.refreshMissingFinDataAccordingToReportPubDates();
+		spds.scanForMissingPublicationDates();
 	}
 
 	// Bulk-load stock pricing data from THS, make sure THS pricing data is complete before doing this!!!!!

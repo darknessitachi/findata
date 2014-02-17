@@ -45,16 +45,16 @@ public class NeteaseTradingDatum extends SecurityTradingDatum {
 	}
 
 	@Override
-	public Double getValue() {
-		return (Double) getProperty("price");
+	public Number getValue() {
+		return (Number) getProperty("price");
 	}
 
 	public String getStockName() {
 		return (String) getProperty("name");
 	}
 
-	public Double getCurrent() {
-		return (Double) getProperty("price");
+	public Number getCurrent() {
+		return (Number) getProperty("price");
 	}
 
 	private Object getProperty(String name) {

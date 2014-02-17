@@ -11,5 +11,7 @@ public class SZSEReportPublicationTest {
 		new SZSEReportPublication("000767", 2007, 2);
 		new SZSEReportPublication("000767", 2007, 3);
 		new SZSEReportPublication("000767", 2007, 4);
+		new SZSEReportPublication("200011", 2013, 1);
+		System.out.println();
 	}
 }

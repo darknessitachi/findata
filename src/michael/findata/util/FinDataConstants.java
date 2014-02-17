@@ -8,7 +8,7 @@ import java.util.Map;
 
 public final class FinDataConstants {
 
-	public static final String BASE_NAME = "/michael/findata/resource/init.properties";
+	public static final String BASE_NAME = "/michael/findata/init.properties";
 
 	public static final String JDBC_URL = ResourceUtil.getString("michael.findata.db.url");
 
@@ -22,7 +22,18 @@ public final class FinDataConstants {
 
 	public static final String TDX_BASE_DIR = ResourceUtil.getString("michael.findata.tdxbase");
 
+	// The most recent # days covered when calculating stock price adjustment factor;
+	public static final int DAYS_ADJ_FACTOR_CALC = ResourceUtil.getInt("michael.findata.days_adj_factor_calc");
+
+	// The most recent # days covered when getting report publication dates from websites;
+	public static final int DAYS_REPORT_PUB_DATES = ResourceUtil.getInt("michael.findata.days_report_pub_dates");
+
 	public static final Date currentTimeStamp = new Date();
+
+	// Some early dates to assume for date range lower bound in database
+	// See more explanation from actual usages
+	public static final Date EARLIEST = new Date(3, 3, 3);
+
 
 	public static final Map<String, String> ABShareCodeRef = new HashMap<>();
 
@@ -109,6 +120,7 @@ public final class FinDataConstants {
 		ABShareCodeRef.put("600054", "900942");
 		ABShareCodeRef.put("600272", "900943");
 		ABShareCodeRef.put("600221", "900945");
+		ABShareCodeRef.put("600698", "900946");
 		ABShareCodeRef.put("600320", "900947");
 		ABShareCodeRef.put("600190", "900952");
 		ABShareCodeRef.put("600555", "900955");
@@ -215,6 +227,7 @@ public final class FinDataConstants {
 		BAShareCodeRef.put("900942", "600054");
 		BAShareCodeRef.put("900943", "600272");
 		BAShareCodeRef.put("900945", "600221");
+		BAShareCodeRef.put("900946", "600698");
 		BAShareCodeRef.put("900947", "600320");
 		BAShareCodeRef.put("900948", "900948");
 		BAShareCodeRef.put("900949", "900949");
@@ -257,4 +270,5 @@ public final class FinDataConstants {
 	public static String s2Report2 = "中期";
 	public static String s3Report = "三季";
 	public static String s4Report = "年度";
+	public static String s4Report2 = "年";
 }

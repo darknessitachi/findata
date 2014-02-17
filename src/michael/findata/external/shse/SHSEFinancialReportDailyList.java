@@ -46,10 +46,12 @@ public class SHSEFinancialReportDailyList implements ReportPublicationList {
 				code = matcher.group(2);
 				fin_year = matcher.group(3);
 				fin_season = matcher.group(4);
-				pbs.add(new ReportPublication(FinDataConstants.yyyyDashMMDashdd.parse(dt), code, Integer.parseInt(fin_year), ("n".equals(fin_season) ? 4 : ("z".equals(fin_season) ? 2 : Integer.parseInt(fin_season)))));
+				pbs.add(new ReportPublication(FinDataConstants.yyyyDashMMDashdd.parse(dt), code, null, Integer.parseInt(fin_year), ("n".equals(fin_season) ? 4 : ("z".equals(fin_season) ? 2 : Integer
+						.parseInt(fin_season)))));
 				code = FinDataConstants.ABShareCodeRef.get(code);
 				if (code != null) {
-					pbs.add(new ReportPublication(FinDataConstants.yyyyDashMMDashdd.parse(dt), code, Integer.parseInt(fin_year), ("n".equals(fin_season) ? 4 : ("z".equals(fin_season) ? 2 : Integer.parseInt(fin_season)))));
+					pbs.add(new ReportPublication(FinDataConstants.yyyyDashMMDashdd.parse(dt), code, null, Integer.parseInt(fin_year), ("n".equals(fin_season) ? 4 : ("z".equals(fin_season) ? 2 :
+							Integer.parseInt(fin_season)))));
 				}
 //				System.out.println(code + " " + fin_year + " " + fin_season + " " + dt);
 			}

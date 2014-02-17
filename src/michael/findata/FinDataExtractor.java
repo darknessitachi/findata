@@ -1,7 +1,5 @@
 package michael.findata;
 
-import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
-import com.mysql.jdbc.exceptions.jdbc4.MySQLSyntaxErrorException;
 import michael.findata.external.*;
 import michael.findata.external.hexun2008.Hexun2008DividendData;
 import michael.findata.external.hexun2008.Hexun2008FinancialSheet;
@@ -14,31 +12,18 @@ import michael.findata.external.szse.SZSEReportPublication;
 import michael.findata.external.tdx.TDXPriceHistory;
 import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
-import org.cyberneko.html.parsers.DOMParser;
-import org.dom4j.Document;
 import org.dom4j.DocumentException;
-import org.dom4j.Element;
-import org.dom4j.XPath;
-import org.dom4j.io.DOMReader;
 import org.xml.sax.SAXException;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.sql.*;
-import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.*;
 import java.util.Date;
 
 import static michael.findata.util.FinDataConstants.*;
 import static michael.findata.util.FinDataConstants.SheetType.*;
-
-enum CodeListFileType {
-	THS, // Tong Hua Shun
-	TDX  // Tong Da Xin
-}
 
 enum StyleRefreshFinData {
 	FULL,
@@ -48,138 +33,21 @@ enum StyleRefreshFinData {
 
 public class FinDataExtractor {
 
-	public static void main(String args[]) throws IOException, SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, URISyntaxException, DocumentException, SAXException, ParseException {
-
+	public static void main(String args[]) throws IOException, SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, URISyntaxException, DocumentException, SAXException, ParseException, ExternalDataException {
 		Date dt = new Date();
-//		refreshStockCodes();
+//		refreshStockCodes(); //
 //		refreshLatestPriceNameAndNumberOfShares();
-		refreshStockPriceHistories();
-//		updateFindataWithDates();
+//		refreshStockPriceHistories(); //
+//		updateFindataWithDates(); //
 //		refreshFinData(StyleRefreshFinData.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
-//		refreshDividendData();
-//		calculateAdjustmentFactor(2013);
-//		calculateMaxMinEPEB();
+//		refreshDividendData(); //
+		calculateAdjustmentFactor(DAYS_ADJ_FACTOR_CALC);
+		calculateMaxMinEPEB();
 //		updateMissingReportPubDatesAccordingToFindata();
 //		updateMissingReportPubDatesAccordingToFindata2();
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
-//		refreshReportPubDatesForStock(jdbcConnection(), "000758", 1804, 2008);
+//		refreshReportPubDatesForStockForAYear(jdbcConnection(), "000758", 1804, 2008);
 		System.out.printf("%d",(new Date().getTime() - dt.getTime()));
-	}
-
-	/**
-	 * Refresh stock code table from stock data software (Tong Da Xin or Tong Hua Shun)
-	 * @throws IOException
-	 * @throws SQLException
-	 * @throws ClassNotFoundException
-	 * @throws IllegalAccessException
-	 * @throws InstantiationException
-	 */
-	public static void refreshStockCodes() throws IOException, SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
-		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(ResourceUtil.getString(STOCK_LIST_FILE))));
-		Connection con = jdbcConnection();
-		Statement st = con.createStatement();
-		String line;
-		int updateCount;
-		CodeListFileType fileType;
-		ArrayList<String> codeList = new ArrayList<String>();
-
-		ResultSet rs;
-		HashSet<String> codeSetOriginal = new HashSet<String>();
-		rs = st.executeQuery("SELECT code FROM stock");
-		while (rs.next()) {
-			codeSetOriginal.add(rs.getString(1));
-		}
-
-		// Determining the type of stock list file
-		br.mark(100);
-		br.readLine();
-		if (br.readLine().contains("[Market]")) {
-			fileType = CodeListFileType.THS;
-		} else {
-			fileType = CodeListFileType.TDX;
-		}
-		br.reset();
-
-		switch (fileType) {
-			case THS:
-				// Getting codes from THS
-				StringTokenizer tk;
-				String temp[];
-				int start, end;
-				boolean enterMarket = false;
-				DecimalFormat dm = new DecimalFormat("000000");
-				while ((line = br.readLine()) != null) {
-					if (line.contains("[Market_16_17]") || line.contains("[Market_16_18]") || line.contains("[Market_32_33]") || line.contains("[Market_32_34]")) {
-						enterMarket = true;
-					} else if (line.length() < 3) {
-						enterMarket = false;
-					} else if (enterMarket && line.startsWith("CodeList")) {
-						tk = new StringTokenizer(line, "=,", false);
-						tk.nextToken();
-						while (tk.hasMoreTokens()) {
-							line = tk.nextToken();
-							if (line.contains("-")) {
-								temp = line.split("-");
-								start = Integer.parseInt(temp[0]);
-								end = Integer.parseInt(temp[1]);
-								for (int i = start; i <= end; i++) {
-									line = dm.format(i);
-									if (!codeSetOriginal.contains(line)) {
-										codeList.add(line);
-										System.out.println("Added " + line + " to list");
-									}
-								}
-							} else {
-								if (!codeSetOriginal.contains(line)) {
-									codeList.add(line);
-									System.out.println("Added " + line + " to list");
-								}
-							}
-						}
-					}
-				}
-				break;
-			case TDX:
-				// Getting codes from TDX
-				while ((line = br.readLine()) != null) {
-					if (line.length() < 6 || line.startsWith("1") || line.startsWith("5")) continue;
-					line = line.substring(0, 6);
-					if (!codeSetOriginal.contains(line)) {
-						codeList.add(line);
-						System.out.println("Added " + line + " to list");
-					}
-				}
-		}
-
-		PreparedStatement pInsertStock = con.prepareStatement("INSERT INTO stock (code, is_ignored) VALUES (?, false)");
-		con.setAutoCommit(false);
-
-		Collections.sort(codeList);
-		for (String code : codeList) {
-			updateCount = 0;
-			System.out.print(code + "...");
-			pInsertStock.setString(1, code);
-			try {
-				updateCount = pInsertStock.executeUpdate();
-			} catch (MySQLIntegrityConstraintViolationException e) {
-				if (!e.getMessage().contains("Duplicate")) {
-					throw e;
-				} else {
-					System.out.println(" already exists.");
-				}
-			}
-			if (updateCount < 2) {
-				if (updateCount == 1) {
-					System.out.println(" inserted.");
-				} else {
-					// Some notification, telling user that record already exists
-				}
-			} else {
-				System.out.println(" unexpected update count: " + updateCount + " has been produced.");
-			}
-			con.commit();
-		}
-		con.close();
 	}
 
 	public static void refreshLatestPriceNameAndNumberOfShares() throws SQLException, IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
@@ -218,7 +86,7 @@ public class FinDataExtractor {
 				updateCount = pUpdateStock.executeUpdate();
 				if (updateCount != 1) {
 					con.rollback();
-					System.out.println("\tunable to update name and price. " + updateCount + " rows updated.");
+					System.out.println("\tUnable to update name and price. " + updateCount + " rows updated.");
 				} else {
 					shareNumberChange.setInt(1, stock_id);
 					shareNumberChangeRs = shareNumberChange.executeQuery();
@@ -243,10 +111,10 @@ public class FinDataExtractor {
 						}
 					}
 					con.commit();
-					System.out.println("\tname, price and total number of shares updated.");
+					System.out.println("\tName, price and total number of shares updated.");
 				}
 			} else {
-				System.out.println(code + "\tunable to retrieve name, price or share number.");
+				System.out.println(code + "\tUnable to retrieve name, price or share number.");
 			}
 		}
 		// Make sure only past share number changes are used
@@ -290,13 +158,13 @@ public class FinDataExtractor {
 		int aYear, order, latestYear, latestSeason, cYear = -1;
 		System.out.println("Current report season: "+currentYear+" "+currentMonth/3);
 
-		if (style == style.FILL_GIVEN && stockCodesToUpdateFindata != null && !stockCodesToUpdateFindata.isEmpty()){
+		if (style == StyleRefreshFinData.FILL_GIVEN && stockCodesToUpdateFindata != null && !stockCodesToUpdateFindata.isEmpty()){
 			String temp = "";
 			for (String s : stockCodesToUpdateFindata) {
 				temp += "'" + s + "', ";
 			}
 			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE code IN ("+temp+"' ') ORDER BY code DESC");
-		} else if (style == style.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE) {
+		} else if (style == StyleRefreshFinData.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE) {
 			// Fill Missing
 			rs = sStock.executeQuery("SELECT id, code, latest_year, latest_season, is_financial FROM stock s, (select max(fin_year*10+fin_season) d, stock_id from report_pub_dates group by stock_id order by stock_id) rpd WHERE rpd.stock_id = s.id AND latest_year * 10 + latest_season < rpd.d ORDER BY code DESC");
 		} else {
@@ -307,7 +175,6 @@ public class FinDataExtractor {
 		boolean someSheetsAreEmpty;
 		boolean isFinancial;
 		Iterator<String> it;
-//		String tableName;
 		pInsertPLNF = con.prepareStatement("INSERT INTO profit_and_loss_nf (" +
 				"pl01, pl02, pl03, pl04, pl05, pl06, pl07, pl08, pl09, pl10, " +
 				"pl11, pl12, pl13, pl14, pl15, pl16, pl17, pl18, pl19, pl20, " +
@@ -423,27 +290,7 @@ public class FinDataExtractor {
 			latestSeason = rs.getInt("latest_season");
 			isFinancial = rs.getBoolean("is_financial");
 			insert = isFinancial? financialInsert : nonFinancialInsert;
-//			tableName = "fin_data_" + code;
 			System.out.println(code);
-			// Create table just in case
-
-//			sCreateFinData.execute(
-//					"CREATE TABLE IF NOT EXISTS " + tableName + " (\n" +
-//							"\tid INT AUTO_INCREMENT,\n" +
-//							"\tstock_id INT,\n" +
-//							"\tsource_id INT,\n" +
-//							"\tfin_field_id INT,\n" +
-//							"\tfin_year INT,\n" +
-//							"\tfin_season INT(1),\n" +
-//							"\tvalue DOUBLE,\n" +
-//							"\torder_ INT,\n" +
-//							"\tPRIMARY KEY (id),\n" +
-//							"\tFOREIGN KEY (stock_id) REFERENCES stock(id),\n" +
-//							"\tFOREIGN KEY (source_id) REFERENCES source(id),\n" +
-//							"\tFOREIGN KEY (fin_field_id) REFERENCES fin_field(id),\n" +
-//							"\tUNIQUE (stock_id, fin_year, fin_season, source_id, fin_field_id)\n" +
-//							")"
-//			);
 
 			// delete invalid rows from the table
 			System.out.println("Delete all data later than " + latestYear + "-" + latestSeason);
@@ -478,14 +325,11 @@ public class FinDataExtractor {
 						order = 1;
 						while (it.hasNext()) {
 							name = it.next();
-//							pInsertFinData.setInt(4, finFields.get(sheetName+"__"+name));
-//							pInsertFinData.setInt(5, 1);
 							v = sheet.getValue(name);
 							if (v == null) {
 								v = 0;
 							}
 							pInsert.setObject(order, v);
-//							pInsertFinData.setInt(7, order);
 							order++;
 						}
 						someSheetsAreEmpty = someSheetsAreEmpty || (order == 1 && (sheetName == balance_sheet || sheetName == cash_flow || sheetName == profit_and_loss));
@@ -519,10 +363,10 @@ public class FinDataExtractor {
 			con.commit();
 		}
 		if (updateReportPublicationDates && !stocksToUpdateReportDates.isEmpty()) {
-			System.out.println("Refreshing report publication dates.");
+			System.out.println("New report found. Now trying to refresh their publication dates...");
 			currentYear = new Date().getYear()+1900;
 			for (Map.Entry<String, Integer> entry: stocksToUpdateReportDates.entrySet()) {
-				refreshReportPubDatesForStock(con, entry.getKey(), entry.getValue(), currentYear);
+				refreshReportPubDatesForStockForAYear(con, entry.getKey(), entry.getValue(), currentYear);
 			}
 		}
 	}
@@ -599,7 +443,7 @@ public class FinDataExtractor {
 		Statement s = c.createStatement();
 		Date dt = new Date();
 		ResultSet rs = s.executeQuery("SELECT code, id, name FROM stock ORDER BY code");
-		System.out.println((new Date().getTime() - dt.getTime()));
+//		System.out.println((new Date().getTime() - dt.getTime()));
 		int id;
 		String code, name;
 		while (rs.next()) {
@@ -607,17 +451,8 @@ public class FinDataExtractor {
 			code = rs.getString("code");
 			name = rs.getString("name");
 			if (name == null) continue;
-//			if (code.startsWith("9") || code.startsWith("6")) {
-//				f = new File(THS_BASE_DIR+"history/shase/day/"+code+".day");
-//			} else {
-//				f = new File(THS_BASE_DIR+"history/sznse/day/"+code+".day");
-//			}
 			System.out.println(code+" "+name);
-//			if (f.exists()) {
-//			} else {
-//				System.out.println("... No pricing data for this stock...");
-//			}
-//			refreshStockPriceHistory(id, code, c);
+			refreshStockPriceHistory(id, code, c);
 		}
 		c.close();
 	}
@@ -639,7 +474,7 @@ public class FinDataExtractor {
 		HashSet<String> stocksToUpdateFindata = new HashSet<>();
 		HashSet<ReportPublication> pubs = new HashSet<>();
 		do {
-			System.out.println("Getting report dates for "+FinDataConstants.yyyyDashMMDashdd.format(last.getTime())+"...");
+			System.out.println("Getting report publisheds on "+FinDataConstants.yyyyDashMMDashdd.format(last.getTime())+"...");
 			pubs.addAll(new SHSEFinancialReportDailyList(last.getTime()).getReportPublications());
 			pubs.addAll(new SZSEFinancialReportDailyList(last.getTime()).getReportPublications());
 			last.add(Calendar.DATE, 1);
@@ -702,16 +537,16 @@ public class FinDataExtractor {
 			if (stockCode == null) {
 				System.out.println("Can't find corresponding A share for stock "+rs.getString("code"));
 			} else {
-				refreshReportPubDatesForStock(con, stockCode, stockId, y, season);
+				refreshReportPubDatesForStockForASeason(con, stockCode, stockId, y, season);
 			}
 		}
 	}
 
-	private static void refreshReportPubDatesForStock(Connection con, String stockCode, int stockId, int year, int season) throws SQLException, IOException {
+	private static void refreshReportPubDatesForStockForASeason(Connection con, String stockCode, int stockId, int year, int season) throws SQLException, IOException {
 		con.setAutoCommit(true);
 		PreparedStatement ps = con.prepareStatement("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES (?, ?, ?, ?)");
 		ReportPublication repPub;
-		System.out.println(stockCode);
+//		System.out.println(stockCode);
 		try {
 			if (stockCode.startsWith("6") || stockCode.startsWith("9")) {
 				repPub = new SHSEReportPublication(stockCode, year, season);
@@ -719,13 +554,13 @@ public class FinDataExtractor {
 				repPub = new SZSEReportPublication(stockCode, year, season);
 			}
 		} catch (ParseException e) {
-			System.out.println("ParseException " + e.getMessage() + " when trying to get report publication date for " + stockCode + " " + year + " " + season);
+			System.err.println("ParseException " + e.getMessage() + " when trying to get report publication date for " + stockCode + " " + year + " " + season);
 			return;
 		} catch (FileNotFoundException e) {
-			System.out.println("FileNotFoundException " + e.getMessage() + " when trying to get report publication date for " + stockCode + " " + year + " " + season);
+			System.err.println("FileNotFoundException " + e.getMessage() + " when trying to get report publication date for " + stockCode + " " + year + " " + season);
 			return;
 		}
-		System.out.println(repPub.getDate() + ": " + year + " " + season);
+		System.out.println(stockCode + " " + year + " " + season + " published on " + repPub.getDate());
 		ps.setInt(1, stockId);
 		ps.setInt(2, repPub.getYear());
 		ps.setInt(3, repPub.getSeason());
@@ -766,7 +601,8 @@ public class FinDataExtractor {
 				"  c.fin_year < max_y and c.fin_year > min_y and count <> 4 and\n" +
 				"  not s.is_ignored\n");
 		String stockCode;
-		int stockId, currentYear = new Date().getYear()+1900;
+		int stockId;
+//		int currentYear = new Date().getYear()+1900;
 		while (rs.next()) {
 			stockCode = rs.getString("code");
 			stockId = rs.getInt("id");
@@ -778,18 +614,17 @@ public class FinDataExtractor {
 			if (stockCode == null) {
 				System.out.println("Can't find corresponding A share for stock "+rs.getString("code"));
 			} else {
-				refreshReportPubDatesForStock(con, stockCode, stockId, y);
+				refreshReportPubDatesForStockForAYear(con, stockCode, stockId, y);
 			}
 		}
 	}
 
-	private static void refreshReportPubDatesForStock(Connection con, String stockCode, int stockId, int aroundYear) throws SQLException, IOException {
+	private static void refreshReportPubDatesForStockForAYear(Connection con, String stockCode, int stockId, int year) throws SQLException, IOException {
 		con.setAutoCommit(true);
 		PreparedStatement ps = con.prepareStatement("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES (?, ?, ?, ?)");
-		int season, year;
+		int season;
 		ReportPublication repPub;
-		System.out.println(stockCode);
-		year = aroundYear;
+//		System.out.println(stockCode);
 		for (season = 4; season > 0; season--) {
 			try {
 				if (stockCode.startsWith("6") || stockCode.startsWith("9")) {
@@ -798,13 +633,13 @@ public class FinDataExtractor {
 					repPub = new SZSEReportPublication(stockCode, year, season);
 				}
 			} catch (ParseException e) {
-				System.out.println("ParseException "+e.getMessage()+" when trying to get report publication date for "+stockCode+" "+year+" "+season);
+				System.err.println("ParseException "+e.getMessage()+" when trying to get report publication date for "+stockCode+" "+year+" "+season);
 				continue;
 			} catch (FileNotFoundException e) {
-				System.out.println("FileNotFoundException "+e.getMessage()+" when trying to get report publication date for "+stockCode+" "+year+" "+season);
+				System.err.println("FileNotFoundException "+e.getMessage()+" when trying to get report publication date for "+stockCode+" "+year+" "+season);
 				continue;
 			}
-			System.out.println(repPub.getDate() + ": " + year + " " + season);
+			System.out.println(stockCode + " " + year + " " + season + " published on " + repPub.getDate());
 			ps.setInt(1, stockId);
 			ps.setInt(2, repPub.getYear());
 			ps.setInt(3, repPub.getSeason());
@@ -821,45 +656,6 @@ public class FinDataExtractor {
 			}
 		}
 	}
-
-//	private static void refreshReportPubDatesForStock(Connection con, String stockCode, int stockId, int aroundYear) throws IOException, SQLException {
-//		con.setAutoCommit(true);
-//		PreparedStatement ps = con.prepareStatement("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES (?, ?, ?, ?)");
-//		int season;
-//		SortedMap<String, String> rDates;
-//		int s;
-//		int year;
-//		System.out.println(stockCode);
-//		for (season = 4; season >0; season --) {
-//			rDates = extractReportDates(stockCode, season, aroundYear+1, aroundYear);
-//			for (Map.Entry<String, String> entry : rDates.entrySet()) {
-//				try {
-//					yyyyDashMMDashdd.parse(entry.getValue());
-//				} catch (ParseException ex) {
-//					break;
-//				}
-//				year = Integer.parseInt(entry.getKey().substring(0, 4));
-//				s = Integer.parseInt(entry.getKey().substring(5, 6));
-//				if (s != season) {
-//					System.out.println("Caution: requesting season: "+season+", while the following returned info is not for this season.");
-//				}
-//				System.out.println(entry.getKey()+" "+entry.getValue()+": "+year+" "+s);
-//				ps.setInt(1, stockId);
-//				ps.setInt(2, year);
-//				ps.setInt(3, s);
-//				ps.setString(4, entry.getValue());
-//				ps.addBatch();
-//			}
-//			try {
-//				ps.executeBatch();
-//			} catch (BatchUpdateException ex) {
-//				if (!ex.getMessage().contains("Duplicate entry")) {
-//					// We are requesting for info for the past 6 years, it's common to have quite a lot of duplicates that already exist in our database.
-//					System.out.println(ex.getMessage());
-//				}
-//			}
-//		}
-//	}
 
 	static final Date earliest = new Date(3, 3, 3);
 
@@ -949,83 +745,39 @@ public class FinDataExtractor {
 		st.close();
 	}
 
-	static URL cninfoListedCompanyReportUrl;
-
-	static {
-		try {
-			cninfoListedCompanyReportUrl = new URL("http://112.95.250.13/search/stockfulltext.jsp");
-//			cninfoListedCompanyReportUrl = new URL("http://www.cninfo.com.cn/search/stockfulltext.jsp");
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		}
-	}
-
-	static String [] seasonParam = {"010305","010303", "010307", "010301"};
-
-//	public static SortedMap<String, String> extractReportDates(String stockCode, int season, int endYear, int startYear) throws IOException {
+//	static URL cninfoListedCompanyReportUrl;
 //
-//		String s;
-//		URLConnection connection = cninfoListedCompanyReportUrl.openConnection();
-//		connection.setDoOutput(true);
-//		OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream(), "gb2312");
-//		out.write("noticeType="+seasonParam[season-1]+"&stockCode="+stockCode+"&endTime="+endYear+"-12-31&startTime="+startYear+"-01-01&pageNo=1");
-//
-//		out.flush();
-//		out.close();
-//
-//		String sCurrentLine;
-//		InputStream l_urlStream;
-//		l_urlStream = connection.getInputStream();
-//
-//		Matcher m;
-//		BufferedReader l_reader = new BufferedReader(new InputStreamReader(l_urlStream));
-//		SortedMap<String, String> reportDates = new TreeMap<>();
-//		String year;
-//		while ((sCurrentLine = l_reader.readLine()) != null) {
-//			m = p.matcher(sCurrentLine);
-//			if (m.find()) {
-//				year = m.group(1);
-//				s = m.group(2);
-//				if (s.contains(s1Report)) {
-//						s = " 1";
-//				} else if (s.contains(s2Report) || s.contains(s2Report2)) {
-//						s = " 2";
-//				} else if (s.contains(s3Report)) {
-//						s = " 3";
-//				} else if (s.contains(s4Report)) {
-//						s = " 4";
-//				} else {
-//					s = " "+season;
-//				}
-//
-//				sCurrentLine = m.group(5);
-//				year = year + s;
-//				if (reportDates.get(year) == null || reportDates.get(year).compareTo(sCurrentLine) > 0) {
-//					reportDates.put(year, sCurrentLine);
-//				}
-//			}
+//	static {
+//		try {
+//			cninfoListedCompanyReportUrl = new URL("http://112.95.250.13/search/stockfulltext.jsp");
+////			cninfoListedCompanyReportUrl = new URL("http://www.cninfo.com.cn/search/stockfulltext.jsp");
+//		} catch (MalformedURLException e) {
+//			e.printStackTrace();
 //		}
-//		l_reader.close();
-//		l_urlStream.close();
-//		return reportDates;
 //	}
 
-	public static void calculateAdjustmentFactor (int startPricingYear) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
+//	static String [] seasonParam = {"010305","010303", "010307", "010301"};
+
+	public static void calculateAdjustmentFactor (int noOfDaysToCover) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		Connection con = jdbcConnection();
 		con.setAutoCommit(false);
 		Statement st = con.createStatement();
-//		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1999-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
-		ResultSet rs = st.executeQuery("SELECT s.id stock_id, s.code code, s.name name, d.payment_date payment_date, round(d.bonus + d.split + 1, 4) fct, p.last_fct_date last_fct_date FROM dividend d, stock s, (select max(date) last_fct_date, stock_id from stock_price group by stock_id) p WHERE p.stock_id = s.id AND d.stock_id = s.id AND payment_date >= '1991-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
+		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
 		int stockId = -1;
 		String stockName = null;
 		String stockCode = null;
 		java.sql.Date dStart = null;
 		java.sql.Date dEnd = null;
-		java.sql.Date dLastFactored = null;
+
+		Calendar cal = new GregorianCalendar();
+		cal.set(Calendar.DATE, -noOfDaysToCover);
+		java.sql.Date dLastFactored = new java.sql.Date(cal.getTimeInMillis());
+		System.out.println("Calculating adjustment factor since "+yyyyDashMMDashdd.format(dLastFactored));
+
 		float currentAdjFactor = 1;
 		while (rs.next()) {
 			dStart = dEnd;
-			dLastFactored = rs.getDate("last_fct_date");
+//			dLastFactored = rs.getDate("last_fct_date");
 			if (stockId != rs.getInt("stock_id")) {
 				// new Stock coming in
 				if (stockId != -1) {
@@ -1034,7 +786,7 @@ public class FinDataExtractor {
 					System.out.println("\tStart: "+ dStart);
 					System.out.println("\tEnd: now");
 					System.out.println("\tFactor: "+currentAdjFactor);
-					adjustStockPriceHistory(stockId, dStart, null, currentAdjFactor, con, startPricingYear);
+					setAdjustmentFactorForStock(stockId, dStart.after(dLastFactored) ? dStart : dLastFactored, null, currentAdjFactor, con);
 					con.commit();
 				}
 
@@ -1054,7 +806,7 @@ public class FinDataExtractor {
 					System.out.println("\tStart: "+ dStart);
 					System.out.println("\tEnd: "+ dEnd);
 					System.out.println("\tFactor: "+currentAdjFactor);
-					adjustStockPriceHistory(stockId, dStart, dEnd, currentAdjFactor, con, startPricingYear);
+					setAdjustmentFactorForStock(stockId, dStart, dEnd, currentAdjFactor, con);
 				}
 			}
 			currentAdjFactor *= rs.getFloat("fct");
@@ -1064,38 +816,19 @@ public class FinDataExtractor {
 		System.out.println("\tStart: "+ dEnd);
 		System.out.println("\tEnd: now");
 		System.out.println("\tFactor: "+currentAdjFactor);
-		adjustStockPriceHistory(stockId, dEnd, null, currentAdjFactor, con, startPricingYear);
+		setAdjustmentFactorForStock(stockId, dEnd.after(dLastFactored) ? dEnd : dLastFactored, null, currentAdjFactor, con);
 		// fill in 1 as adjustment factors for the nulls
-//		st.executeUpdate("UPDATE stock_price_"+startPricingYear+" SET adjustment_factor = 1 WHERE adjustment_factor is NULL");
-		st.executeUpdate("UPDATE stock_price SET adjustment_factor = 1 WHERE adjustment_factor is NULL");
+//		st.executeUpdate("UPDATE stock_price SET adjustment_factor = 1 WHERE adjustment_factor is NULL AND date <= ?");
 		con.commit();
 	}
 
-	private static void adjustStockPriceHistory(int stockId, java.sql.Date start, java.sql.Date end, float factor, Connection con, int startPricingYear) throws SQLException {
-		int startYear = start.getYear() + 1900;
-		if (startYear < startPricingYear) {
-			startYear = startPricingYear;
-		}
-		int endYear = (end == null? FinDataConstants.currentTimeStamp.getYear() : end.getYear()) + 1900;
+	private static void setAdjustmentFactorForStock(int stockId, java.sql.Date start, java.sql.Date end, float factor, Connection con) throws SQLException {
 		PreparedStatement ps;
-//		for (int y = startYear; y <= endYear; y++) {
-//			if (end == null) {
-//				System.out.println("Update "+factor+" "+y+" "+start);
-//				ps = con.prepareStatement("UPDATE stock_price_"+y+" SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ?");
-//			} else {
-//				System.out.println("Update "+factor+" "+y+" "+start+" "+end);
-//				ps = con.prepareStatement("UPDATE stock_price_"+y+" SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ? AND date < ?");
-//				ps.setDate (3, end);
-//			}
-//			ps.setFloat(1, factor);
-//			ps.setDate(2, start);
-//			ps.executeUpdate();
-//		}
 		if (end == null) {
-			System.out.println("Update "+factor+" "+start);
+			System.out.println("Update "+stockId+" "+factor+" "+start+" - now");
 			ps = con.prepareStatement("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ?");
 		} else {
-			System.out.println("Update "+factor+" "+start+" "+end);
+			System.out.println("Update "+stockId+" "+factor+" "+start+" - "+end);
 			ps = con.prepareStatement("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ? AND date < ?");
 			ps.setDate (3, end);
 		}
@@ -1140,7 +873,7 @@ public class FinDataExtractor {
 			} else {
 				ret_max = -1000;
 				ret_min = 1000;
-				dLastCalculated = null; // todo
+				dLastCalculated = new java.sql.Date(earliest.getTime());
 			}
 //			for (int year = currentYear-1; year <= currentYear; year ++)
 //			{
@@ -1157,7 +890,7 @@ public class FinDataExtractor {
 					if (cst != null) cst.close();
 					cst = con.prepareCall((isFinancial ? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '" + FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")) + "', 1)");
 					analysis = cst.executeQuery();
-				} catch (MySQLSyntaxErrorException ex) {
+				} catch (SQLSyntaxErrorException ex) {
 					System.out.println("Can't calculate return for " + stockCode + " " + FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")));
 					continue;
 				}
@@ -1201,33 +934,5 @@ public class FinDataExtractor {
 		Class.forName("com.mysql.jdbc.Driver").newInstance();
 		Connection con = DriverManager.getConnection(ResourceUtil.getString(JDBC_URL), ResourceUtil.getString(JDBC_USER), ResourceUtil.getString(JDBC_PASS));
 		return con;
-	}
-
-	public static void test() throws IOException, DocumentException, SAXException, SQLException {
-		DOMParser parser = new DOMParser();
-		parser.parse("http://stockdata.stock.hexun.com/2008/lr.aspx?stockid=600016&accountdate=2005.12.31");
-		DOMReader domReader = new DOMReader();
-		Document doc = domReader.read(parser.getDocument());
-		XPath tablePath = doc.createXPath("//DIV[@id=\"zaiyaocontent\"]//TBODY/TR[position()>1 and position()<last()]");
-		XPath fieldNamePath = doc.createXPath(".//STRONG[1]");
-		XPath fieldValuePath = doc.createXPath("./TD[2]/DIV");
-		Element nameElement, valueElement;
-		Object o = tablePath.evaluate(doc);
-
-//		Connection con = DriverManager.getConnection("jdbc.mysql://localhost/findata", "root", "108129");
-//		con.setAutoCommit(false);
-//		Statement stmt = con.createStatement();
-//		stmt.executeQuery("SELECT id, name FROM source ORDER BY id");
-//		stmt.executeQuery("SELECT code FROM stock ORDER BY id");
-//		stmt.executeQuery("SELECT name FROM fin_period ORDER BY id");
-//		stmt.executeQuery("SELECT id, name FROM fin_sheet ORDER BY id");
-
-		for (Element e : (List<Element>) o) {
-			nameElement = (Element) fieldNamePath.evaluate(e);
-			valueElement = (Element) fieldValuePath.evaluate(e);
-			System.out.print(nameElement.getText());
-			System.out.print(" ");
-			System.out.println(valueElement.getText());
-		}
 	}
 }
