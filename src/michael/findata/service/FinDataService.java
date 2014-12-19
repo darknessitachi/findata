@@ -135,8 +135,8 @@ public class FinDataService extends JdbcDaoSupport {
 	 * @throws InstantiationException
 	 * @param stockCodesToUpdateFindata
 	 */
-	public void refreshFinData(EnumStyleRefreshFinData style, HashSet<String> stockCodesToUpdateFindata, boolean includeIgnored) throws ClassNotFoundException, SQLException, IllegalAccessException,
-			InstantiationException, IOException {
+	public void refreshFinData(EnumStyleRefreshFinData style, HashSet<String> stockCodesToUpdateFindata, boolean includeIgnored)
+			throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException {
 		String code;
 		java.util.Date cDate = FinDataConstants.currentTimeStamp;
 		int id, currentYear = cDate.getYear() + 1900, currentMonth = cDate.getMonth() + 1;
@@ -306,6 +306,7 @@ public class FinDataService extends JdbcDaoSupport {
 		}
 
 	}
+
 	@Transactional
 	private boolean refreshFinDataForStockYearSeason(String code, int id, int year, short season, boolean financial) {
 		EnumMap<FinDataConstants.SheetType, String> insert;

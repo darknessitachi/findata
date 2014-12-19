@@ -1,5 +1,7 @@
 package michael.findata.util;
 
+import michael.findata.service.EnumTypeCodeListFile;
+
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -17,6 +19,8 @@ public final class FinDataConstants {
 	public static final String JDBC_PASS = ResourceUtil.getString("michael.findata.db.pass");
 
 	public static final String STOCK_LIST_FILE = ResourceUtil.getString("michael.findata.stocklist");
+
+	public static final EnumTypeCodeListFile STOCK_LIST_TYPE = EnumTypeCodeListFile.valueOf(ResourceUtil.getString("michael.findata.stocklist.type"));
 
 	public static final String THS_BASE_DIR = ResourceUtil.getString("michael.findata.thsbase");
 

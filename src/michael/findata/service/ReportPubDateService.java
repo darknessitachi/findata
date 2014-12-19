@@ -79,6 +79,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 		getJdbcTemplate().update("DELETE FROM report_pub_dates WHERE stock_id IS NULL");
 	}
 
+	// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
 	public void scanForMissingPublicationDates () {
 		HashSet<String> toBeFilledWithNeteasePublicationList = new HashSet<>();
 		SqlRowSet rs = getJdbcTemplate().queryForRowSet(

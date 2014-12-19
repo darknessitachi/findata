@@ -41,10 +41,12 @@ public class FinDataExtractor {
 //		updateFindataWithDates(); //
 //		refreshFinData(StyleRefreshFinData.FILL_MISSING_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
 //		refreshDividendData(); //
-		calculateAdjustmentFactor(DAYS_ADJ_FACTOR_CALC);
-		calculateMaxMinEPEB();
+
+//		calculateAdjustmentFactor(DAYS_ADJ_FACTOR_CALC);
+//		calculateMaxMinEPEB();
 //		updateMissingReportPubDatesAccordingToFindata();
-//		updateMissingReportPubDatesAccordingToFindata2();
+		updateMissingReportPubDatesAccordingToFindata2();
+
 //		refreshStockPriceHistoryTEST(1,"600000", jdbcConnection());
 //		refreshReportPubDatesForStockForAYear(jdbcConnection(), "000758", 1804, 2008);
 		System.out.printf("%d",(new Date().getTime() - dt.getTime()));

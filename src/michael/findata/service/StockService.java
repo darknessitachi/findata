@@ -1,6 +1,7 @@
 package michael.findata.service;
 
 import michael.findata.external.netease.NeteaseTradingDatum;
+import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
@@ -31,7 +32,7 @@ public class StockService extends JdbcDaoSupport {
 		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(ResourceUtil.getString(STOCK_LIST_FILE))));
 		String line;
 		int updateCount;
-		EnumTypeCodeListFile fileType;
+//		EnumTypeCodeListFile fileType;
 		ArrayList<String> codeList = new ArrayList<>();
 
 		HashSet<String> codeSetOriginal = new HashSet<>();
@@ -40,17 +41,17 @@ public class StockService extends JdbcDaoSupport {
 			codeSetOriginal.add(rs.getString(1));
 		}
 
-		// Determining the type of stock list file
-		br.mark(100);
-		br.readLine();
-		if (br.readLine().contains("[Market]")) {
-			fileType = EnumTypeCodeListFile.THS;
-		} else {
-			fileType = EnumTypeCodeListFile.TDX;
-		}
-		br.reset();
+//		// Determining the type of stock list file
+//		br.mark(100);
+//		br.readLine();
+//		if (br.readLine().contains("[Market]")) {
+//			fileType = EnumTypeCodeListFile.THS;
+//		} else {
+//			fileType = EnumTypeCodeListFile.TDX;
+//		}
+//		br.reset();
 
-		switch (fileType) {
+		switch (FinDataConstants.STOCK_LIST_TYPE) {
 			case THS:
 				// Getting codes from THS
 				StringTokenizer tk;
@@ -61,7 +62,7 @@ public class StockService extends JdbcDaoSupport {
 				while ((line = br.readLine()) != null) {
 					if (line.contains("[Market_16_17]") || line.contains("[Market_16_18]") || line.contains("[Market_32_33]") || line.contains("[Market_32_34]")) {
 						enterMarket = true;
-					} else if (line.length() < 3) {
+					} else if (line.startsWith("[Market_")) {
 						enterMarket = false;
 					} else if (enterMarket && line.startsWith("CodeList")) {
 						tk = new StringTokenizer(line, "=,", false);

@@ -29,7 +29,7 @@ public class FinDataAnalyzer {
 //		modify();
 //		growthAnalysis();
 //		analyzeGiven(false);
-//		analyzeThroughTime("000568", "2000-01-01");
+//		analyzeThroughTime("600000", "2013-01-01");
 //		analyzeAsOfTime(false, "2010-05-01");
 //		migrate();
 	}

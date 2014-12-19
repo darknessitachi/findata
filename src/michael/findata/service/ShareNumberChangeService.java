@@ -1,17 +1,14 @@
 package michael.findata.service;
 
-import michael.findata.external.ExternalDataException;
 import michael.findata.external.SecurityShareNumberChange;
-import michael.findata.external.hexun2008.Hexun2008DataException;
 import michael.findata.external.hexun2008.Hexun2008ShareNumberDatum;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.sql.*;
+import java.sql.Date;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 public class ShareNumberChangeService extends JdbcDaoSupport {

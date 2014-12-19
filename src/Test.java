@@ -55,18 +55,20 @@ public class Test {
 		ShareNumberChangeService sncs = (ShareNumberChangeService) context.getBean("shareNumberChangeService");
 
 		// The following are used regularly throughout the year
-		ss.refreshStockCodes();
-		sps.refreshStockPriceHistories();
+//		ss.refreshStockCodes();
+//		sps.refreshStockPriceHistories();
 //		ss.refreshLatestPriceAndName();
 //		sncs.refreshNumberOfShares();
 //		ds.refreshDividendData();
+
+		// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
+		spds.scanForMissingPublicationDates();
 
 		// The following are used mainly during and immediately after earnings report seasons
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
-//		spds.scanForMissingPublicationDates();
 	}
 
 	// Bulk-load stock pricing data from THS, make sure THS pricing data is complete before doing this!!!!!
