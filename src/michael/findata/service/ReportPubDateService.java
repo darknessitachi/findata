@@ -168,9 +168,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 				}
 			}
 		}
-		for (String c : toBeFilledWithNeteasePublicationList) {
-			fillMissingReportPublicationDatesWithNetease(c);
-		}
+		toBeFilledWithNeteasePublicationList.forEach(this::fillMissingReportPublicationDatesWithNetease);
 		// Some cleaning
 		getJdbcTemplate().update("DELETE FROM report_pub_dates WHERE fin_year < 1800");
 	}

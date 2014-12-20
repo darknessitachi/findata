@@ -13,6 +13,7 @@ import java.net.URLConnection;
 import java.text.ParseException;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,20 +27,20 @@ public class NeteaseFinancialReportList implements ReportPublicationList{
 	private static Pattern p1 = Pattern.compile("<td class=\"td_text\"><a href=\"/f10/ggmx_(\\d{6})_[\\d_]+.html\" target=\"_blank\" title='.+([\\d?一二三四五六七八九０１２３４５６７８９]{4})年?.+'>");
 	private static Pattern p2 = Pattern.compile("<td class=\"align_c\">(\\d\\d\\d\\d-\\d\\d-\\d\\d)</td>");
 	private static Pattern p3 = Pattern.compile("<td class=\"td_text\">(一季度报告|中期报告|三季度报告|年度报告)</td>");
-	HashSet<ReportPublication> pbs;
+	HashMap<ReportPublication, Date> pbs;
 	public NeteaseFinancialReportList (String code) throws IOException {
 		String d = "", dt = null;
-		pbs = new HashSet<>();
+		pbs = new HashMap<>();
 		int year, season;
 		Date date;
 		URL url;
 		HttpURLConnection httpCon;
-		int totalPages = 5;
+		int totalPages = 1;
 		InputStream is;
 		BufferedReader l_reader;
 		String sBuffer3 = "", sBuffer2 = "", sBuffer1 = "";
 		Matcher m1, m2, m3;
-		for (int page = 1; page <= totalPages; page++) {
+		for (int page = 0; page < totalPages; page++) {
 			url = new URL("http://quotes.money.163.com/f10/gsgg_"+code+",dqbg,"+page+".html");
 			httpCon = (HttpURLConnection) url.openConnection();
 			httpCon.connect();
@@ -86,7 +87,18 @@ public class NeteaseFinancialReportList implements ReportPublicationList{
 							System.out.println("Cannot understand "+m3.group(1)+" for season.");
 							continue;
 					}
-					pbs.add(new ReportPublication(date, code, null, year, season));
+					// test whether we have it in this list already (multiple entry)
+					// if we have multiple entry, we take the earliest
+					ReportPublication pb = new ReportPublication(date, code, null, year, season);
+					if (pbs.containsKey(pb)) {
+						Date oldDate = pbs.get(pb);
+						if (oldDate.after(pb.getDate())) {
+							pbs.remove(pb); // remove the old entry
+							pbs.put(pb, pb.getDate());
+						}
+					} else {
+						pbs.put(pb, pb.getDate());
+					}
 				}
 				sBuffer1 = sBuffer2;
 				sBuffer2 = sBuffer3;
@@ -114,6 +126,6 @@ public class NeteaseFinancialReportList implements ReportPublicationList{
 
 	@Override
 	public Collection<ReportPublication> getReportPublications() {
-		return pbs;
+		return pbs.keySet();
 	}
 }
