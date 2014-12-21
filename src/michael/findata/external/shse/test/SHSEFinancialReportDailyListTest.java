@@ -19,7 +19,7 @@ public class SHSEFinancialReportDailyListTest {
 			System.out.println(p.getCode());
 			System.out.println(p.getYear());
 			System.out.println(p.getSeason());
-			System.out.println(FinDataConstants.yyyyDashMMDashdd.format(p.getDate()));
+			System.out.println(FinDataConstants.FORMAT_yyyyDashMMDashdd.format(p.getDate()));
 		}
 	}
 }

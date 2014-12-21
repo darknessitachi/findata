@@ -263,11 +263,14 @@ public final class FinDataConstants {
 
 	public static DecimalFormat CommonDecimalFormat = new DecimalFormat("##,###.00");
 
-	public static SimpleDateFormat yyyyDashMMDashdd = new SimpleDateFormat("yyyy-MM-dd");
+	public final static String yyyyDashMMDashdd = "yyyy-MM-dd";
+	public final static SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(yyyyDashMMDashdd);
 
-	public static SimpleDateFormat yyyyMMdd = new SimpleDateFormat("yyyyMMdd");
+	public final static String yyyyMMdd = "yyyyMMdd";
+	public final static SimpleDateFormat FORMAT_yyyyMMdd = new SimpleDateFormat(yyyyMMdd);
 
-	public static SimpleDateFormat yyMMdd = new SimpleDateFormat("yyMMdd");
+	public final static String yyMMdd = "yyMMdd";
+	public final static SimpleDateFormat FORMAT_yyMMdd = new SimpleDateFormat(yyMMdd);
 
 	public static String s1Report = "Ò»¼¾";
 	public static String s2Report = "°ëÄê";

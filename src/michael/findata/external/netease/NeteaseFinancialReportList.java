@@ -2,24 +2,17 @@ package michael.findata.external.netease;
 
 import michael.findata.external.ReportPublication;
 import michael.findata.external.ReportPublicationList;
-import michael.findata.external.shse.SHSEReportPublication;
 import michael.findata.util.FinDataConstants;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.text.ParseException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static michael.findata.util.FinDataConstants.*;
-import static michael.findata.util.FinDataConstants.s4Report;
 
 public class NeteaseFinancialReportList implements ReportPublicationList{
 
@@ -65,7 +58,7 @@ public class NeteaseFinancialReportList implements ReportPublicationList{
 //					System.out.println(m2.group(1));
 
 					try {
-						date = FinDataConstants.yyyyDashMMDashdd.parse(m2.group(1));
+						date = FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(m2.group(1));
 					} catch (ParseException e) {
 						System.out.println("Cannot understand "+m2.group(1)+" for date.");
 						continue;

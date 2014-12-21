@@ -12,7 +12,7 @@ public class SZSEFinancialReportListOfTodayTest {
 	public static void main (String [] args) throws IOException, ParseException {
 		SZSEFinancialReportListOfToday t = new SZSEFinancialReportListOfToday();
 		for(ReportPublication rp : t.getReportPublications()){
-			System.out.println(rp.getName() + " " + rp.getYear() + " " + rp.getSeason() + " " + FinDataConstants.yyyyDashMMDashdd.format(rp.getDate()));
+			System.out.println(rp.getName() + " " + rp.getYear() + " " + rp.getSeason() + " " + FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
 		}
 	}
 }

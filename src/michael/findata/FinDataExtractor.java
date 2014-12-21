@@ -476,7 +476,7 @@ public class FinDataExtractor {
 		HashSet<String> stocksToUpdateFindata = new HashSet<>();
 		HashSet<ReportPublication> pubs = new HashSet<>();
 		do {
-			System.out.println("Getting report publisheds on "+FinDataConstants.yyyyDashMMDashdd.format(last.getTime())+"...");
+			System.out.println("Getting report publisheds on "+FinDataConstants.FORMAT_yyyyDashMMDashdd.format(last.getTime())+"...");
 			pubs.addAll(new SHSEFinancialReportDailyList(last.getTime()).getReportPublications());
 			pubs.addAll(new SZSEFinancialReportDailyList(last.getTime()).getReportPublications());
 			last.add(Calendar.DATE, 1);
@@ -487,7 +487,7 @@ public class FinDataExtractor {
 			ps.setInt(2, p.getYear());
 			ps.setInt(3, p.getSeason());
 			ps.setDate(4, new java.sql.Date(p.getDate().getTime()));
-			System.out.println(p.getCode() + " " + FinDataConstants.yyyyDashMMDashdd.format(p.getDate()) + ": " + p.getYear() + " " + p.getSeason());
+			System.out.println(p.getCode() + " " + FinDataConstants.FORMAT_yyyyDashMMDashdd.format(p.getDate()) + ": " + p.getYear() + " " + p.getSeason());
 			try {
 				ps.executeUpdate();
 				stocksToUpdateFindata.add(p.getCode());
@@ -694,7 +694,7 @@ public class FinDataExtractor {
 			latest = earliest;
 		}
 
-		System.out.println("Latest: " + yyyyMMdd.format(latest));
+		System.out.println("Latest: " + FORMAT_yyyyMMdd.format(latest));
 		con.setAutoCommit(false);
 //		System.out.println((fc.size()-headerSize)/recordSize);
 		SecurityTimeSeriesDatum temp;
@@ -774,7 +774,7 @@ public class FinDataExtractor {
 		Calendar cal = new GregorianCalendar();
 		cal.set(Calendar.DATE, -noOfDaysToCover);
 		java.sql.Date dLastFactored = new java.sql.Date(cal.getTimeInMillis());
-		System.out.println("Calculating adjustment factor since "+yyyyDashMMDashdd.format(dLastFactored));
+		System.out.println("Calculating adjustment factor since "+ FORMAT_yyyyDashMMDashdd.format(dLastFactored));
 
 		float currentAdjFactor = 1;
 		while (rs.next()) {
@@ -890,10 +890,10 @@ public class FinDataExtractor {
 				pid = rsPrice.getInt("pid");
 				try {
 					if (cst != null) cst.close();
-					cst = con.prepareCall((isFinancial ? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '" + FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")) + "', 1)");
+					cst = con.prepareCall((isFinancial ? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '" + FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date")) + "', 1)");
 					analysis = cst.executeQuery();
 				} catch (SQLSyntaxErrorException ex) {
-					System.out.println("Can't calculate return for " + stockCode + " " + FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")));
+					System.out.println("Can't calculate return for " + stockCode + " " + FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date")));
 					continue;
 				}
 				if (analysis.next()) {
@@ -919,7 +919,7 @@ public class FinDataExtractor {
 					pstUpdateRow.setFloat(3, ret_min);
 					pstUpdateRow.setInt(4, pid);
 					pstUpdateRow.executeUpdate();
-					System.out.println(stockCode + "\t" + FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")) + "\t" + ret + "\t" + ret_max + "\t" + ret_min + "\t");
+					System.out.println(stockCode + "\t" + FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date")) + "\t" + ret + "\t" + ret_max + "\t" + ret_min + "\t");
 				}
 			}
 //			}

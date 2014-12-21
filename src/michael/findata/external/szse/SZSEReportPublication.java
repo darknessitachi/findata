@@ -1,15 +1,12 @@
 package michael.findata.external.szse;
 
 import michael.findata.external.ReportPublication;
-import michael.findata.external.ReportPublicationList;
 
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -86,7 +83,7 @@ public class SZSEReportPublication extends ReportPublication {
 		l_urlStream.close();
 //		System.out.println(d);
 //		rp = new ReportPublication(yyyyDashMMDashdd.parse(d), code, y, season);
-		super.setDate(yyyyDashMMDashdd.parse(d));
+		super.setDate(FORMAT_yyyyDashMMDashdd.parse(d));
 		super.setCode(code);
 		super.setYear(y);
 		super.setSeason(season);

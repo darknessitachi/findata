@@ -1,16 +1,12 @@
 package michael.findata.external.shse;
 
 import michael.findata.external.ReportPublication;
-import michael.findata.external.ReportPublicationList;
 import michael.findata.util.FinDataConstants;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
 
 public class SHSEReportPublication extends ReportPublication {
 
@@ -24,7 +20,7 @@ public class SHSEReportPublication extends ReportPublication {
 		String redirectedURL = httpCon.getURL().toString();
 //		ReportPublication rp = new ReportPublication(FinDataConstants.yyyyMMdd.parse(redirectedURL.substring(55, 59) + redirectedURL.substring(60, 62) + redirectedURL.substring(63, 65)), code, year, season);
 		try {
-			super.setDate(FinDataConstants.yyyyMMdd.parse(redirectedURL.substring(62, 66) + redirectedURL.substring(67, 69) + redirectedURL.substring(70, 72)));
+			super.setDate(FinDataConstants.FORMAT_yyyyMMdd.parse(redirectedURL.substring(62, 66) + redirectedURL.substring(67, 69) + redirectedURL.substring(70, 72)));
 		} catch (ParseException e) {
 			System.out.println("Can't parese: "+redirectedURL);
 			throw e;

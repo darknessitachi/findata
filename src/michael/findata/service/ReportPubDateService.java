@@ -1,7 +1,7 @@
 package michael.findata.service;
 
 import michael.findata.external.ReportPublication;
-import michael.findata.external.netease.NeteaseFinancialReportList;
+import michael.findata.external.cninfo.CnInfoReportPublicationList;
 import michael.findata.external.shse.SHSEFinancialReportDailyList;
 import michael.findata.external.shse.SHSEReportPublication;
 import michael.findata.external.szse.SZSEFinancialReportDailyList;
@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.sql.*;
-import java.sql.Date;
 import java.text.ParseException;
 import java.util.*;
 
@@ -35,14 +34,14 @@ public class ReportPubDateService extends JdbcDaoSupport {
 
 		// get publications from daily digests
 		do {
-			System.out.println("Getting report published on "+ FinDataConstants.yyyyDashMMDashdd.format(last.getTime())+"...");
+			System.out.println("Getting report published on "+ FinDataConstants.FORMAT_yyyyDashMMDashdd.format(last.getTime())+"...");
 			pubs.addAll(new SHSEFinancialReportDailyList(last.getTime()).getReportPublications());
 			pubs.addAll(new SZSEFinancialReportDailyList(last.getTime()).getReportPublications());
 			last.add(Calendar.DATE, 1);
 		} while (last.getTimeInMillis()<FinDataConstants.currentTimeStamp.getTime());
 
 		for (ReportPublication p : pubs) {
-			System.out.println(p.getCode() + " " + FinDataConstants.yyyyDashMMDashdd.format(p.getDate()) + ": " + p.getYear() + " " + p.getSeason());
+			System.out.println(p.getCode() + " " + FinDataConstants.FORMAT_yyyyDashMMDashdd.format(p.getDate()) + ": " + p.getYear() + " " + p.getSeason());
 			try {
 				getJdbcTemplate().update("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)",
 						p.getCode(), p.getYear(), p.getSeason(), new java.sql.Date(p.getDate().getTime()));
@@ -80,12 +79,13 @@ public class ReportPubDateService extends JdbcDaoSupport {
 	}
 
 	// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
-	public void scanForMissingPublicationDates () {
+	public void scanForMissingPublicationDates (int earliestYear, boolean includeIgnored) {
 		HashSet<String> toBeFilledWithNeteasePublicationList = new HashSet<>();
 		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
 				"SELECT code, name, rpd.fin_year year, rpd.fin_season season " +
 				"FROM report_pub_dates rpd, stock s " +
-				"WHERE rpd.stock_id = s.id " +
+				"WHERE rpd.stock_id = s.id " + (includeIgnored ? "":"AND s.is_ignored = 0 ") +
+						"AND rpd.fin_year >= " + earliestYear + " " +
 				"ORDER BY code, rpd.fin_year, rpd.fin_season");
 		String codePrev, namePrev;
 		int yearPrev, seasonPrev;
@@ -149,7 +149,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 						} else {
 							rp = new SHSEReportPublication(codePrev, tempY, tempS);
 						}
-						System.out.println(FinDataConstants.yyyyDashMMDashdd.format(rp.getDate()));
+						System.out.println(FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
 						getJdbcTemplate().update("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)",
 								codePrev, tempY, tempS, rp.getDate());
 					} catch (Exception e) {
@@ -159,7 +159,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 					// SZ
 					try {
 						rp = new SZSEReportPublication(codePrev, tempY, tempS);
-						System.out.println(FinDataConstants.yyyyDashMMDashdd.format(rp.getDate()));
+						System.out.println(FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
 						getJdbcTemplate().update("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)",
 								codePrev, tempY, tempS, rp.getDate());
 					} catch (Exception e) {
@@ -175,11 +175,14 @@ public class ReportPubDateService extends JdbcDaoSupport {
 
 	private void fillMissingReportPublicationDatesWithNetease (String code) {
 		try {
-			for (ReportPublication rp : new NeteaseFinancialReportList(code).getReportPublications()) {
+			for (ReportPublication rp : new CnInfoReportPublicationList(code).getReportPublications()) {
+				if (rp.getCode() == null) {
+					continue;
+				}
 				try {
 					getJdbcTemplate().update("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)",
 							code, rp.getYear(), rp.getSeason(), rp.getDate());
-					System.out.println("Found: "+rp.getCode() + " " + rp.getYear() + " " + rp.getSeason() + ": "+ FinDataConstants.yyyyDashMMDashdd.format(rp.getDate()));
+					System.out.println("Found: "+rp.getCode() + " " + rp.getYear() + " " + rp.getSeason() + ": "+ FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
 				} catch (Exception ex) {
 					if (ex instanceof DuplicateKeyException) {
 						// Normal
@@ -219,12 +222,9 @@ public class ReportPubDateService extends JdbcDaoSupport {
 	Missing: 000422 湖北宜化 1996 2
 	Missing: 000425 徐工机械 1996 2
 	Missing: 000430 张家界 1996 2
-	Missing: 000620 新华联 2008 3
 	Missing: 000629 攀钢钒钛 1998 2
 	Missing: 200002 万  科Ｂ 1990 2
 	Missing: 200002 万  科Ｂ 1991 2
-	Missing: 300218 安利股份 2011 1
-	Missing: 300318 博晖创新 2012 1
 	Missing: 600601 方正科技 1991 2
 	Missing: 600601 方正科技 1992 2
 	Missing: 600602 仪电电子 1991 2

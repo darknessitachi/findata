@@ -135,9 +135,9 @@ public class FinDataService extends JdbcDaoSupport {
 	 * @throws InstantiationException
 	 * @param stockCodesToUpdateFindata
 	 */
-	public void refreshFinData(EnumStyleRefreshFinData style, HashSet<String> stockCodesToUpdateFindata, boolean includeIgnored)
+	public void refreshFinData(EnumStyleRefreshFinData style, HashSet<String> stockCodesToUpdateFindata, boolean includeIgnored, boolean ascendingOrder)
 			throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException {
-		String code;
+		String code, name;
 		java.util.Date cDate = FinDataConstants.currentTimeStamp;
 		int id, currentYear = cDate.getYear() + 1900, currentMonth = cDate.getMonth() + 1;
 		getJdbcTemplate().update("UPDATE stock SET latest_year = ?, latest_season = 0 WHERE latest_year IS NULL", currentYear - 3);
@@ -153,14 +153,14 @@ public class FinDataService extends JdbcDaoSupport {
 			for (String s : stockCodesToUpdateFindata) {
 				temp += "'" + s + "', ";
 			}
-			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial FROM stock WHERE code IN (" + temp + "' ')"+(includeIgnored? "": " AND NOT is_ignored")+" ORDER BY code DESC");
+			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial, name FROM stock WHERE code IN (" + temp + "' ')"+(includeIgnored? "": " AND NOT is_ignored")+" ORDER BY code "+(ascendingOrder ? "ASC" : "DESC"));
 		} else if (style == EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE) {
 			// Fill recent according to report_pub_dates
-			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial FROM stock s, (SELECT max(fin_year*10+fin_season) d, " +
-					"stock_id FROM report_pub_dates GROUP BY stock_id ORDER BY stock_id) rpd WHERE rpd.stock_id = s.id AND latest_year * 10 + latest_season < rpd.d"+(includeIgnored? "": " AND NOT is_ignored")+" ORDER BY code DESC");
+			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial, name FROM stock s, (SELECT max(fin_year*10+fin_season) d, " +
+					"stock_id FROM report_pub_dates GROUP BY stock_id ORDER BY stock_id) rpd WHERE rpd.stock_id = s.id AND latest_year * 10 + latest_season < rpd.d"+(includeIgnored? "": " AND NOT is_ignored")+" ORDER BY code "+(ascendingOrder ? "ASC" : "DESC"));
 		} else if (style == EnumStyleRefreshFinData.FiLL_ALL_RECENT) {
 			// Fill all recent
-			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial FROM stock"+(includeIgnored? "": " WHERE NOT is_ignored")+" ORDER BY code DESC");
+			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial, name FROM stock"+(includeIgnored? "": " WHERE NOT is_ignored")+" ORDER BY code "+(ascendingOrder ? "ASC" : "DESC"));
 		} else {
 			// todo Fill Missing
 			System.err.println("Fill_Missing hasn't been implemented yet.");
@@ -173,7 +173,8 @@ public class FinDataService extends JdbcDaoSupport {
 			latestYear = rs.getInt("latest_year");
 			latestSeason = rs.getInt("latest_season");
 			isFinancial = rs.getBoolean("is_financial");
-			if (refreshFinDataForStock(code, id, currentYear, currentMonth, latestYear, latestSeason, isFinancial)) {
+			name = rs.getString("name");
+			if (refreshFinDataForStock(code, id, currentYear, currentMonth, latestYear, latestSeason, isFinancial, name)) {
 				stocksToUpdateReportDates.put(code, id);
 			}
 		}
@@ -189,7 +190,7 @@ public class FinDataService extends JdbcDaoSupport {
 	}
 
 	@Transactional
-	private boolean refreshFinDataForStock(String code, int id, int currentYear, int currentMonth, int latestYear, int latestSeason, boolean financial) {
+	private boolean refreshFinDataForStock(String code, int id, int currentYear, int currentMonth, int latestYear, int latestSeason, boolean financial, String stockName) {
 		EnumMap<FinDataConstants.SheetType, String> insert;
 		int cYear;
 		short cSeason;
@@ -202,7 +203,7 @@ public class FinDataService extends JdbcDaoSupport {
 		String name;
 		Number v;
 		insert = financial ? financialInsert : nonFinancialInsert;
-		System.out.println(code);
+		System.out.println(code+" "+stockName);
 		ArrayList<Object> argList = new ArrayList<>();
 
 		// delete invalid rows from the table

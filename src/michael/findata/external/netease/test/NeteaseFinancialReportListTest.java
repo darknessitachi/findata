@@ -10,7 +10,7 @@ import java.text.ParseException;
 public class NeteaseFinancialReportListTest {
 	public static void main (String [] args) throws IOException, ParseException {
 		for (ReportPublication p : new NeteaseFinancialReportList("600704").getReportPublications()) {
-			System.out.println(p.getCode() + " " + p.getYear() + " " + p.getSeason() + ": "+ FinDataConstants.yyyyDashMMDashdd.format(p.getDate()));
+			System.out.println(p.getCode() + " " + p.getYear() + " " + p.getSeason() + ": "+ FinDataConstants.FORMAT_yyyyDashMMDashdd.format(p.getDate()));
 		}
 	}
 }

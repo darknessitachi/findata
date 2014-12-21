@@ -31,9 +31,15 @@ public class CnInfoReportPublicationList implements ReportPublicationList{
 		List result = urls.map(s -> {
 			BufferedReader br = null;
 			try {
-				br = new BufferedReader(new InputStreamReader(new URL(s[0].replace("${code}", code)).openConnection().getInputStream()));
+				String url;
+				if (FinDataConstants.BAShareCodeRef.containsKey(code)) {
+					url = s[0].replace("${code}", FinDataConstants.BAShareCodeRef.get(code));
+				} else {
+					url = s[0].replace("${code}", code);
+				}
+				br = new BufferedReader(new InputStreamReader(new URL(url).openConnection().getInputStream()));
 			} catch (IOException e) {
-				return null;
+				return new ReportPublication [] {}; // meaningless data
 			}
 			String input = null;
 			try {
@@ -47,19 +53,18 @@ public class CnInfoReportPublicationList implements ReportPublicationList{
 				if (m.find()) {
 					try {
 						return new ReportPublication(
-								FinDataConstants.yyyyDashMMDashdd.parse(m.group(3)),
+								FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(m.group(3)),
 								code, null, Integer.parseInt(m.group(1)),
 								Integer.parseInt(s[1]));
 					} catch (ParseException e) {
-						return null;
+						return new ReportPublication(null, null, null, -1, -1); // meaningless data
 					}
 				} else {
-					return null;
+					return new ReportPublication(null, null, null, -1, -1); // meaningless data
 				}
 			}).toArray();
 		}).flatMap(ss -> (Stream.of((Object[]) ss))).collect(Collectors.toList());
 		pbs = result;
-		System.out.print("");
 	}
 
 	private Collection<ReportPublication> pbs = new ArrayList<>();
@@ -67,8 +72,5 @@ public class CnInfoReportPublicationList implements ReportPublicationList{
 	@Override
 	public Collection<ReportPublication> getReportPublications() {
 		return pbs;
-	}
-	public static void main (String [] args) throws IOException {
-		new CnInfoReportPublicationList("600000");
 	}
 }

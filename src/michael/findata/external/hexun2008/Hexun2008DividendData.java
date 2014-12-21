@@ -45,7 +45,7 @@ public class Hexun2008DividendData implements SecurityDividendData {
 			}
 			Matcher m = Pattern.compile("([\\d-]{10})\\D+font10\">(\\d+\\.\\d+)\\D+font10\">(\\d+\\.\\d+)\\D+font10\">(\\d+\\.\\d+)\\D+font10\">([\\d-]{10}|-)\\D+font10\">([\\d,]+\\.\\d+)\\D+font10\">([\\d-]{10}|-)").matcher(line);
 			while (m.find()) {
-				d = FinDataConstants.yyyyDashMMDashdd.parse(m.group(1));
+				d = FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(m.group(1));
 				paymentDateString = m.group(7);
 				temp = Hexun2008Constants.normalDecimalFormat.parse(m.group(6));
 				if (temp instanceof Double) {
@@ -57,7 +57,7 @@ public class Hexun2008DividendData implements SecurityDividendData {
 				} else {
 					throw new NumberFormatException("Unexpected Number Type: "+temp);
 				}
-				dividendRecords.put(d, new SecurityDividendRecord(d, Float.parseFloat(m.group(2)), Float.valueOf(m.group(3)), Float.valueOf(m.group(4)), paymentDateString.length() == 10 ? FinDataConstants.yyyyDashMMDashdd.parse(paymentDateString) : null, total_amount));
+				dividendRecords.put(d, new SecurityDividendRecord(d, Float.parseFloat(m.group(2)), Float.valueOf(m.group(3)), Float.valueOf(m.group(4)), paymentDateString.length() == 10 ? FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(paymentDateString) : null, total_amount));
 			}
 			br.close();
 		} catch (MalformedURLException e) {

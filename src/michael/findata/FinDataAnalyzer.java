@@ -35,7 +35,7 @@ public class FinDataAnalyzer {
 	}
 
 	private static void analyzeAsOfTime(boolean isFinancial, String asOfDate) throws ParseException, ClassNotFoundException, SQLException, InstantiationException, IllegalAccessException {
-		analyzeAsOfTime(isFinancial, FinDataConstants.yyyyDashMMDashdd.parse(asOfDate));
+		analyzeAsOfTime(isFinancial, FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(asOfDate));
 	}
 
 	private static void analyzeAsOfTime(boolean isFinancial, Date asOfDate) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
@@ -50,7 +50,7 @@ public class FinDataAnalyzer {
 	}
 
 	private static void analyzeThroughTime(String stockCode, String asOfDate) throws ParseException, ClassNotFoundException, SQLException, InstantiationException, IllegalAccessException {
-		analyzeThroughTime(stockCode, FinDataConstants.yyyyDashMMDashdd.parse(asOfDate));
+		analyzeThroughTime(stockCode, FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(asOfDate));
 	}
 
 	public static void analyze(boolean financial) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException {
@@ -76,7 +76,7 @@ public class FinDataAnalyzer {
 
 	private static void analyzeStock(boolean financial, Connection con, String param_stock_code, Date asOfDate) throws SQLException {
 		String dateString;
-		dateString = FinDataConstants.yyyyDashMMDashdd.format(asOfDate);
+		dateString = FinDataConstants.FORMAT_yyyyDashMMDashdd.format(asOfDate);
 		analyzeStock(financial, con, param_stock_code, dateString);
 	}
 
@@ -407,10 +407,10 @@ public class FinDataAnalyzer {
 					pid = rsPrice.getInt("pid");
 					try {
 						if (cst != null) cst.close();
-						cst = con.prepareCall((isFinancial? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"', 1)");
+						cst = con.prepareCall((isFinancial? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '"+FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"', 1)");
 						analysis = cst.executeQuery();
 					} catch (SQLSyntaxErrorException ex) {
-						System.out.println("Can't calculate return for "+stockCode+" "+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date")));
+						System.out.println("Can't calculate return for "+stockCode+" "+FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date")));
 						continue;
 					}
 					if (analysis.next()) {
@@ -436,7 +436,7 @@ public class FinDataAnalyzer {
 						pst.setFloat(3, ret_min);
 						pst.setInt(4, pid);
 						pst.executeUpdate();
-						System.out.println(stockCode+"\t"+FinDataConstants.yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"\t"+ ret + "\t"+ ret_max + "\t"+ ret_min + "\t");
+						System.out.println(stockCode+"\t"+FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"\t"+ ret + "\t"+ ret_max + "\t"+ ret_min + "\t");
 					}
 				}
 			}

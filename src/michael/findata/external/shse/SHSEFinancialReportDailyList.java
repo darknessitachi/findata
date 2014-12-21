@@ -29,9 +29,9 @@ public class SHSEFinancialReportDailyList implements ReportPublicationList {
 		URL SHSEDailyListUrl;
 		HttpURLConnection httpCon;
 		SHSEDailyListUrl = new URL("http://query.sse.com.cn/infodisplay/queryLatestBulletin.do?jsonCallBack=&isPagination=false&productId=&reportType2=DQGG&reportType=ALL&beginDate=" +
-				FinDataConstants.yyyyDashMMDashdd.format(date) +
+				FinDataConstants.FORMAT_yyyyDashMMDashdd.format(date) +
 				"&endDate=" +
-				FinDataConstants.yyyyDashMMDashdd.format(date) +
+				FinDataConstants.FORMAT_yyyyDashMMDashdd.format(date) +
 				"&pageHelp.pageSize=2000&pageHelp.beginPage=1&pageHelp.endPage=1000&_=1359207649232");
 		httpCon = (HttpURLConnection) SHSEDailyListUrl.openConnection();
 		httpCon.setRequestProperty("Referer", "http://www.sse.com.cn/disclosure/listedinfo/announcement/search_result_index.shtml?x=1&productId=&startDate=2012-02-09&endDate=2012-02-09&reportType2=%E5%AE%9A%E6%9C%9F%E5%85%AC%E5%91%8A&reportType=ALL&moreConditions=true");
@@ -46,11 +46,11 @@ public class SHSEFinancialReportDailyList implements ReportPublicationList {
 				code = matcher.group(2);
 				fin_year = matcher.group(3);
 				fin_season = matcher.group(4);
-				pbs.add(new ReportPublication(FinDataConstants.yyyyDashMMDashdd.parse(dt), code, null, Integer.parseInt(fin_year), ("n".equals(fin_season) ? 4 : ("z".equals(fin_season) ? 2 : Integer
+				pbs.add(new ReportPublication(FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(dt), code, null, Integer.parseInt(fin_year), ("n".equals(fin_season) ? 4 : ("z".equals(fin_season) ? 2 : Integer
 						.parseInt(fin_season)))));
 				code = FinDataConstants.ABShareCodeRef.get(code);
 				if (code != null) {
-					pbs.add(new ReportPublication(FinDataConstants.yyyyDashMMDashdd.parse(dt), code, null, Integer.parseInt(fin_year), ("n".equals(fin_season) ? 4 : ("z".equals(fin_season) ? 2 :
+					pbs.add(new ReportPublication(FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(dt), code, null, Integer.parseInt(fin_year), ("n".equals(fin_season) ? 4 : ("z".equals(fin_season) ? 2 :
 							Integer.parseInt(fin_season)))));
 				}
 //				System.out.println(code + " " + fin_year + " " + fin_season + " " + dt);

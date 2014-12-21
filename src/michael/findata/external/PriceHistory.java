@@ -2,13 +2,13 @@ package michael.findata.external;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.channels.FileChannel;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 
 import static michael.findata.util.FinDataConstants.yyyyMMdd;
 
@@ -41,9 +41,6 @@ public abstract class PriceHistory implements SecurityTimeSeriesData{
 		try {
 			fc = new FileInputStream(DataFile).getChannel();
 			fc.position(headerSize);
-		} catch (FileNotFoundException e) {
-			System.out.println("Exception caught when accessing stock price history file for " + code);
-			e.printStackTrace();
 		} catch (IOException e) {
 			System.out.println("Exception caught when accessing stock price history file for " + code);
 			e.printStackTrace();
@@ -75,7 +72,8 @@ public abstract class PriceHistory implements SecurityTimeSeriesData{
 			lb.get(records);
 			java.sql.Date pricingDate;
 			try {
-				pricingDate = new java.sql.Date(yyyyMMdd.parse(records[0] + "").getTime());
+				SimpleDateFormat format_yyyyMMdd = new SimpleDateFormat(yyyyMMdd);
+				pricingDate = new java.sql.Date(format_yyyyMMdd.parse(records[0] + "").getTime());
 			} catch (ParseException e) {
 				System.out.println("Cannot parse a date in stock price history file for " + code + ": " + records[0]);
 				e.printStackTrace();

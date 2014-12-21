@@ -9,7 +9,6 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -42,7 +41,7 @@ public class SZSEFinancialReportListOfToday implements ReportPublicationList {
 		while ((html = br.readLine()) != null) {
 			m = p1.matcher(html);
 			while (m.find()) {
-				date = FinDataConstants.yyyyDashMMDashdd.parse(m.group(1));
+				date = FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(m.group(1));
 				name = m.group(2);
 				fin_year = m.group(3);
 				fin_season = m.group(4);

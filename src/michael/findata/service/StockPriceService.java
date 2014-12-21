@@ -12,7 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.sql.*;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import static michael.findata.util.FinDataConstants.yyyyDashMMDashdd;
 
@@ -20,11 +23,17 @@ public class StockPriceService extends JdbcDaoSupport {
 	// Bulk-load stock pricing data from THS, make sure THS pricing data is complete before doing this!!!!!
 	public void refreshStockPriceHistories() throws IOException, SQLException, ParseException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT code, id, name FROM stock ORDER BY code");
-		String code;
+		List<String> codes = new ArrayList<>();
 		while (rs.next()) {
-			code = rs.getString("code");
-			refreshStockPriceHistory(code);
+			codes.add(rs.getString("code"));
 		}
+		codes.parallelStream().forEach(code -> {
+			try {
+				refreshStockPriceHistory(code);
+			} catch (IOException | SQLException | ParseException e) {
+				e.printStackTrace();
+			}
+		});
 	}
 
 	@Transactional
@@ -49,7 +58,7 @@ public class StockPriceService extends JdbcDaoSupport {
 			latest = FinDataConstants.EARLIEST;
 		}
 
-		System.out.println(code+" Latest price: " + yyyyDashMMDashdd.format(latest));
+		System.out.println(code+" Latest price: " + new SimpleDateFormat(yyyyDashMMDashdd).format(latest));
 //		System.err.println((fc.size()-headerSize)/recordSize);
 		SecurityTimeSeriesDatum temp;
 		while (ts.hasNext()) {

@@ -1,6 +1,5 @@
 package michael.findata.external.hexun2008;
 
-import michael.findata.external.ExternalDataException;
 import michael.findata.external.SecurityShareNumberChange;
 import michael.findata.external.SecurityShareNumberChangesData;
 import michael.findata.external.SecurityShareNumberDatum;
@@ -13,7 +12,6 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -57,7 +55,7 @@ public class Hexun2008ShareNumberDatum extends SecurityShareNumberDatum implemen
 					switch (changeCounter) {
 						case 1:
 							// Date of change
-							changeDate = FinDataConstants.yyyyDashMMDashdd.parse(line.substring(index, line.length() - 5).trim());
+							changeDate = FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(line.substring(index, line.length() - 5).trim());
 							break;
 						case 2:
 							// Number of shares after the change

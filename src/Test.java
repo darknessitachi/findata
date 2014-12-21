@@ -3,7 +3,6 @@ import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.tdx.TDXPriceHistory;
 import michael.findata.model.Stock;
-import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
 import org.cyberneko.html.parsers.DOMParser;
 import org.dom4j.Document;
@@ -23,8 +22,6 @@ import java.sql.*;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static michael.findata.util.FinDataConstants.*;
 
@@ -54,21 +51,23 @@ public class Test {
 		DividendService ds = (DividendService) context.getBean("dividendService");
 		ShareNumberChangeService sncs = (ShareNumberChangeService) context.getBean("shareNumberChangeService");
 
+		long stamp = System.currentTimeMillis();
 		// The following are used regularly throughout the year
 //		ss.refreshStockCodes();
-//		sps.refreshStockPriceHistories();
+		sps.refreshStockPriceHistories();
 //		ss.refreshLatestPriceAndName();
 //		sncs.refreshNumberOfShares();
 //		ds.refreshDividendData();
 
 		// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
-		spds.scanForMissingPublicationDates();
+//		spds.scanForMissingPublicationDates(2000, false);
 
 		// The following are used mainly during and immediately after earnings report seasons
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
-//		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false);
+//		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
+		System.out.println("Time taken: "+(System.currentTimeMillis() - stamp)/1000);
 	}
 
 	// Bulk-load stock pricing data from THS, make sure THS pricing data is complete before doing this!!!!!
@@ -113,7 +112,7 @@ public class Test {
 			latest = earliest;
 		}
 
-		System.out.println("Latest: " + yyyyMMdd.format(latest));
+		System.out.println("Latest: " + FORMAT_yyyyMMdd.format(latest));
 		con.setAutoCommit(false);
 		em.getTransaction().begin();
 		SecurityTimeSeriesDatum temp;

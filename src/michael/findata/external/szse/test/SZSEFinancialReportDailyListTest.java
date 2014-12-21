@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class SZSEFinancialReportDailyListTest {
 	public static void main (String [] args) throws IOException, ParseException {
@@ -34,7 +32,7 @@ public class SZSEFinancialReportDailyListTest {
 			System.out.println(p.getCode());
 			System.out.println(p.getYear());
 			System.out.println(p.getSeason());
-			System.out.println(FinDataConstants.yyyyDashMMDashdd.format(p.getDate()));
+			System.out.println(FinDataConstants.FORMAT_yyyyDashMMDashdd.format(p.getDate()));
 		}
 	}
 }

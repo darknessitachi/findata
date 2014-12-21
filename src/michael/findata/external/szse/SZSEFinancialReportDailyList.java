@@ -23,7 +23,7 @@ public class SZSEFinancialReportDailyList implements ReportPublicationList {
 	ArrayList<ReportPublication> pbs;
 	public SZSEFinancialReportDailyList(Date date) throws IOException, ParseException {
 		pbs = new ArrayList<>();
-		URL SHSEDailyListUrl = new URL("http://www.szse.cn/szseWeb/common/szse/files/text/gs/gs" + yyMMdd.format(date) + ".txt");
+		URL SHSEDailyListUrl = new URL("http://www.szse.cn/szseWeb/common/szse/files/text/gs/gs" + FORMAT_yyMMdd.format(date) + ".txt");
 		HttpURLConnection httpCon = (HttpURLConnection) SHSEDailyListUrl.openConnection();
 		httpCon.connect();
 		InputStream is;
