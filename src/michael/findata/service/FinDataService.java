@@ -3,6 +3,7 @@ package michael.findata.service;
 import michael.findata.external.FinancialSheet;
 import michael.findata.external.hexun2008.Hexun2008FinancialSheet;
 import michael.findata.util.FinDataConstants;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.transaction.annotation.Transactional;
@@ -208,13 +209,15 @@ public class FinDataService extends JdbcDaoSupport {
 
 		// delete invalid rows from the table
 		System.out.println("Delete all data later than " + latestYear + "-" + latestSeason);
-		getJdbcTemplate().update("DELETE FROM profit_and_loss_nf WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
-		getJdbcTemplate().update("DELETE FROM balance_sheet_nf WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
-		getJdbcTemplate().update("DELETE FROM cash_flow_nf WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
-		getJdbcTemplate().update("DELETE FROM profit_and_loss_f WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
-		getJdbcTemplate().update("DELETE FROM balance_sheet_f WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
-		getJdbcTemplate().update("DELETE FROM cash_flow_f WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
-		getJdbcTemplate().update("DELETE FROM provision WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
+		JdbcTemplate template = getJdbcTemplate();
+
+		template.update("DELETE FROM profit_and_loss_nf WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
+		template.update("DELETE FROM balance_sheet_nf WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
+		template.update("DELETE FROM cash_flow_nf WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
+		template.update("DELETE FROM profit_and_loss_f WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
+		template.update("DELETE FROM balance_sheet_f WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
+		template.update("DELETE FROM cash_flow_f WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
+		template.update("DELETE FROM provision WHERE fin_year*10 + fin_season > ? AND stock_id = ?", (latestYear * 10 + latestSeason), id);
 
 		// update data
 		cYear = -1;

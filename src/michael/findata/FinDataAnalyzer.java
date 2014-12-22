@@ -20,16 +20,16 @@ public class FinDataAnalyzer {
 			System.err.println("Usage: [command] true|false");
 			return;
 		}
-		if ("true".equals(args[0])) {
-			analyze(true); // Financial
-		} else if ("false".equals(args[0])) {
-			analyze(false); // Non-financial
-		}
+//		if ("true".equals(args[0])) {
+//			analyze(true); // Financial
+//		} else if ("false".equals(args[0])) {
+//			analyze(false); // Non-financial
+//		}
 
 //		modify();
 //		growthAnalysis();
 //		analyzeGiven(false);
-//		analyzeThroughTime("600000", "2013-01-01");
+		analyzeThroughTime("601398", "2010-01-01");
 //		analyzeAsOfTime(false, "2010-05-01");
 //		migrate();
 	}

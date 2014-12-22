@@ -3,6 +3,7 @@ import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.tdx.TDXPriceHistory;
 import michael.findata.model.Stock;
+import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
 import org.cyberneko.html.parsers.DOMParser;
 import org.dom4j.Document;
@@ -54,8 +55,8 @@ public class Test {
 		long stamp = System.currentTimeMillis();
 		// The following are used regularly throughout the year
 //		ss.refreshStockCodes();
-		sps.refreshStockPriceHistories();
-//		ss.refreshLatestPriceAndName();
+//		sps.refreshStockPriceHistories();
+		ss.refreshLatestPriceAndName();
 //		sncs.refreshNumberOfShares();
 //		ds.refreshDividendData();
 
@@ -63,9 +64,9 @@ public class Test {
 //		spds.scanForMissingPublicationDates(2000, false);
 
 		// The following are used mainly during and immediately after earnings report seasons
-//		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
+		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
-//		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
+//		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, false);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
 		System.out.println("Time taken: "+(System.currentTimeMillis() - stamp)/1000);
 	}

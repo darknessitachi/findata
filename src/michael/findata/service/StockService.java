@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.*;
 import java.text.DecimalFormat;
+import java.text.ParseException;
 import java.util.*;
 
 import static michael.findata.util.FinDataConstants.STOCK_LIST_FILE;
@@ -133,9 +134,20 @@ public class StockService extends JdbcDaoSupport {
 	public void refreshLatestPriceAndName() throws SQLException, IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
 		rs = getJdbcTemplate().queryForRowSet("SELECT code, id FROM stock ORDER BY code");
+		List<String> codes = new ArrayList<>();
 		while (rs.next()) {
-			refreshLatestPriceAndNameForStock(rs.getString("code"));
+			codes.add(rs.getString("code"));
 		}
+		codes.parallelStream().forEach(code -> {
+			try {
+				refreshLatestPriceAndNameForStock(code);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+//		while (rs.next()) {
+//			refreshLatestPriceAndNameForStock(rs.getString("code"));
+//		}
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
