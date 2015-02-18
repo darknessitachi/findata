@@ -133,7 +133,7 @@ public class StockService extends JdbcDaoSupport {
 
 	public void refreshLatestPriceAndName() throws SQLException, IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
-		rs = getJdbcTemplate().queryForRowSet("SELECT code, id FROM stock ORDER BY code");
+		rs = getJdbcTemplate().queryForRowSet("SELECT code, id FROM stock WHERE NOT is_ignored ORDER BY code");
 		List<String> codes = new ArrayList<>();
 		while (rs.next()) {
 			codes.add(rs.getString("code"));
