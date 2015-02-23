@@ -16,22 +16,40 @@ import java.util.Date;
 public class FinDataAnalyzer {
 
 	public static void main(String[] args) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException, ParseException {
-		if (args.length != 1) {
-			System.err.println("Usage: [command] true|false");
+		if (args.length < 1) {
+			printUsage();
 			return;
 		}
-//		if ("true".equals(args[0])) {
-//			analyze(true); // Financial
-//		} else if ("false".equals(args[0])) {
-//			analyze(false); // Non-financial
-//		}
+		if ("true".equals(args[0]) || "false".equals(args[0])) {
+			boolean isFinancial = Boolean.parseBoolean(args[0]);
+			if (args.length == 1) {
+				analyze(isFinancial);
+			} else {
+				try {
+					analyzeAsOfTime(isFinancial, FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(args[1]));
+				} catch (Exception e) {
+					printUsage();
+				}
+			}
+		} else {
+			try {
+				Integer.parseInt(args[0]);
+				analyzeThroughTime(args[0], FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(args[1]));
+			} catch (Exception e) {
+				printUsage();
+			}
+		}
 
 //		modify();
 //		growthAnalysis();
 //		analyzeGiven(false);
-		analyzeThroughTime("601398", "2010-01-01");
-//		analyzeAsOfTime(false, "2010-05-01");
 //		migrate();
+	}
+
+	private static void printUsage () {
+		System.err.println("Usage: [command] true|false ");
+		System.err.println("Usage: [command] true|false [date]");
+		System.err.println("Usage: [command] [code] [date]");
 	}
 
 	private static void analyzeAsOfTime(boolean isFinancial, String asOfDate) throws ParseException, ClassNotFoundException, SQLException, InstantiationException, IllegalAccessException {
@@ -42,7 +60,7 @@ public class FinDataAnalyzer {
 		Connection con = jdbcConnection();
 		Statement st = con.createStatement();
 		String stockCode;
-		ResultSet rsCodes = st.executeQuery("SELECT code FROM stock WHERE code >= 399999 AND code < 900000 AND NOT (is_financial OR is_ignored) ORDER BY code");
+		ResultSet rsCodes = st.executeQuery("SELECT code FROM stock WHERE ("+(isFinancial? "":"NOT")+" is_financial) AND (NOT is_ignored) ORDER BY code");
 		while (rsCodes.next()) {
 			stockCode = rsCodes.getString("code");
 			analyzeStock(isFinancial, con, stockCode, asOfDate);
@@ -62,14 +80,14 @@ public class FinDataAnalyzer {
 		} else {
 			rsCodes = stCodes.executeQuery("SELECT code FROM stock WHERE true AND latest_year >= 2011 AND (NOT name LIKE '%ST%') AND NOT is_financial ORDER BY code");
 		}
-		String param_stock_code;
+		String stock_code;
 		Date today = new Date();
 //		GregorianCalendar gc = new GregorianCalendar();
 //		gc.add(Calendar.DATE, -1);
 //		today = gc.getTime();
 		while (rsCodes.next()) {
-			param_stock_code = rsCodes.getString(1);
-			analyzeStock(financial, con, param_stock_code, today);
+			stock_code = rsCodes.getString("code");
+			analyzeStock(financial, con, stock_code, today);
 		}
 		con.close();
 	}
@@ -206,10 +224,12 @@ public class FinDataAnalyzer {
 		Date now = new Date();
 		Connection conn = jdbcConnection();
 		Statement st = conn.createStatement();
-		ResultSet rs = st.executeQuery("SELECT is_financial FROM stock WHERE code = "+stockCode);
-		boolean isFinancial = false;
+		ResultSet rs = st.executeQuery("SELECT is_financial FROM stock WHERE code = \""+stockCode+"\"");
+		boolean isFinancial;
 		if (rs.next()) {
 			isFinancial = rs.getBoolean(1);
+		} else {
+			throw new SQLException ("Stock code not found.");
 		}
 		while (start.before(now)) {
 			analyzeStock(isFinancial, conn, stockCode, start);
