@@ -25,9 +25,9 @@ public class SZSEFinancialReportDailyListTest {
 //		System.out.println(m.group(4));
 
 		GregorianCalendar gc = new GregorianCalendar();
-		gc.set(Calendar.YEAR, 2013);
-		gc.set(Calendar.MONTH, 3);
-		gc.set(Calendar.DAY_OF_MONTH, 24);
+		gc.set(Calendar.YEAR, 2014);
+		gc.set(Calendar.MONTH, 9);
+		gc.set(Calendar.DAY_OF_MONTH, 9);
 		for (ReportPublication p : new SZSEFinancialReportDailyList(gc.getTime()).getReportPublications()) {
 			System.out.println(p.getCode());
 			System.out.println(p.getYear());

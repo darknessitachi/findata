@@ -1,5 +1,6 @@
 package michael.findata.external;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 public class ReportPublication {
@@ -92,5 +93,28 @@ public class ReportPublication {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	// publication date must be after the season end
+	public boolean isDateMeaningful () {
+		LocalDate.of(date.getYear()+1900, date.getMonth() + 1, date.getDate());
+		Date seasonLast;
+		switch (season) {
+			case 1:
+				seasonLast = new Date (year - 1900, 2, 31);
+				break;
+			case 2:
+				seasonLast = new Date (year - 1900, 5, 30);
+				break;
+			case 3:
+				seasonLast = new Date (year - 1900, 8, 30);
+				break;
+			case 4:
+				seasonLast = new Date (year - 1900, 11, 31);
+				break;
+			default:
+				return false;
+		}
+		return date.after(seasonLast);
 	}
 }
