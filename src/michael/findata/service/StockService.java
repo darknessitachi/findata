@@ -12,11 +12,11 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.sql.*;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
-import java.text.ParseException;
 import java.util.*;
 
+import static michael.findata.util.FinDataConstants.FORMAT_yyyyDashMMDashdd;
 import static michael.findata.util.FinDataConstants.STOCK_LIST_FILE;
 
 public class StockService extends JdbcDaoSupport {
@@ -164,5 +164,89 @@ public class StockService extends JdbcDaoSupport {
 		} else {
 			System.err.println(code + "\tUnable to retrieve name and price.");
 		}
+	}
+
+	public void calculateAdjustmentFactor (int noOfDaysToCover) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
+//		Connection con = jdbcConnection();
+//		con.setAutoCommit(false);
+//		Statement st = con.createStatement();
+//		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
+//		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
+		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 AND code = '000002' ORDER BY code, payment_date");
+		int stockId = -1;
+		String stockName = null;
+		String stockCode = null;
+		java.sql.Date dStart = null;
+		java.sql.Date dEnd = null;
+
+		Calendar cal = new GregorianCalendar();
+		cal.set(Calendar.DATE, -noOfDaysToCover);
+		java.sql.Date dLastFactored = new java.sql.Date(cal.getTimeInMillis());
+		System.out.println("Calculating adjustment factor since "+ FORMAT_yyyyDashMMDashdd.format(dLastFactored));
+
+		float currentAdjFactor = 1;
+		while (rs.next()) {
+			dStart = dEnd;
+//			dLastFactored = rs.getDate("last_fct_date");
+			if (stockId != rs.getInt("stock_id")) {
+				// new Stock coming in
+				if (stockId != -1) {
+					// update the last part of the last stock
+					System.out.println("Stock "+stockId+" - "+stockCode+" - "+stockName);
+					System.out.println("\tStart: "+ dStart);
+					System.out.println("\tEnd: now");
+					System.out.println("\tFactor: "+currentAdjFactor);
+					setAdjustmentFactorForStock(stockId, dStart.after(dLastFactored) ? dStart : dLastFactored, null, currentAdjFactor);
+//					con.commit();
+				}
+
+				// now we can clear the temp values
+				stockId = rs.getInt("stock_id");
+				stockCode = rs.getString("code");
+				stockName = rs.getString("name");
+				dStart = null;
+				dEnd = null;
+				currentAdjFactor = 1;
+			}
+
+			dEnd = rs.getDate("payment_date");
+			if (dStart != null) {
+				if (dStart.after(dLastFactored)) {
+					System.out.println("Stock "+stockId+" - "+stockCode+" - "+stockName);
+					System.out.println("\tStart: "+ dStart);
+					System.out.println("\tEnd: "+ dEnd);
+					System.out.println("\tFactor: "+currentAdjFactor);
+					setAdjustmentFactorForStock(stockId, dStart, dEnd, currentAdjFactor);
+				}
+			}
+			currentAdjFactor *= rs.getFloat("fct");
+		}
+		// update the last part of the last stock
+		System.out.println("Stock "+stockId+" - "+stockCode+" - "+stockName);
+		System.out.println("\tStart: "+ dEnd);
+		System.out.println("\tEnd: now");
+		System.out.println("\tFactor: "+currentAdjFactor);
+		setAdjustmentFactorForStock(stockId, dEnd.after(dLastFactored) ? dEnd : dLastFactored, null, currentAdjFactor);
+		// fill in 1 as adjustment factors for the nulls
+//		st.executeUpdate("UPDATE stock_price SET adjustment_factor = 1 WHERE adjustment_factor is NULL AND date <= ?");
+//		con.commit();
+	}
+
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	private void setAdjustmentFactorForStock(int stockId, java.sql.Date start, java.sql.Date end, float factor) throws SQLException {
+//		PreparedStatement ps;
+		if (end == null) {
+			System.out.println("Update "+stockId+" "+factor+" "+start+" - now");
+//			ps = con.prepareStatement("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ?");
+			getJdbcTemplate().update("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ?", factor, start);
+		} else {
+			System.out.println("Update "+stockId+" "+factor+" "+start+" - "+end);
+//			ps = con.prepareStatement("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ? AND date < ?");
+			getJdbcTemplate().update("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ? AND date < ?", factor, start, end);
+//			ps.setDate (3, end);
+		}
+//		ps.setFloat(1, factor);
+//		ps.setDate(2, start);
+//		ps.executeUpdate();
 	}
 }
