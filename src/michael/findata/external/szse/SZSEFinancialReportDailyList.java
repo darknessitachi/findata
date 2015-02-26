@@ -2,6 +2,7 @@ package michael.findata.external.szse;
 
 import michael.findata.external.ReportPublication;
 import michael.findata.external.ReportPublicationList;
+import michael.findata.util.StringParserUtil;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -18,6 +19,11 @@ import static michael.findata.util.FinDataConstants.*;
 public class SZSEFinancialReportDailyList implements ReportPublicationList {
 	public static String pt = "finalpage/(\\d\\d\\d\\d-\\d\\d-\\d\\d)/\\d+.PDF' target=new>(.{2,8})：(\\d\\d\\d\\d)年?(第一季|半年|第三季|年)度报告";
 
+//	..
+	// todo problem here is that "业绩快报" are not filtered, must remove them from the filtered result.
+	// todo try try 2015 01 09  stock code 000006
+	// todo try (000852)江钻股份：2014年前三季度业绩快报 2014 10 09
+	// todo (业绩)预告, (业绩)快报, (业绩)预亏, must be removed
 	Pattern p1 = Pattern.compile("、\\(([0|2|3][\\d]{5})\\).+：([\\d]{4})(.+度).*主要.+");
 	Pattern p2 = Pattern.compile("、\\(([0|1|2|3][\\d]{5})、.*([0|1|2|3][\\d]{5}).*\\).+：([\\d]{4})(.+度).*主要.+");
 	ArrayList<ReportPublication> pbs;
@@ -43,7 +49,7 @@ public class SZSEFinancialReportDailyList implements ReportPublicationList {
 			code2 = "";
 //			System.out.println(sBuffer3);
 			sLine = sBufferPrev + sBuffer3;
-			System.out.println(sLine);
+//			System.out.println(sLine);
 			sBufferPrev = sBuffer3;
 			matcher = p1.matcher(sLine);
 			if (matcher.find()) {
@@ -61,15 +67,21 @@ public class SZSEFinancialReportDailyList implements ReportPublicationList {
 					continue;
 				}
 			}
-			if (fin_season.contains(s1Report)) {
-				season = 1;
-			} else if (fin_season.contains(s3Report)) {
-				season = 3;
-			} else if (fin_season.contains(s2Report) || fin_season.contains(s2Report2)) {
-				season = 2;
-			} else if (fin_season.contains(s4Report)) {
-				season = 4;
-			} else {
+//			if (fin_season.contains(s1Report)) {
+//				season = 1;
+//			} else if (fin_season.contains(s3Report)) {
+//				season = 3;
+//			} else if (fin_season.contains(s2Report) || fin_season.contains(s2Report2)) {
+//				season = 2;
+//			} else if (fin_season.contains(s4Report)) {
+//				season = 4;
+//			} else {
+//				System.out.println("Can't figure out season: " + code1 + " " + code2 + date + " " + fin_season);
+//				continue;
+//			}
+			try {
+				season = StringParserUtil.inferSeason(fin_season);
+			} catch (ParseException e) {
 				System.out.println("Can't figure out season: " + code1 + " " + code2 + date + " " + fin_season);
 				continue;
 			}

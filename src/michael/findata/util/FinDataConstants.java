@@ -4,6 +4,7 @@ import michael.findata.service.EnumTypeCodeListFile;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -265,6 +266,7 @@ public final class FinDataConstants {
 
 	public final static String yyyyDashMMDashdd = "yyyy-MM-dd";
 	public final static SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(yyyyDashMMDashdd);
+	public final static DateTimeFormatter NEW_FORMATTER_yyyyDashMMDashdd = DateTimeFormatter.ofPattern (yyyyDashMMDashdd);
 
 	public final static String yyyyMMdd = "yyyyMMdd";
 	public final static SimpleDateFormat FORMAT_yyyyMMdd = new SimpleDateFormat(yyyyMMdd);

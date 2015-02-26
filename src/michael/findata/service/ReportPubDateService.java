@@ -2,7 +2,7 @@ package michael.findata.service;
 
 import michael.findata.external.ReportPublication;
 import michael.findata.external.cninfo.CnInfoReportPublicationList;
-import michael.findata.external.shse.SHSEFinancialReportDailyList;
+import michael.findata.external.netease.NeteaseFinancialReportDailyList;
 import michael.findata.external.shse.SHSEReportPublication;
 import michael.findata.external.szse.SZSEFinancialReportDailyList;
 import michael.findata.external.szse.SZSEFinancialReportListOfToday;
@@ -20,8 +20,8 @@ import java.util.*;
 
 public class ReportPubDateService extends JdbcDaoSupport {
 
-	// Used daily during the earnings report seasons. Going through the daily digests of SH and SZ stock exchanges are grab the financial report publication dates,
-	// after which corresponding new fin data are grabbed.
+	// Used daily during the earnings report seasons. Going through the daily digests of SH and SZ stock exchanges and
+	// grab the financial report publication dates, after which corresponding new fin data are grabbed.
 	@Transactional
 	public void updateFindataWithDates(int daysCovered) throws SQLException, IllegalAccessException, ClassNotFoundException, InstantiationException, IOException, ParseException {
 		// Figure out the last date when we did this
@@ -35,7 +35,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 		// get publications from daily digests
 		do {
 			System.out.println("Getting report published on "+ FinDataConstants.FORMAT_yyyyDashMMDashdd.format(last.getTime())+"...");
-			pubs.addAll(new SHSEFinancialReportDailyList(last.getTime()).getReportPublications());
+			pubs.addAll(new NeteaseFinancialReportDailyList(last.getTime(), last.getTime()).getReportPublications());
 			pubs.addAll(new SZSEFinancialReportDailyList(last.getTime()).getReportPublications());
 			last.add(Calendar.DATE, 1);
 		} while (last.getTimeInMillis()<FinDataConstants.currentTimeStamp.getTime());
@@ -78,8 +78,13 @@ public class ReportPubDateService extends JdbcDaoSupport {
 		getJdbcTemplate().update("DELETE FROM report_pub_dates WHERE stock_id IS NULL");
 	}
 
-	// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
-	public void scanForMissingPublicationDates (int earliestYear, boolean includeIgnored) {
+
+	// This is used to quickly update publication dates after 2 or more seasons of report publication dates was missed.
+    // However, this doesn't guarantee that the latest report publication dates will be update to date.
+    // The reason is that this only fills the gaps as identified from the data within the report_pub_dates table.
+    // In other words, for example, if the most recent report publication dates are missing from a stock, since there
+    // is no gap visible from report_pub_dates's data, nothing will be done to update these two publication dates.
+	public void scanForPublicationDateGaps (int earliestYear, boolean includeIgnored) {
 		HashSet<String> toBeFilledWithNeteasePublicationList = new HashSet<>();
 		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
 				"SELECT code, name, rpd.fin_year year, rpd.fin_season season " +

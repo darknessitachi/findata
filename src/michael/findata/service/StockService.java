@@ -20,6 +20,7 @@ import static michael.findata.util.FinDataConstants.FORMAT_yyyyDashMMDashdd;
 import static michael.findata.util.FinDataConstants.STOCK_LIST_FILE;
 
 public class StockService extends JdbcDaoSupport {
+
 	/**
 	 * Refresh stock code table from stock data software (Tong Da Xin or Tong Hua Shun)
 	 * @throws java.io.IOException
