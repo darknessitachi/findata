@@ -18,7 +18,7 @@ public class DividendService extends JdbcDaoSupport {
 	 */
 	public void refreshDividendData() throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
-		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock ORDER BY code");
+		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE NOT is_ignored ORDER BY code");
 		while (rs.next()) {
 			try {
 				refreshDividendDataForStock(rs.getString("code"), rs.getInt("id"), rs.getString("name"));

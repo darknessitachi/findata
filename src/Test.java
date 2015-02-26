@@ -21,7 +21,9 @@ import javax.persistence.Persistence;
 import java.io.IOException;
 import java.sql.*;
 import java.text.ParseException;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 import static michael.findata.util.FinDataConstants.*;
@@ -56,7 +58,7 @@ public class Test {
 		// The following are used regularly throughout the year
 //		ss.refreshStockCodes();
 //		sps.refreshStockPriceHistories();
-		ss.refreshLatestPriceAndName();
+//		ss.refreshLatestPriceAndName();
 //		sncs.refreshNumberOfShares();
 //		ds.refreshDividendData();
 
@@ -64,11 +66,11 @@ public class Test {
 //		spds.scanForMissingPublicationDates(2000, false);
 
 		// The following are used mainly during and immediately after earnings report seasons
-		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
+//		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
-//		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, false);
+		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
-		System.out.println("Time taken: "+(System.currentTimeMillis() - stamp)/1000);
+		System.out.println("Time taken: "+(System.currentTimeMillis() - stamp)/1000+" seconds.");
 	}
 
 	// Bulk-load stock pricing data from THS, make sure THS pricing data is complete before doing this!!!!!
@@ -139,9 +141,7 @@ public class Test {
 		try {
 			ps.executeBatch();
 			System.out.println(code + " updated.");
-		}
-		catch (BatchUpdateException exx)
-		{
+		} catch (BatchUpdateException exx) {
 			System.out.println(exx.getMessage());
 		}
 		con.commit();

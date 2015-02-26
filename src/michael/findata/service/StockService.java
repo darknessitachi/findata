@@ -12,7 +12,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.sql.*;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
 
@@ -134,7 +134,7 @@ public class StockService extends JdbcDaoSupport {
 
 	public void refreshLatestPriceAndName() throws SQLException, IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
-		rs = getJdbcTemplate().queryForRowSet("SELECT code, id FROM stock ORDER BY code");
+		rs = getJdbcTemplate().queryForRowSet("SELECT code, id FROM stock WHERE NOT is_ignored ORDER BY code");
 		List<String> codes = new ArrayList<>();
 		while (rs.next()) {
 			codes.add(rs.getString("code"));
