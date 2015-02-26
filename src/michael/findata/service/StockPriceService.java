@@ -206,7 +206,8 @@ public class StockPriceService extends JdbcDaoSupport {
 
 			try {
 				getJdbcTemplate().update("INSERT INTO stock_price (stock_id, date, open, high, low, close, avg, adjustment_factor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-						stockId, temp.getDate(), temp.getOpen(), temp.getHigh(), temp.getLow(), temp.getClose(), (temp.getOpen() + temp.getHigh() + temp.getLow() + temp.getClose()) / 4, null);
+						stockId, temp.getDate(), temp.getOpen(), temp.getHigh(), temp.getLow(), temp.getClose(),
+						(temp.getOpen() + temp.getHigh() + temp.getLow() + temp.getClose()) / 4, null);
 			} catch (DuplicateKeyException ex) {
 				System.err.println(ex.getMessage());
 				break;
@@ -220,15 +221,6 @@ public class StockPriceService extends JdbcDaoSupport {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/findata_spring.xml");
 		StockPriceService sps = (StockPriceService) context.getBean("stockPriceService");
 		long stamp = System.currentTimeMillis();
-		Calendar cal = new GregorianCalendar();
-		cal.set(Calendar.YEAR, 2008);
-		cal.set(Calendar.MONTH, 4);
-		cal.set(Calendar.DATE, 20);
-		Date start = cal.getTime();
-		cal.set(Calendar.YEAR, 2015);
-		cal.set(Calendar.MONTH, 1);
-		cal.set(Calendar.DATE, 17);
-		Date end = cal.getTime();
 		sps.stockPriceHistoryWalker(
 			args[0],
 			FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(args[1]),
