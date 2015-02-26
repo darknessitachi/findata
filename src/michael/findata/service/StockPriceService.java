@@ -52,8 +52,13 @@ public class StockPriceService extends JdbcDaoSupport {
 			this.serial = serial;
 			this.buying_date = buying_date;
 		}
+
 		public float getInvestment(){
-			return number_shares*paid_price;
+			return number_shares*paid_price*(1+0.0008f);
+		}
+
+		public float getSellTotal(float selling_price) {
+			return (selling_price*number_shares)*(1-0.0018f);
 		}
 	}
 
@@ -145,7 +150,7 @@ public class StockPriceService extends JdbcDaoSupport {
 			// Sell
 			positionsToSell.stream().forEach(position -> {
 				float selling_price = low < position.sell_floor ? position.sell_floor : low;
-				float profit = ((selling_price - position.paid_price)*position.number_shares);
+				float profit = position.getSellTotal(selling_price) - position.getInvestment();
 				if (position.paid_price == -1f) {
 					System.out.println("error");
 				}

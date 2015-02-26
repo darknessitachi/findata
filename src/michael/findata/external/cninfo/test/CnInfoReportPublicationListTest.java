@@ -10,7 +10,7 @@ import java.io.IOException;
  */
 public class CnInfoReportPublicationListTest {
 	public static void main (String [] args) throws IOException {
-		ReportPublicationList list = new CnInfoReportPublicationList("600000");
+		ReportPublicationList list = new CnInfoReportPublicationList("600775");
 		list.getReportPublications().forEach(System.out::println);
 	}
 }
