@@ -168,12 +168,8 @@ public class StockService extends JdbcDaoSupport {
 	}
 
 	public void calculateAdjustmentFactor (int noOfDaysToCover) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
-//		Connection con = jdbcConnection();
-//		con.setAutoCommit(false);
-//		Statement st = con.createStatement();
-//		ResultSet rs = st.executeQuery("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
-//		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
-		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 AND code = '000002' ORDER BY code, payment_date");
+		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
+//		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 AND code = '000002' ORDER BY code, payment_date");
 		int stockId = -1;
 		String stockName = null;
 		String stockCode = null;

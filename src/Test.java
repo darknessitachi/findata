@@ -59,11 +59,11 @@ public class Test {
 
 		long stamp = System.currentTimeMillis();
 		// The following are used regularly throughout the year
-		ss.refreshStockCodes();
-		sps.refreshStockPriceHistories();
-		ss.refreshLatestPriceAndName();
+//		ss.refreshStockCodes();
+//		sps.refreshStockPriceHistories();
+//		ss.refreshLatestPriceAndName();
 		sncs.refreshNumberOfShares();
-		ds.refreshDividendData();
+//		ds.refreshDividendData();
 
 		// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
 //		spds.scanForPublicationDateGaps(2000, false);
@@ -72,6 +72,8 @@ public class Test {
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 //		spds.fillLatestPublicationDateAccordingToLatestFinData();
+//		ss.calculateAdjustmentFactor(600);
+
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
 		System.out.println("Time taken: "+(System.currentTimeMillis() - stamp)/1000+" seconds.");

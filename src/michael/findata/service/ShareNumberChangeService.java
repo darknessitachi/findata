@@ -45,6 +45,7 @@ public class ShareNumberChangeService extends JdbcDaoSupport {
 		getJdbcTemplate().update("UPDATE stock, (SELECT stock_id, number_of_shares sn FROM share_number_change snc WHERE stock_id = ? AND change_date <= current_date() ORDER BY change_date DESC LIMIT 1) sn SET stock.number_of_shares = sn.sn WHERE stock.id = sn.stock_id", stockId);
 	}
 
+	// Please don't mark this as transactional as it purposely uses sql exception in its logic
 	private void refreshNumberOfSharesForStock(int stockId, ArrayList<SecurityShareNumberChange> snc) {
 		int times = getJdbcTemplate().queryForObject("SELECT count(*) c FROM share_number_change WHERE stock_id = ?", Integer.class, stockId);
 		for (int i = snc.size() - 1 - times; i > -1; i--) {
@@ -60,7 +61,7 @@ public class ShareNumberChangeService extends JdbcDaoSupport {
 							stockId, new Date(snc.get(i).getChangeDate().getTime()));
 					i += 2;
 				} else {
-					// force rollback
+					// force rollback, since we don't understand/expect this exception
 					throw e;
 				}
 			}
