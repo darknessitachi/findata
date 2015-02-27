@@ -21,9 +21,7 @@ import javax.persistence.Persistence;
 import java.io.IOException;
 import java.sql.*;
 import java.text.ParseException;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
 
 import static michael.findata.util.FinDataConstants.*;
@@ -33,18 +31,23 @@ public class Test {
 	private static EntityManagerFactory entityManagerFactory;
 
 	public static void main (String [] args) throws ClassNotFoundException, SQLException, InstantiationException, IOException, IllegalAccessException, ParseException {
-//		Pattern p2 = Pattern.compile("target=\"new\">.*([\\d,O]{4})\\s*年?(.*)报告(摘要|正文|全文)?(（更新后）|（已取消）|\\(修订版\\))?<.*");
-//		Matcher m = p2.matcher("target=\"new\">路翔股份：2012年年半年度报告</a>&nbsp;&nbsp;&nbsp;<img width=\"19\" height=\"21\" border=\"0\"  src=\"images2008/pdf.jpg\"  onerror=\"this.src='images2008/otherfile.jpg'\"/>");
-//		System.out.println(m.find());
-//		System.out.println(m.group());
-//		System.out.println(m.find());
-//		System.out.println(m.group());
-//		System.out.println(m.find());
-//		System.out.println(m.group());
 
-//		Date dt = new Date();
-//		refreshStockPriceHistories();
-//		System.out.printf("%d",(new Date().getTime() - dt.getTime()));
+		/**
+		 * Data integrity check:
+		 */
+
+		/**
+		 * 1. report_pub_dates latest year/season not in sync with stock latest year/season
+
+		 select rpd.*, s.latest_year, s.latest_season, s.code, s.name
+		 from
+		   (select max(fin_year*10+fin_season) d, stock_id from report_pub_dates group by stock_id) rpd,
+		   stock s
+		 where
+		   rpd.stock_id = s.id and
+		   s.latest_year*10+s.latest_season <> d and not s.is_ignored;
+
+		**/
 
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/findata_spring.xml");
 		ReportPubDateService spds = (ReportPubDateService) context.getBean("reportPubDateService");
@@ -56,19 +59,19 @@ public class Test {
 
 		long stamp = System.currentTimeMillis();
 		// The following are used regularly throughout the year
-//		ss.refreshStockCodes();
-//		sps.refreshStockPriceHistories();
-//		ss.refreshLatestPriceAndName();
-//		sncs.refreshNumberOfShares();
-//		ds.refreshDividendData();
+		ss.refreshStockCodes();
+		sps.refreshStockPriceHistories();
+		ss.refreshLatestPriceAndName();
+		sncs.refreshNumberOfShares();
+		ds.refreshDividendData();
 
 		// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
 //		spds.scanForPublicationDateGaps(2000, false);
 
 		// The following are used mainly during and immediately after earnings report seasons
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
-		spds.updateFindataWithDates(60);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
+//		spds.fillLatestPublicationDateAccordingToLatestFinData();
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
 		System.out.println("Time taken: "+(System.currentTimeMillis() - stamp)/1000+" seconds.");

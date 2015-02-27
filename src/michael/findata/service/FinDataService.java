@@ -179,15 +179,6 @@ public class FinDataService extends JdbcDaoSupport {
 				stocksToUpdateReportDates.put(code, id);
 			}
 		}
-
-		// todo still need this or you can't re-fill pub dates according to fin data
-//		if (updateReportPublicationDates && !stocksToUpdateReportDates.isEmpty()) {
-//			System.out.println("New report found. Now trying to refresh their publication dates...");
-//			currentYear = new Date().getYear()+1900;
-//			for (Map.Entry<String, Integer> entry: stocksToUpdateReportDates.entrySet()) {
-//				refreshReportPubDatesForStockForAYear(con, entry.getKey(), entry.getValue(), currentYear);
-//			}
-//		}
 	}
 
 	@Transactional
@@ -281,6 +272,8 @@ public class FinDataService extends JdbcDaoSupport {
 		}
 	}
 
+	// This is used together with ReportPubDateService.fillLatestPublicationDateAccordingToLatestFinData
+	// to make sure that report pub dates and fin_data are in sync
 	public void refreshMissingFinDataAccordingToReportPubDates () {
 		boolean isFinancial;
 		String code;

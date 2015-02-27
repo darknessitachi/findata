@@ -1,8 +1,10 @@
 package michael.findata.service;
 
 import michael.findata.external.ReportPublication;
+import michael.findata.external.ReportPublicationList;
 import michael.findata.external.cninfo.CnInfoReportPublicationList;
 import michael.findata.external.netease.NeteaseFinancialReportDailyList;
+import michael.findata.external.netease.NeteaseFinancialReportList;
 import michael.findata.external.shse.SHSEReportPublication;
 import michael.findata.external.szse.SZSEFinancialReportDailyList;
 import michael.findata.external.szse.SZSEFinancialReportListOfToday;
@@ -78,6 +80,22 @@ public class ReportPubDateService extends JdbcDaoSupport {
 		getJdbcTemplate().update("DELETE FROM report_pub_dates WHERE stock_id IS NULL");
 	}
 
+
+	// This is used together with FinDataService.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE ..
+	// to make sure that report pub dates and fin_data are in sync
+	public void fillLatestPublicationDateAccordingToLatestFinData () {
+		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
+				"select rpd.*, s.latest_year, s.latest_season, s.code, s.name \n" +
+						"from \n" +
+						" (select max(fin_year*10+fin_season) d, stock_id from report_pub_dates group by stock_id) rpd,\n" +
+						" stock s \n" +
+						"where \n" +
+						"  rpd.stock_id = s.id and \n" +
+						"  s.latest_year*10+s.latest_season <> d and not s.is_ignored;");
+		while (rs.next()) {
+			fillMissingReportPublicationDatesWithNetease(rs.getString("code"));
+		}
+	}
 
 	// This is used to quickly update publication dates after 2 or more seasons of report publication dates was missed.
     // However, this doesn't guarantee that the latest report publication dates will be update to date.
@@ -173,29 +191,42 @@ public class ReportPubDateService extends JdbcDaoSupport {
 				}
 			}
 		}
-		toBeFilledWithNeteasePublicationList.forEach(this::fillMissingReportPublicationDatesWithNetease);
+		toBeFilledWithNeteasePublicationList.forEach(this::fillMissingReportPublicationDatesWithCnInfo);
 		// Some cleaning
 		getJdbcTemplate().update("DELETE FROM report_pub_dates WHERE fin_year < 1800");
 	}
 
-	private void fillMissingReportPublicationDatesWithNetease (String code) {
-		try {
-			for (ReportPublication rp : new CnInfoReportPublicationList(code).getReportPublications()) {
-				if (rp.getCode() == null) {
-					continue;
-				}
-				try {
-					getJdbcTemplate().update("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)",
-							code, rp.getYear(), rp.getSeason(), rp.getDate());
-					System.out.println("Found: "+rp.getCode() + " " + rp.getYear() + " " + rp.getSeason() + ": "+ FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
-				} catch (Exception ex) {
-					if (ex instanceof DuplicateKeyException) {
-						// Normal
-					} else {
-						ex.printStackTrace();
-					}
+	private void fillMissingReportPublicationDates(String code, ReportPublicationList rpl) {
+		for (ReportPublication rp : rpl.getReportPublications()) {
+			if (rp.getCode() == null) {
+				continue;
+			}
+			try {
+				getJdbcTemplate().update("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)",
+						code, rp.getYear(), rp.getSeason(), rp.getDate());
+				System.out.println("Found: "+rp.getCode() + " " + rp.getYear() + " " + rp.getSeason() + ": "+ FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
+			} catch (Exception ex) {
+				if (ex instanceof DuplicateKeyException) {
+					// Normal
+				} else {
+					ex.printStackTrace();
 				}
 			}
+		}
+	}
+
+	private void fillMissingReportPublicationDatesWithCnInfo(String code) {
+		try {
+			fillMissingReportPublicationDates(code, new CnInfoReportPublicationList(code));
+		} catch (IOException e) {
+			System.out.println("Cannot obtain "+code+"'s report publication dates from CnInfo.");
+			e.printStackTrace();
+		}
+	}
+
+	private void fillMissingReportPublicationDatesWithNetease(String code) {
+		try {
+			fillMissingReportPublicationDates(code, new NeteaseFinancialReportList(code));
 		} catch (IOException e) {
 			System.out.println("Cannot obtain "+code+"'s report publication dates from Netease.");
 			e.printStackTrace();

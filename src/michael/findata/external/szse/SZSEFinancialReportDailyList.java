@@ -19,10 +19,6 @@ import static michael.findata.util.FinDataConstants.*;
 public class SZSEFinancialReportDailyList implements ReportPublicationList {
 	public static String pt = "finalpage/(\\d\\d\\d\\d-\\d\\d-\\d\\d)/\\d+.PDF' target=new>(.{2,8})：(\\d\\d\\d\\d)年?(第一季|半年|第三季|年)度报告";
 
-	// todo problem here is that "业绩快报" are not filtered, must remove them from the filtered result.
-	// todo try try 2015 01 09  stock code 000006
-	// todo try (000852)江钻股份：2014年前三季度业绩快报 2014 10 09
-	// todo (业绩)快报, (业绩)预告, (业绩)预亏, must be removed
 	Pattern p1 = Pattern.compile("、\\(([0|2|3][\\d]{5})\\).+：([\\d]{4})([^快预]+度)[^快预]*主要.+");
 	Pattern p2 = Pattern.compile("、\\(([0|1|2|3][\\d]{5})、.*([0|1|2|3][\\d]{5}).*\\).+：([\\d]{4})(.+度).*主要.+");
 	ArrayList<ReportPublication> pbs;
