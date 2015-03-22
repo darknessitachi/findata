@@ -65,6 +65,6 @@ public class ShareNumberChangeService extends JdbcDaoSupport {
 				}
 			}
 		}
-		System.out.println(" Changes in number of shares updated.");
+		System.out.println(" changes in number of shares updated.");
 	}
 }

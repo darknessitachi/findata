@@ -3,7 +3,6 @@ import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.tdx.TDXPriceHistory;
 import michael.findata.model.Stock;
-import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
 import org.cyberneko.html.parsers.DOMParser;
 import org.dom4j.Document;
@@ -21,9 +20,7 @@ import javax.persistence.Persistence;
 import java.io.IOException;
 import java.sql.*;
 import java.text.ParseException;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
 
 import static michael.findata.util.FinDataConstants.*;
@@ -58,18 +55,18 @@ public class Test {
 		// The following are used regularly throughout the year
 //		ss.refreshStockCodes();
 //		sps.refreshStockPriceHistories();
-//		ss.refreshLatestPriceAndName();
+		ss.refreshLatestPriceAndName();
 		sncs.refreshNumberOfShares();
-//		ds.refreshDividendData();
+		ds.refreshDividendData();
 
 		// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
 //		spds.scanForPublicationDateGaps(2000, false);
 
 		// The following are used mainly during and immediately after earnings report seasons
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
-		spds.updateFindataWithDates(60);
+//		spds.updateFindataWithDates(60);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false);
-		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
+//		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
 		System.out.println("Time taken: "+(System.currentTimeMillis() - stamp)/1000+" seconds.");
 	}
