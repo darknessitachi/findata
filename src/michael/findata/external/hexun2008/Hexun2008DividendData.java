@@ -10,7 +10,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.DecimalFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -45,9 +47,11 @@ public class Hexun2008DividendData implements SecurityDividendData {
 			}
 			Matcher m = Pattern.compile("([\\d-]{10})\\D+font10\">(\\d+\\.\\d+)\\D+font10\">(\\d+\\.\\d+)\\D+font10\">(\\d+\\.\\d+)\\D+font10\">([\\d-]{10}|-)\\D+font10\">([\\d,]+\\.\\d+)\\D+font10\">([\\d-]{10}|-)").matcher(line);
 			while (m.find()) {
-				d = FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(m.group(1));
+//				d = FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(m.group(1));
+				d = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd).parse(m.group(1));
 				paymentDateString = m.group(7);
-				temp = Hexun2008Constants.normalDecimalFormat.parse(m.group(6));
+//				temp = Hexun2008Constants.FORMAT_normalDecimalFormat.parse(m.group(6));
+				temp = new DecimalFormat(Hexun2008Constants.NORMAL_DECIMAL_FORMAT).parse(m.group(6));
 				if (temp instanceof Double) {
 					 total_amount = 10000 * (Double)temp;
 				} else if (temp instanceof Long) {
