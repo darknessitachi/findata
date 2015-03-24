@@ -21,7 +21,7 @@ import java.util.*;
 public class ReportPubDateService extends JdbcDaoSupport {
 
 	// Used daily during the earnings report seasons. Going through the daily digests of SH and SZ stock exchanges and
-	// grab the financial report publication dates, after which corresponding new fin data are grabbed.
+	// grab the financial report publication dates, after which the corresponding new fin data are grabbed.
 	@Transactional
 	public void updateFindataWithDates(int daysCovered) throws SQLException, IllegalAccessException, ClassNotFoundException, InstantiationException, IOException, ParseException {
 		// Figure out the last date when we did this
