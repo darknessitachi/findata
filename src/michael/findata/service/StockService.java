@@ -168,8 +168,8 @@ public class StockService extends JdbcDaoSupport {
 	}
 
 	public void calculateAdjustmentFactor (int noOfDaysToCover) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
-		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
-//		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 AND code = '000002' ORDER BY code, payment_date");
+//		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 ORDER BY code, payment_date");
+		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct FROM dividend, stock WHERE stock_id = stock.id AND payment_date >= '1989-01-01' AND (bonus + split) <> 0 AND code = '000002' ORDER BY code, payment_date");
 		int stockId = -1;
 		String stockName = null;
 		String stockCode = null;
@@ -177,7 +177,7 @@ public class StockService extends JdbcDaoSupport {
 		java.sql.Date dEnd = null;
 
 		Calendar cal = new GregorianCalendar();
-		cal.set(Calendar.DATE, -noOfDaysToCover);
+		cal.add(Calendar.DATE, -noOfDaysToCover);
 		java.sql.Date dLastFactored = new java.sql.Date(cal.getTimeInMillis());
 		System.out.println("Calculating adjustment factor since "+ FORMAT_yyyyDashMMDashdd.format(dLastFactored));
 
@@ -208,12 +208,12 @@ public class StockService extends JdbcDaoSupport {
 
 			dEnd = rs.getDate("payment_date");
 			if (dStart != null) {
-				if (dStart.after(dLastFactored)) {
+				if (dEnd.after(dLastFactored)) {
 					System.out.println("Stock "+stockId+" - "+stockCode+" - "+stockName);
 					System.out.println("\tStart: "+ dStart);
 					System.out.println("\tEnd: "+ dEnd);
 					System.out.println("\tFactor: "+currentAdjFactor);
-					setAdjustmentFactorForStock(stockId, dStart, dEnd, currentAdjFactor);
+					setAdjustmentFactorForStock(stockId, dStart.after(dLastFactored) ? dStart : dLastFactored, dEnd, currentAdjFactor);
 				}
 			}
 			currentAdjFactor *= rs.getFloat("fct");
@@ -231,19 +231,17 @@ public class StockService extends JdbcDaoSupport {
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	private void setAdjustmentFactorForStock(int stockId, java.sql.Date start, java.sql.Date end, float factor) throws SQLException {
-//		PreparedStatement ps;
 		if (end == null) {
-			System.out.println("Update "+stockId+" "+factor+" "+start+" - now");
-//			ps = con.prepareStatement("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ?");
-			getJdbcTemplate().update("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ?", factor, start);
+			System.out.println("Updating "+stockId+" "+factor+" "+start+" - now");
+//			getJdbcTemplate().update("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = " + stockId + " AND date >= ?", factor, start);
+			getJdbcTemplate().update(
+					"UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = ? AND date >= ?",
+					factor, stockId, start);
 		} else {
-			System.out.println("Update "+stockId+" "+factor+" "+start+" - "+end);
-//			ps = con.prepareStatement("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ? AND date < ?");
-			getJdbcTemplate().update("UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = "+stockId+" AND date >= ? AND date < ?", factor, start, end);
-//			ps.setDate (3, end);
+			System.out.println("Updating "+stockId+" "+factor+" "+start+" - "+end);
+			getJdbcTemplate().update(
+					"UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = ? AND date >= ? AND date < ?",
+					factor, stockId, start, end);
 		}
-//		ps.setFloat(1, factor);
-//		ps.setDate(2, start);
-//		ps.executeUpdate();
 	}
 }

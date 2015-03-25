@@ -49,6 +49,20 @@ public class Test {
 
 		**/
 
+		/**
+		 * 2. Adjustment factor must be calculated once there are split/bonus for a stock, the following will find
+		 * gaps in the adjustment factor column
+
+		 select nn.min_not_null, min(p.date) min_null, count(p.date) gap_count, max(p.date) max_null, nn.max_not_null
+		 from
+		 stock_price p,
+		 stock s,
+		 (select min(p.date) min_not_null,max(p.date) max_not_null from stock_price p, stock s where p.stock_id = s.id and s.code = '000001' and adjustment_factor is not null) nn
+		 where
+		 p.stock_id = s.id and s.code = '000001' and adjustment_factor is null and date > nn.min_not_null and date < nn.max_not_null;
+
+		 */
+
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/findata_spring.xml");
 		ReportPubDateService spds = (ReportPubDateService) context.getBean("reportPubDateService");
 		StockPriceService sps = (StockPriceService) context.getBean("stockPriceService");
@@ -62,17 +76,16 @@ public class Test {
 //		ss.refreshStockCodes();
 //		sps.refreshStockPriceHistories();
 //		ss.refreshLatestPriceAndName();
-		sncs.refreshNumberOfShares();
+//		sncs.refreshNumberOfShares();
 //		ds.refreshDividendData();
-
-		// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
-//		spds.scanForPublicationDateGaps(2000, false);
+		ss.calculateAdjustmentFactor(10);
 
 		// The following are used mainly during and immediately after earnings report seasons
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 //		spds.fillLatestPublicationDateAccordingToLatestFinData();
-//		ss.calculateAdjustmentFactor(600);
+//		spds.scanForPublicationDateGaps(2000, false);
+
 
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
