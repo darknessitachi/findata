@@ -1,6 +1,7 @@
 package michael.findata;
 
 import michael.findata.external.*;
+import michael.findata.external.hexun2008.Hexun2008DataException;
 import michael.findata.external.hexun2008.Hexun2008DividendData;
 import michael.findata.external.hexun2008.Hexun2008FinancialSheet;
 import michael.findata.external.hexun2008.Hexun2008ShareNumberDatum;
@@ -77,7 +78,13 @@ public class FinDataExtractor {
 			code = rs.getString(1);
 			stock_id = rs.getInt(2);
 			NeteaseTradingDatum td = new NeteaseTradingDatum(code);
-			Hexun2008ShareNumberDatum snd = new Hexun2008ShareNumberDatum(code);
+			Hexun2008ShareNumberDatum snd;
+			try {
+				snd = new Hexun2008ShareNumberDatum(code);
+			} catch (Hexun2008DataException e) {
+				System.out.println(code + "\tUnable to retrieve name, price or share number.");
+				continue;
+			}
 			if (td.getStockName() != null && td.getCurrent() != null && snd.getValue() != null) {
 				pUpdateStock.setString(1, td.getStockName());
 				pUpdateStock.setObject(2, td.getCurrent());

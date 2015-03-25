@@ -76,9 +76,9 @@ public class Test {
 //		ss.refreshStockCodes();
 //		sps.refreshStockPriceHistories();
 //		ss.refreshLatestPriceAndName();
-//		sncs.refreshNumberOfShares();
 //		ds.refreshDividendData();
 		ss.calculateAdjustmentFactor(10);
+//		sncs.refreshNumberOfShares();
 
 		// The following are used mainly during and immediately after earnings report seasons
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
@@ -87,8 +87,14 @@ public class Test {
 //		spds.scanForPublicationDateGaps(2000, false);
 
 
+		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
+//		spds.updateFindataWithDates(60);
+		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
+
+		// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
+//		spds.scanForPublicationDateGaps(2000, false);
 		System.out.println("Time taken: "+(System.currentTimeMillis() - stamp)/1000+" seconds.");
 	}
 

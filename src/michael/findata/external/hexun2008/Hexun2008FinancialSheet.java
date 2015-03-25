@@ -1,7 +1,6 @@
 package michael.findata.external.hexun2008;
 
 import michael.findata.external.FinancialSheet;
-import michael.findata.util.FinDataConstants;
 import org.cyberneko.html.parsers.DOMParser;
 import org.dom4j.Document;
 import org.dom4j.Element;
@@ -118,7 +117,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 		XPath fieldValuePath = doc.createXPath("./TD[2]/DIV");
 
 		try {
-			Pattern p = Pattern.compile("\\['(\\d\\d\\d\\d)\\.\\d\\d.\\d\\d','\\d+.{1,5}¶È'\\]\\];$");
+			Pattern p = Pattern.compile("\\['(\\d\\d\\d\\d)\\.\\d\\d.\\d\\d','\\d+.{1,5}ï¿½ï¿½'\\]\\];$");
 			XPath scriptPath = doc.createXPath("//DIV[@id=\"zaiyaocontent\"]/SCRIPT[1]");
 			Matcher m = p.matcher(((Element)scriptPath.evaluate(doc)).getText());
 			if (m.find()) {
@@ -141,7 +140,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 			try {
 //				nameElement = ;
 				datumName = ((Element) fieldNamePath.evaluate(e)).getText();
-				if ("»á¼ÆÄê¶È".equals(datumName) || "±¸×¢".equals(datumName) || "±¨¸æÄê¶È".equals(datumName) || "·¢²¼ÈÕÆÚ".equals(datumName)) {
+				if ("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½".equals(datumName) || "ï¿½ï¿½×¢".equals(datumName) || "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½".equals(datumName) || "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½".equals(datumName)) {
 					continue;
 				}
 				valueElement = (Element) fieldValuePath.evaluate(e);
@@ -149,7 +148,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 				continue;
 			}
 			try {
-				value = Hexun2008Constants.normalDecimalFormat.parse(valueElement.getText());
+				value = Hexun2008Constants.FORMAT_normalDecimalFormat.parse(valueElement.getText());
 			} catch (NumberFormatException ex) {
 				value = null;
 			} catch (ParseException e1) {

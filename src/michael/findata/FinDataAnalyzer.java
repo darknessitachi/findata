@@ -117,60 +117,60 @@ public class FinDataAnalyzer {
 			if (rsResult.getString(2) == null) return;
 			System.out.print(param_stock_code + "\t" +
 			rsResult.getString(2) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(3)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(4)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(5)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(6)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(7)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(8)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(9)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(10)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(11)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(12)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(13)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(14)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(15)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(16)) + "\t" +
-			Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(17)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(3)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(4)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(5)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(6)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(7)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(8)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(9)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(10)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(11)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(12)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(13)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(14)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(15)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(16)) + "\t" +
+			Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(17)) + "\t" +
 			dateString + "\n");
 		} else {
 			if (rsResult.getString(2) == null) return;
 			System.out.print(param_stock_code + "\t" +
 					rsResult.getString(2) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(3)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(4)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(5)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(6)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(7)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(8)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(9)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(10)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(11)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(12)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(13)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(14)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(15)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(16)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(17)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(18)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(19)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(20)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(21)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(22)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(23)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(24)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(25)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(26)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(27)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(28)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(29)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(30)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(31)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(32)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(3)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(4)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(5)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(6)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(7)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(8)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(9)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(10)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(11)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(12)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(13)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(14)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(15)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(16)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(17)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(18)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(19)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(20)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(21)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(22)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(23)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(24)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(25)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(26)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(27)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(28)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(29)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(30)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(31)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(32)) + "\t" +
 					rsResult.getString(33) + "\t" +
 					rsResult.getString(34) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(35)) + "\t" +
-					Hexun2008Constants.accurateDecimalFormat.format(rsResult.getDouble(36)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(35)) + "\t" +
+					Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(36)) + "\t" +
 					dateString + "\n");
 		}
 	}

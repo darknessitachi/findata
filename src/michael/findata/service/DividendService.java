@@ -3,6 +3,7 @@ package michael.findata.service;
 import michael.findata.external.SecurityDividendData;
 import michael.findata.external.SecurityDividendRecord;
 import michael.findata.external.hexun2008.Hexun2008DividendData;
+import michael.findata.model.Stock;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,14 +20,22 @@ public class DividendService extends JdbcDaoSupport {
 	public void refreshDividendData() throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
 		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE NOT is_ignored ORDER BY code");
+		List<Stock> stocks = new ArrayList<>();
 		while (rs.next()) {
+			Stock s = new Stock();
+			s.setId(rs.getInt("id"));
+			s.setCode(rs.getString("code"));
+			s.setName(rs.getString("name"));
+			stocks.add(s);
+		}
+		stocks.parallelStream().forEach(stock -> {
 			try {
-				refreshDividendDataForStock(rs.getString("code"), rs.getInt("id"), rs.getString("name"));
+				refreshDividendDataForStock(stock.getCode(), stock.getId(), stock.getName());
 			} catch (Exception e) {
-				System.err.println("Unexpected exception caught when refreshing dividend records for "+rs.getString("code"));
+				System.err.println("Unexpected exception caught when refreshing dividend records for "+stock.getCode());
 				System.err.println(e.getMessage());
 			}
-		}
+		});
 	}
 
 	@Transactional

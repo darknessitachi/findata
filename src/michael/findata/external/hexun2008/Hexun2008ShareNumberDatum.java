@@ -9,9 +9,10 @@ import michael.findata.util.StringParserUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.DecimalFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -22,7 +23,7 @@ public class Hexun2008ShareNumberDatum extends SecurityShareNumberDatum implemen
 	private Number numberOfShares = null;
 	private ArrayList<SecurityShareNumberChange> shareNumberChanges;
 
-	public Hexun2008ShareNumberDatum(String stockCode) {
+	public Hexun2008ShareNumberDatum(String stockCode) throws Hexun2008DataException {
 		this.stockCode = stockCode;
 		shareNumberChanges = new ArrayList<>();
 
@@ -55,11 +56,13 @@ public class Hexun2008ShareNumberDatum extends SecurityShareNumberDatum implemen
 					switch (changeCounter) {
 						case 1:
 							// Date of change
-							changeDate = FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(line.substring(index, line.length() - 5).trim());
+//							changeDate = FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(line.substring(index, line.length() - 5).trim());
+							changeDate = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd).parse(line.substring(index, line.length() - 5).trim());
 							break;
 						case 2:
 							// Number of shares after the change
-							nos = normalDecimalFormat.parse(line.substring(line.indexOf(">")+1, line.length() - 5).trim());
+//							nos = FORMAT_normalDecimalFormat.parse(line.substring(line.indexOf(">")+1, line.length() - 5).trim());
+							nos = new DecimalFormat(NORMAL_DECIMAL_FORMAT).parse(line.substring(line.indexOf(">")+1, line.length() - 5).trim());
 							if (nos instanceof Double) {
 								nos = 10000 * (Double)nos;
 							} else if (nos instanceof Long) {
@@ -84,13 +87,7 @@ public class Hexun2008ShareNumberDatum extends SecurityShareNumberDatum implemen
 				numberOfShares = getShareNumberChanges().get(0).getNumberOfShares();
 			}
 			br.close();
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (ParseException e) {
-			e.printStackTrace();
-		} catch (Hexun2008DataException e) {
+		} catch (IOException | ParseException e) {
 			e.printStackTrace();
 		}
 	}
