@@ -117,7 +117,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 		XPath fieldValuePath = doc.createXPath("./TD[2]/DIV");
 
 		try {
-			Pattern p = Pattern.compile("\\['(\\d\\d\\d\\d)\\.\\d\\d.\\d\\d','\\d+.{1,5}ï¿½ï¿½'\\]\\];$");
+			Pattern p = Pattern.compile("\\['(\\d\\d\\d\\d)\\.\\d\\d.\\d\\d','\\d+.{1,5}¶È'\\]\\];$");
 			XPath scriptPath = doc.createXPath("//DIV[@id=\"zaiyaocontent\"]/SCRIPT[1]");
 			Matcher m = p.matcher(((Element)scriptPath.evaluate(doc)).getText());
 			if (m.find()) {
@@ -140,7 +140,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 			try {
 //				nameElement = ;
 				datumName = ((Element) fieldNamePath.evaluate(e)).getText();
-				if ("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½".equals(datumName) || "ï¿½ï¿½×¢".equals(datumName) || "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½".equals(datumName) || "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½".equals(datumName)) {
+				if ("»á¼ÆÄê¶È".equals(datumName) || "±¸×¢".equals(datumName) || "±¨¸æÄê¶È".equals(datumName) || "·¢²¼ÈÕÆÚ".equals(datumName)) {
 					continue;
 				}
 				valueElement = (Element) fieldValuePath.evaluate(e);
