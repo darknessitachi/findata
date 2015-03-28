@@ -37,7 +37,7 @@ public class NeteaseFinancialReportDailyList implements ReportPublicationList {
 		String endDateString = FinDataConstants.NEW_FORMATTER_yyyyDashMMDashdd.format(endDate);
 		ArrayList<URL> urls = new ArrayList<>();
 		urls.add(new URL("http://quotes.money.163.com/hs/marketdata/service/gsgg" +
-				".php?host=/hs/marketdata/service/gsgg.php&page=0&query=leixing:02;start:"+startDateString+";" +
+				".php?host=/hs/marketdata/service/gsgg.php&page=0&query=leixing:03;start:"+startDateString+";" +
 				"end:"+endDateString+"&fields=RN,SYMBOL,SNAME,PUBLISHDATE,ANNOUNMT2," +
 				"ANNOUNMT1&sort=PUBLISHDATE&order=desc&count=3000&type=query&req=41430"));
 		urls.add(new URL("http://quotes.money.163.com/hs/marketdata/service/gsgg" +
