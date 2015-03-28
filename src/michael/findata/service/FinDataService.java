@@ -2,6 +2,7 @@ package michael.findata.service;
 
 import michael.findata.external.FinancialSheet;
 import michael.findata.external.hexun2008.Hexun2008FinancialSheet;
+import michael.findata.model.Stock;
 import michael.findata.util.FinDataConstants;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
@@ -138,14 +139,16 @@ public class FinDataService extends JdbcDaoSupport {
 	 */
 	public void refreshFinData(EnumStyleRefreshFinData style, HashSet<String> stockCodesToUpdateFindata, boolean includeIgnored, boolean ascendingOrder)
 			throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException {
-		String code, name;
 		java.util.Date cDate = FinDataConstants.currentTimeStamp;
-		int id, currentYear = cDate.getYear() + 1900, currentMonth = cDate.getMonth() + 1;
+		int currentYear = cDate.getYear() + 1900, currentMonth = cDate.getMonth() + 1;
 		getJdbcTemplate().update("UPDATE stock SET latest_year = ?, latest_season = 0 WHERE latest_year IS NULL", currentYear - 3);
 		getJdbcTemplate().update("UPDATE stock SET latest_season = 0 WHERE latest_season IS NULL");
 		TreeMap<String, Integer> stocksToUpdateReportDates = new TreeMap<>();
 		SqlRowSet rs;
+		int id;
+		String code, name;
 		int latestYear, latestSeason;
+		boolean isFinancial;
 		System.out.println("Current report season: "+currentYear+" "+currentMonth/3);
 
 		if (style == EnumStyleRefreshFinData.FILL_GIVEN && stockCodesToUpdateFindata != null && !stockCodesToUpdateFindata.isEmpty()){
@@ -167,18 +170,26 @@ public class FinDataService extends JdbcDaoSupport {
 			System.err.println("Fill_Missing hasn't been implemented yet.");
 			return;
 		}
-		boolean isFinancial;
+		List<Stock> stocks = new ArrayList<>();
 		while (rs.next()) {
-			id = rs.getInt("id");
-			code = rs.getString("code");
-			latestYear = rs.getInt("latest_year");
-			latestSeason = rs.getInt("latest_season");
-			isFinancial = rs.getBoolean("is_financial");
-			name = rs.getString("name");
-			if (refreshFinDataForStock(code, id, currentYear, currentMonth, latestYear, latestSeason, isFinancial, name)) {
-				stocksToUpdateReportDates.put(code, id);
-			}
+			Stock stock = new Stock();
+			stock.setId(rs.getInt("id"));
+			stock.setCode(rs.getString("code"));
+			stock.setLatestYear(rs.getInt("latest_year"));
+			stock.setLatestSeason(rs.getInt("latest_season"));
+			stock.setFinancial(rs.getBoolean("is_financial"));
+			stock.setName(rs.getString("name"));
+			stocks.add(stock);
+//			if (refreshFinDataForStock(stock.getCode(), stock.getId(), currentYear, currentMonth, stock.getLatestYear(), stock.getLatestSeason(), stock.isFinancial(), stock.getName())) {
+//				stocksToUpdateReportDates.put(stock.getCode(), stock.getId());
+//			}
 		}
+
+		stocks.parallelStream().forEach(stock -> {
+			if (refreshFinDataForStock(stock.getCode(), stock.getId(), currentYear, currentMonth, stock.getLatestYear(), stock.getLatestSeason(), stock.isFinancial(), stock.getName())) {
+				stocksToUpdateReportDates.put(stock.getCode(), stock.getId());
+			}
+		});
 	}
 
 	@Transactional
