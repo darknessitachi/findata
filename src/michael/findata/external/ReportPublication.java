@@ -117,4 +117,12 @@ public class ReportPublication {
 		}
 		return date.after(seasonLast);
 	}
+
+	public String toString () {
+		return	"Code: "+code+"\n"+
+				"Name: "+name+"\n"+
+				"Year: "+year+"\n"+
+				"Season: "+season+"\n"+
+				"Date: "+date;
+	}
 }

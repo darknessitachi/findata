@@ -1,13 +1,20 @@
 http://www.cninfo.com.cn/disclosure/1qreport/plate/shmbq1.js?ver=201412222301
 http://www.cninfo.com.cn/disclosure/1qreport/plate/szmbq1.js?ver=201412222309
+http://www.cninfo.com.cn/disclosure/1qreport/plate/cybq1.js?ver=201412222309
 
 http://www.cninfo.com.cn/disclosure/seannualreport/plate/shmbsar.js?ver=201412222307
+http://www.cninfo.com.cn/disclosure/seannualreport/plate/szmbsar.js?ver=201412222307
 http://www.cninfo.com.cn/disclosure/seannualreport/plate/smesar.js?ver=201412222311
+http://www.cninfo.com.cn/disclosure/seannualreport/plate/cybsar.js?ver=201412222311
 
 http://www.cninfo.com.cn/disclosure/3qreport/plate/shmbq3.js?ver=201412222254
+http://www.cninfo.com.cn/disclosure/3qreport/plate/szmbq3.js?ver=201412222254
+http://www.cninfo.com.cn/disclosure/3qreport/plate/cybq3.js?ver=201412222254
 
 http://www.cninfo.com.cn/disclosure/annualreport/plate/shmbar.js?ver=201412222308
+http://www.cninfo.com.cn/disclosure/annualreport/plate/szmbar.js?ver=201412222308
 http://www.cninfo.com.cn/disclosure/annualreport/plate/cybar.js?ver=201412222309
+http://www.cninfo.com.cn/disclosure/annualreport/plate/smear.js?ver=201412222308
 
 http://www.cninfo.com.cn/disclosure/fulltext/plate/smelatest_24h.js?ver=201412222313
 http://www.cninfo.com.cn/disclosure/fulltext/plate/cnsmelatest_24h.js?ver=201412222313

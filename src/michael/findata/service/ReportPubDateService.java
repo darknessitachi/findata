@@ -6,6 +6,7 @@ import michael.findata.external.cninfo.CnInfoReportPublicationList;
 import michael.findata.external.netease.NeteaseFinancialReportDailyList;
 import michael.findata.external.netease.NeteaseFinancialReportList;
 import michael.findata.external.shse.SHSEReportPublication;
+import michael.findata.external.shse.SHSEReportPublicationList;
 import michael.findata.external.szse.SZSEFinancialReportDailyList;
 import michael.findata.external.szse.SZSEFinancialReportListOfToday;
 import michael.findata.external.szse.SZSEReportPublication;
@@ -37,8 +38,9 @@ public class ReportPubDateService extends JdbcDaoSupport {
 		// get publications from daily digests
 		do {
 			System.out.println("Getting report published on "+ FinDataConstants.FORMAT_yyyyDashMMDashdd.format(last.getTime())+"...");
-			pubs.addAll(new NeteaseFinancialReportDailyList(last.getTime(), last.getTime()).getReportPublications());
+			pubs.addAll(new SHSEReportPublicationList(last.getTime(), last.getTime()).getReportPublications());
 			pubs.addAll(new SZSEFinancialReportDailyList(last.getTime()).getReportPublications());
+//			pubs.addAll(new NeteaseFinancialReportDailyList(last.getTime(), last.getTime()).getReportPublications());
 			last.add(Calendar.DATE, 1);
 		} while (last.getTimeInMillis()<FinDataConstants.currentTimeStamp.getTime());
 

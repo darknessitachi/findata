@@ -77,17 +77,17 @@ public class Test {
 //		sps.refreshStockPriceHistories();
 //		ss.refreshLatestPriceAndName();
 //		ds.refreshDividendData();
-		ss.calculateAdjustmentFactor(10);
 //		sncs.refreshNumberOfShares();
+//		ss.calculateAdjustmentFactor(10);
 
 		// The following are used mainly during and immediately after earnings report seasons
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 //		spds.fillLatestPublicationDateAccordingToLatestFinData();
-//		spds.scanForPublicationDateGaps(2000, false);
 
 
-		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
+
+//		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 //		spds.updateFindataWithDates(60);
 		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
