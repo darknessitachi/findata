@@ -183,7 +183,14 @@ public class StockPriceService extends JdbcDaoSupport {
 		int stockId;
 		String name;
 
-		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT max(sp.date) date, s.name name, s.id stock_id FROM stock s LEFT OUTER JOIN stock_price sp ON sp.stock_id = s.id WHERE s.code = ?", code);
+		SqlRowSet rs;
+		try {
+			rs = getJdbcTemplate().queryForRowSet("SELECT max(sp.date) date, s.name name, s.id stock_id FROM stock s LEFT OUTER JOIN stock_price sp ON sp.stock_id = s.id WHERE s.code = ?", code);
+		} catch (Exception e) {
+			System.out.println("Cannot find max pricing date for stock: "+code);
+			e.printStackTrace();
+			return;
+		}
 		if (rs.next()) {
 			latest = rs.getDate("date");
 			stockId = rs.getInt("stock_id");
