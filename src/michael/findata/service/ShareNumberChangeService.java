@@ -19,7 +19,7 @@ public class ShareNumberChangeService extends JdbcDaoSupport {
 	public void refreshNumberOfShares() throws SQLException, IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
 //		java.sql.Date today = new java.sql.Date(new java.util.Date().getTime());
-		rs = getJdbcTemplate().queryForRowSet("SELECT code, id FROM stock ORDER BY code");
+		rs = getJdbcTemplate().queryForRowSet("SELECT code, id FROM stock WHERE NOT is_ignored ORDER BY code");
 //		ArrayList<SecurityShareNumberChange> ssnc;
 		Map<Integer, String> stockMap = new HashMap<>();
 
