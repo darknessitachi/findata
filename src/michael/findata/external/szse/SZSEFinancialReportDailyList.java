@@ -2,6 +2,7 @@ package michael.findata.external.szse;
 
 import michael.findata.external.ReportPublication;
 import michael.findata.external.ReportPublicationList;
+import michael.findata.util.FinDataConstants;
 import michael.findata.util.StringParserUtil;
 
 import java.io.*;
@@ -81,10 +82,18 @@ public class SZSEFinancialReportDailyList implements ReportPublicationList {
 				continue;
 			}
 			pbs.add(new ReportPublication(date, code1, null, Integer.parseInt(fin_year), season));
+			code1 = FinDataConstants.ABShareCodeRef.get(code1);
+			if (code1 != null) {
+				pbs.add(new ReportPublication(date, code1, null, Integer.parseInt(fin_year), season));
+			}
 //			System.out.println(code1 + " " + fin_year + " " + fin_season + " " + FinDataConstants.yyyyDashMMDashdd.format(date));
 			if (!code2.equals("")) {
 				pbs.add(new ReportPublication(date, code2, null, Integer.parseInt(fin_year), season));
 //				System.out.println(code2 + " " + fin_year + " " + fin_season + " " + FinDataConstants.yyyyDashMMDashdd.format(date));
+				code2 = FinDataConstants.ABShareCodeRef.get(code2);
+				if (code2 != null) {
+					pbs.add(new ReportPublication(date, code2, null, Integer.parseInt(fin_year), season));
+				}
 			}
 		}
 		l_reader.close();
