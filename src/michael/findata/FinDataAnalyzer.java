@@ -9,13 +9,16 @@ import java.sql.*;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.text.DecimalFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 
 public class FinDataAnalyzer {
 
 	public static void main(String[] args) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException, ParseException {
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		if (args.length < 1) {
 			printUsage();
 			return;
@@ -26,7 +29,7 @@ public class FinDataAnalyzer {
 				analyze(isFinancial);
 			} else {
 				try {
-					analyzeAsOfTime(isFinancial, FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(args[1]));
+					analyzeAsOfTime(isFinancial, FORMAT_yyyyDashMMDashdd.parse(args[1]));
 				} catch (Exception e) {
 					printUsage();
 				}
@@ -34,7 +37,7 @@ public class FinDataAnalyzer {
 		} else {
 			try {
 				Integer.parseInt(args[0]);
-				analyzeThroughTime(args[0], FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(args[1]));
+				analyzeThroughTime(args[0], FORMAT_yyyyDashMMDashdd.parse(args[1]));
 			} catch (Exception e) {
 				printUsage();
 			}
@@ -53,7 +56,8 @@ public class FinDataAnalyzer {
 	}
 
 	private static void analyzeAsOfTime(boolean isFinancial, String asOfDate) throws ParseException, ClassNotFoundException, SQLException, InstantiationException, IllegalAccessException {
-		analyzeAsOfTime(isFinancial, FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(asOfDate));
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
+		analyzeAsOfTime(isFinancial, FORMAT_yyyyDashMMDashdd.parse(asOfDate));
 	}
 
 	private static void analyzeAsOfTime(boolean isFinancial, Date asOfDate) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
@@ -68,7 +72,8 @@ public class FinDataAnalyzer {
 	}
 
 	private static void analyzeThroughTime(String stockCode, String asOfDate) throws ParseException, ClassNotFoundException, SQLException, InstantiationException, IllegalAccessException {
-		analyzeThroughTime(stockCode, FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(asOfDate));
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
+		analyzeThroughTime(stockCode, FORMAT_yyyyDashMMDashdd.parse(asOfDate));
 	}
 
 	public static void analyze(boolean financial) throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException, IOException {
@@ -94,7 +99,8 @@ public class FinDataAnalyzer {
 
 	private static void analyzeStock(boolean financial, Connection con, String param_stock_code, Date asOfDate) throws SQLException {
 		String dateString;
-		dateString = FinDataConstants.FORMAT_yyyyDashMMDashdd.format(asOfDate);
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
+		dateString = FORMAT_yyyyDashMMDashdd.format(asOfDate);
 		analyzeStock(financial, con, param_stock_code, dateString);
 	}
 
@@ -113,67 +119,68 @@ public class FinDataAnalyzer {
 			//			System.out.println("Error: "+param_stock_code);
 			return;
 		}
+		DecimalFormat df = new DecimalFormat(Hexun2008Constants.ACCURATE_DECIMAL_FORMAT);
 		if (rsResult.next()) {
 			if (financial) {
 				if (rsResult.getString(2) == null)
 					return;
 				System.out.print(param_stock_code + "\t" +
 						rsResult.getString(2) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(3)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(4)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(5)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(6)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(7)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(8)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(9)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(10)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(11)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(12)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(13)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(14)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(15)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(16)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(17)) + "\t" +
+						df.format(rsResult.getDouble(3)) + "\t" +
+						df.format(rsResult.getDouble(4)) + "\t" +
+						df.format(rsResult.getDouble(5)) + "\t" +
+						df.format(rsResult.getDouble(6)) + "\t" +
+						df.format(rsResult.getDouble(7)) + "\t" +
+						df.format(rsResult.getDouble(8)) + "\t" +
+						df.format(rsResult.getDouble(9)) + "\t" +
+						df.format(rsResult.getDouble(10)) + "\t" +
+						df.format(rsResult.getDouble(11)) + "\t" +
+						df.format(rsResult.getDouble(12)) + "\t" +
+						df.format(rsResult.getDouble(13)) + "\t" +
+						df.format(rsResult.getDouble(14)) + "\t" +
+						df.format(rsResult.getDouble(15)) + "\t" +
+						df.format(rsResult.getDouble(16)) + "\t" +
+						df.format(rsResult.getDouble(17)) + "\t" +
 						dateString + "\n");
 			} else {
 				if (rsResult.getString(2) == null)
 					return;
 				System.out.print(param_stock_code + "\t" +
 						rsResult.getString(2) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(3)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(4)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(5)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(6)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(7)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(8)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(9)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(10)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(11)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(12)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(13)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(14)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(15)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(16)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(17)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(18)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(19)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(20)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(21)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(22)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(23)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(24)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(25)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(26)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(27)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(28)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(29)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(30)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(31)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(32)) + "\t" +
+						df.format(rsResult.getDouble(3)) + "\t" +
+						df.format(rsResult.getDouble(4)) + "\t" +
+						df.format(rsResult.getDouble(5)) + "\t" +
+						df.format(rsResult.getDouble(6)) + "\t" +
+						df.format(rsResult.getDouble(7)) + "\t" +
+						df.format(rsResult.getDouble(8)) + "\t" +
+						df.format(rsResult.getDouble(9)) + "\t" +
+						df.format(rsResult.getDouble(10)) + "\t" +
+						df.format(rsResult.getDouble(11)) + "\t" +
+						df.format(rsResult.getDouble(12)) + "\t" +
+						df.format(rsResult.getDouble(13)) + "\t" +
+						df.format(rsResult.getDouble(14)) + "\t" +
+						df.format(rsResult.getDouble(15)) + "\t" +
+						df.format(rsResult.getDouble(16)) + "\t" +
+						df.format(rsResult.getDouble(17)) + "\t" +
+						df.format(rsResult.getDouble(18)) + "\t" +
+						df.format(rsResult.getDouble(19)) + "\t" +
+						df.format(rsResult.getDouble(20)) + "\t" +
+						df.format(rsResult.getDouble(21)) + "\t" +
+						df.format(rsResult.getDouble(22)) + "\t" +
+						df.format(rsResult.getDouble(23)) + "\t" +
+						df.format(rsResult.getDouble(24)) + "\t" +
+						df.format(rsResult.getDouble(25)) + "\t" +
+						df.format(rsResult.getDouble(26)) + "\t" +
+						df.format(rsResult.getDouble(27)) + "\t" +
+						df.format(rsResult.getDouble(28)) + "\t" +
+						df.format(rsResult.getDouble(29)) + "\t" +
+						df.format(rsResult.getDouble(30)) + "\t" +
+						df.format(rsResult.getDouble(31)) + "\t" +
+						df.format(rsResult.getDouble(32)) + "\t" +
 						rsResult.getString(33) + "\t" +
 						rsResult.getString(34) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(35)) + "\t" +
-						Hexun2008Constants.FORMAT_accurateDecimalFormat.format(rsResult.getDouble(36)) + "\t" +
+						df.format(rsResult.getDouble(35)) + "\t" +
+						df.format(rsResult.getDouble(36)) + "\t" +
 						dateString + "\n");
 			}
 		}
@@ -394,6 +401,7 @@ public class FinDataAnalyzer {
 
 	// todo if this method is ever gonna be used again, you need to get rid of the price_year thing
 	public static void migrate () throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		Connection con = jdbcConnection();
 		con.setAutoCommit(false);
 		Statement st = con.createStatement();
@@ -430,10 +438,10 @@ public class FinDataAnalyzer {
 					pid = rsPrice.getInt("pid");
 					try {
 						if (cst != null) cst.close();
-						cst = con.prepareCall((isFinancial? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '"+FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"', 1)");
+						cst = con.prepareCall((isFinancial? "CALL analyze_f ('" : "CALL analyze_nf ('") + stockCode + "', '"+FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"', 1)");
 						analysis = cst.executeQuery();
 					} catch (SQLSyntaxErrorException ex) {
-						System.out.println("Can't calculate return for "+stockCode+" "+FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date")));
+						System.out.println("Can't calculate return for "+stockCode+" "+FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date")));
 						continue;
 					}
 					if (analysis.next()) {
@@ -459,7 +467,7 @@ public class FinDataAnalyzer {
 						pst.setFloat(3, ret_min);
 						pst.setInt(4, pid);
 						pst.executeUpdate();
-						System.out.println(stockCode+"\t"+FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"\t"+ ret + "\t"+ ret_max + "\t"+ ret_min + "\t");
+						System.out.println(stockCode+"\t"+FORMAT_yyyyDashMMDashdd.format(rsPrice.getDate("date"))+"\t"+ ret + "\t"+ ret_max + "\t"+ ret_min + "\t");
 					}
 				}
 			}

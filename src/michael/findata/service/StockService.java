@@ -14,9 +14,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
-import static michael.findata.util.FinDataConstants.FORMAT_yyyyDashMMDashdd;
 import static michael.findata.util.FinDataConstants.STOCK_LIST_FILE;
 
 public class StockService extends JdbcDaoSupport {
@@ -179,6 +179,7 @@ public class StockService extends JdbcDaoSupport {
 		Calendar cal = new GregorianCalendar();
 		cal.add(Calendar.DATE, -noOfDaysToCover);
 		java.sql.Date dLastFactored = new java.sql.Date(cal.getTimeInMillis());
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		System.out.println("Calculating adjustment factor since "+ FORMAT_yyyyDashMMDashdd.format(dLastFactored));
 
 		float currentAdjFactor = 1;

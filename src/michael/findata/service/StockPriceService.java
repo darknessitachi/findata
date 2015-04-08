@@ -230,13 +230,14 @@ public class StockPriceService extends JdbcDaoSupport {
 	}
 
 	public static void main (String [] args) throws ParseException {
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/findata_spring.xml");
 		StockPriceService sps = (StockPriceService) context.getBean("stockPriceService");
 		long stamp = System.currentTimeMillis();
 		sps.stockPriceHistoryWalker(
 			args[0],
-			FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(args[1]),
-			FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(args[2]),
+			FORMAT_yyyyDashMMDashdd.parse(args[1]),
+			FORMAT_yyyyDashMMDashdd.parse(args[2]),
 			Float.parseFloat(args[3]),
 			Float.parseFloat(args[4]));
 		System.out.println("Time taken: " + (System.currentTimeMillis() - stamp) / 1000+" seconds.");

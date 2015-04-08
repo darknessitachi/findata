@@ -14,6 +14,7 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -79,12 +80,13 @@ public class NeteaseFinancialReportDailyList implements ReportPublicationList {
 	}
 
 	private ReportPublication constructReportPublication (JSONObject publication) throws ParseException {
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		String code = (String) (publication).get("SYMBOL");
 		int season, year;
 		Date publishDate;
 		String name = (String) publication.get("SNAME");
 		try {
-			publishDate = FinDataConstants.FORMAT_yyyyDashMMDashdd.parse((String)publication.get("PUBLISHDATE"));
+			publishDate = FORMAT_yyyyDashMMDashdd.parse((String)publication.get("PUBLISHDATE"));
 		} catch (ParseException e) {
 			System.out.println("Can't figure out date: " + code + " " + publication.get("PUBLISHDATE") + " " +
 					publication.get ("ANNOUNMT1"));

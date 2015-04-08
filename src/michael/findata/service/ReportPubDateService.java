@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.sql.*;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class ReportPubDateService extends JdbcDaoSupport {
@@ -35,9 +36,10 @@ public class ReportPubDateService extends JdbcDaoSupport {
 		HashSet<String> stocksToUpdateFindata = new HashSet<>();
 		HashSet<ReportPublication> pubs = new HashSet<>();
 
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		// get publications from daily digests
 		do {
-			System.out.println("Getting report published on "+ FinDataConstants.FORMAT_yyyyDashMMDashdd.format(last.getTime())+"...");
+			System.out.println("Getting report published on "+ FORMAT_yyyyDashMMDashdd.format(last.getTime())+"...");
 			pubs.addAll(new SHSEReportPublicationList(last.getTime(), last.getTime()).getReportPublications());
 			pubs.addAll(new SZSEFinancialReportDailyList(last.getTime()).getReportPublications());
 //			pubs.addAll(new NeteaseFinancialReportDailyList(last.getTime(), last.getTime()).getReportPublications());
@@ -45,7 +47,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 		} while (last.getTimeInMillis()<FinDataConstants.currentTimeStamp.getTime());
 
 		for (ReportPublication p : pubs) {
-			System.out.println(p.getCode() + " " + FinDataConstants.FORMAT_yyyyDashMMDashdd.format(p.getDate()) + ": " + p.getYear() + " " + p.getSeason());
+			System.out.println(p.getCode() + " " + FORMAT_yyyyDashMMDashdd.format(p.getDate()) + ": " + p.getYear() + " " + p.getSeason());
 			try {
 				getJdbcTemplate().update("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)",
 						p.getCode(), p.getYear(), p.getSeason(), new java.sql.Date(p.getDate().getTime()));
@@ -105,6 +107,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
     // In other words, for example, if the most recent report publication dates are missing from a stock, since there
     // is no gap visible from report_pub_dates's data, nothing will be done to update these two publication dates.
 	public void scanForPublicationDateGaps (int earliestYear, boolean includeIgnored) {
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		HashSet<String> toBeFilledWithNeteasePublicationList = new HashSet<>();
 		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
 				"SELECT code, name, rpd.fin_year year, rpd.fin_season season " +
@@ -174,7 +177,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 						} else {
 							rp = new SHSEReportPublication(codePrev, tempY, tempS);
 						}
-						System.out.println(FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
+						System.out.println(FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
 						getJdbcTemplate().update("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)",
 								codePrev, tempY, tempS, rp.getDate());
 					} catch (Exception e) {
@@ -184,7 +187,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 					// SZ
 					try {
 						rp = new SZSEReportPublication(codePrev, tempY, tempS);
-						System.out.println(FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
+						System.out.println(FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
 						getJdbcTemplate().update("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)",
 								codePrev, tempY, tempS, rp.getDate());
 					} catch (Exception e) {
@@ -199,6 +202,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 	}
 
 	private void fillMissingReportPublicationDates(String code, ReportPublicationList rpl) {
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		for (ReportPublication rp : rpl.getReportPublications()) {
 			if (rp.getCode() == null) {
 				continue;
@@ -206,7 +210,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 			try {
 				getJdbcTemplate().update("INSERT INTO report_pub_dates (stock_id, fin_year, fin_season, fin_date) VALUES ((SELECT id FROM stock WHERE code = ?), ?, ?, ?)",
 						code, rp.getYear(), rp.getSeason(), rp.getDate());
-				System.out.println("Found: "+rp.getCode() + " " + rp.getYear() + " " + rp.getSeason() + ": "+ FinDataConstants.FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
+				System.out.println("Found: " + rp.getCode() + " " + rp.getYear() + " " + rp.getSeason() + ": " + FORMAT_yyyyDashMMDashdd.format(rp.getDate()));
 			} catch (Exception ex) {
 				if (ex instanceof DuplicateKeyException) {
 					// Normal

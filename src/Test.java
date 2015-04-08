@@ -21,6 +21,7 @@ import javax.persistence.Persistence;
 import java.io.IOException;
 import java.sql.*;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -87,8 +88,8 @@ public class Test {
 
 
 
+//		spds.updateFindataWithDates(91);
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
-//		spds.updateFindataWithDates(60);
 		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
@@ -140,6 +141,7 @@ public class Test {
 			latest = earliest;
 		}
 
+		SimpleDateFormat FORMAT_yyyyMMdd = new SimpleDateFormat(FinDataConstants.yyyyMMdd);
 		System.out.println("Latest: " + FORMAT_yyyyMMdd.format(latest));
 		con.setAutoCommit(false);
 		em.getTransaction().begin();

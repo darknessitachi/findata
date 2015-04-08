@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 
 public class SHSEReportPublication extends ReportPublication {
 
@@ -18,9 +19,10 @@ public class SHSEReportPublication extends ReportPublication {
 		httpCon.getInputStream().close();
 		httpCon.disconnect();
 		String redirectedURL = httpCon.getURL().toString();
+		SimpleDateFormat FORMAT_yyyyMMdd = new SimpleDateFormat(FinDataConstants.yyyyMMdd);
 //		ReportPublication rp = new ReportPublication(FinDataConstants.yyyyMMdd.parse(redirectedURL.substring(55, 59) + redirectedURL.substring(60, 62) + redirectedURL.substring(63, 65)), code, year, season);
 		try {
-			super.setDate(FinDataConstants.FORMAT_yyyyMMdd.parse(redirectedURL.substring(62, 66) + redirectedURL.substring(67, 69) + redirectedURL.substring(70, 72)));
+			super.setDate(FORMAT_yyyyMMdd.parse(redirectedURL.substring(62, 66) + redirectedURL.substring(67, 69) + redirectedURL.substring(70, 72)));
 		} catch (ParseException e) {
 			System.out.println("Can't parese: "+redirectedURL);
 			throw e;

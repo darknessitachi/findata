@@ -10,6 +10,7 @@ import org.xml.sax.SAXException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -136,6 +137,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 		}
 		data.clear();
 		name.clear();
+		DecimalFormat df = new DecimalFormat(Hexun2008Constants.NORMAL_DECIMAL_FORMAT);
 		for (Element e : (List<Element>) o) {
 			try {
 //				nameElement = ;
@@ -148,7 +150,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 				continue;
 			}
 			try {
-				value = Hexun2008Constants.FORMAT_normalDecimalFormat.parse(valueElement.getText());
+				value = df.parse(valueElement.getText());
 			} catch (NumberFormatException ex) {
 				value = null;
 			} catch (ParseException e1) {

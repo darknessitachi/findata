@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,6 +23,7 @@ public class CnInfoReportPublicationList implements ReportPublicationList{
 	// This is only useful if you have missed no more than 5 seasons of report publication dates.
 	public static Pattern p = Pattern.compile(".*([\\d,O]{4})\\s*Äê?(.*)±¨¸æ.*(\\d\\d\\d\\d-\\d\\d-\\d\\d)");
 	public CnInfoReportPublicationList (String code) throws IOException {
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		Stream<String []> urls = Stream.of(
 				new String[]{"http://www.cninfo.com.cn/disclosure/1qreport/stocks/1qr1y/cninfo/${code}.js", "1"},
 				new String[]{"http://www.cninfo.com.cn/disclosure/seannualreport/stocks/sar1y/cninfo/${code}.js", "2"},
@@ -53,7 +55,7 @@ public class CnInfoReportPublicationList implements ReportPublicationList{
 				if (m.find()) {
 					try {
 						return new ReportPublication(
-								FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(m.group(3)),
+								FORMAT_yyyyDashMMDashdd.parse(m.group(3)),
 								code, null, Integer.parseInt(m.group(1)),
 								Integer.parseInt(s[1]));
 					} catch (ParseException e) {

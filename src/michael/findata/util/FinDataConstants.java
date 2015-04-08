@@ -262,17 +262,14 @@ public final class FinDataConstants {
 		non_financial
 	}
 
-	public static DecimalFormat CommonDecimalFormat = new DecimalFormat("##,###.00");
+//	public static DecimalFormat CommonDecimalFormat = new DecimalFormat("##,###.00");
 
 	public final static String yyyyDashMMDashdd = "yyyy-MM-dd";
-	public final static SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(yyyyDashMMDashdd);
 	public final static DateTimeFormatter NEW_FORMATTER_yyyyDashMMDashdd = DateTimeFormatter.ofPattern (yyyyDashMMDashdd);
 
 	public final static String yyyyMMdd = "yyyyMMdd";
-	public final static SimpleDateFormat FORMAT_yyyyMMdd = new SimpleDateFormat(yyyyMMdd);
 
 	public final static String yyMMdd = "yyMMdd";
-	public final static SimpleDateFormat FORMAT_yyMMdd = new SimpleDateFormat(yyMMdd);
 
 	public static String s1Report = "Ò»¼¾";
 	public static String s2Report = "°ëÄê";

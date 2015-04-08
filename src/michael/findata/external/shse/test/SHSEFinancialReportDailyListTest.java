@@ -6,11 +6,13 @@ import michael.findata.util.FinDataConstants;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 public class SHSEFinancialReportDailyListTest {
 	public static void main (String [] args ) throws IOException, ParseException {
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		GregorianCalendar gc = new GregorianCalendar();
 		gc.set(Calendar.YEAR, 2012);
 		gc.set(Calendar.MONTH, 7);
@@ -19,7 +21,7 @@ public class SHSEFinancialReportDailyListTest {
 			System.out.println(p.getCode());
 			System.out.println(p.getYear());
 			System.out.println(p.getSeason());
-			System.out.println(FinDataConstants.FORMAT_yyyyDashMMDashdd.format(p.getDate()));
+			System.out.println(FORMAT_yyyyDashMMDashdd.format(p.getDate()));
 		}
 	}
 }

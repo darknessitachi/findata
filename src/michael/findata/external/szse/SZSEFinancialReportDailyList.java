@@ -9,6 +9,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -25,6 +26,7 @@ public class SZSEFinancialReportDailyList implements ReportPublicationList {
 	ArrayList<ReportPublication> pbs;
 	public SZSEFinancialReportDailyList(Date date) throws IOException, ParseException {
 		pbs = new ArrayList<>();
+		SimpleDateFormat FORMAT_yyMMdd = new SimpleDateFormat(yyMMdd);
 		URL SHSEDailyListUrl = new URL("http://www.szse.cn/szseWeb/common/szse/files/text/gs/gs" + FORMAT_yyMMdd.format(date) + ".txt");
 		HttpURLConnection httpCon = (HttpURLConnection) SHSEDailyListUrl.openConnection();
 		httpCon.connect();

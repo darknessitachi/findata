@@ -1,12 +1,14 @@
 package michael.findata.external.szse;
 
 import michael.findata.external.ReportPublication;
+import michael.findata.util.FinDataConstants;
 
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,6 +57,7 @@ public class SZSEReportPublication extends ReportPublication {
 		Matcher m, n;
 		BufferedReader l_reader = new BufferedReader(new InputStreamReader(l_urlStream, "GB2312"));
 		String year;
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		while ((sBuffer3 = l_reader.readLine()) != null) {
 //			System.out.println(sBuffer3);
 			m = p.matcher(sBuffer1);

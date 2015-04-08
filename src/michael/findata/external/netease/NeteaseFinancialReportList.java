@@ -8,6 +8,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -22,6 +23,7 @@ public class NeteaseFinancialReportList implements ReportPublicationList{
 	private static Pattern p3 = Pattern.compile("<td class=\"td_text\">(一季度报告|中期报告|三季度报告|年度报告)</td>");
 	HashMap<ReportPublication, Date> pbs;
 	public NeteaseFinancialReportList (String code) throws IOException {
+		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		String d = "", dt = null;
 		pbs = new HashMap<>();
 		int year, season;
@@ -58,7 +60,7 @@ public class NeteaseFinancialReportList implements ReportPublicationList{
 //					System.out.println(m2.group(1));
 
 					try {
-						date = FinDataConstants.FORMAT_yyyyDashMMDashdd.parse(m2.group(1));
+						date = FORMAT_yyyyDashMMDashdd.parse(m2.group(1));
 					} catch (ParseException e) {
 						System.out.println("Cannot understand "+m2.group(1)+" for date.");
 						continue;
