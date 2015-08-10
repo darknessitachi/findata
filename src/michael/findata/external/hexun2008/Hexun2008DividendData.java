@@ -4,12 +4,13 @@ import michael.findata.external.SecurityDividendData;
 import michael.findata.external.SecurityDividendRecord;
 import michael.findata.util.FinDataConstants;
 import michael.findata.util.StringParserUtil;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -22,12 +23,12 @@ public class Hexun2008DividendData implements SecurityDividendData {
 
 	private TreeMap<Date, SecurityDividendRecord> dividendRecords;
 	private String stockCode;
-
 	public TreeMap<Date, SecurityDividendRecord> getDividendRecords() {
 		return dividendRecords;
 	}
 
 	public Hexun2008DividendData (String stockCode) {
+		CloseableHttpClient httpClient = FinDataConstants.httpClient;
 		this.stockCode = stockCode;
 		String [] characteristicsStrings = {
 				"<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" class=\"web2\" style=\"text-align:center;\">",
@@ -39,8 +40,16 @@ public class Hexun2008DividendData implements SecurityDividendData {
 		String paymentDateString;
 		dividendRecords = new TreeMap<>();
 		try {
-			URL url = new URL("http://stockdata.stock.hexun.com/2009_fhzzgb_" + stockCode + ".shtml");
-			BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
+			HttpGet get = new HttpGet("http://stockdata.stock.hexun.com/2009_fhzzgb_" + stockCode + ".shtml");
+			get.setHeader("Host", "stockdata.stock.hexun.com");
+			get.setHeader("Connection", "keep-alive");
+			get.setHeader("Cache-Control", "max-age=0");
+			get.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+			get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.130 Safari/537.36");
+			get.setHeader("Accept-Encoding", "gzip, deflate, sdch");
+			get.setHeader("Accept-Language", "en-US,en;q=0.8");
+			CloseableHttpResponse response = httpClient.execute(get);
+			BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), "GB2312"));
 			String line = StringParserUtil.skipByCharacteristicStrings(br, characteristicsStrings);
 			if (line == null) {
 				throw new Hexun2008DataException("Cannot find dividend data for " + stockCode);

@@ -19,6 +19,9 @@
 		<mysql-connector.version>5.1.34</mysql-connector.version>
 		<maven-compiler-plugin.version>3.2</maven-compiler-plugin.version>
 		<maven-war-plugin.version>2.5</maven-war-plugin.version>
+		<xercesImpl.version>2.11.0</xercesImpl.version>
+		<json-simple.version>1.1.1</json-simple.version>
+		<installed.algoquant.version>1.0.0</installed.algoquant.version>
 	</properties>
 
 	<dependencies>
@@ -52,7 +55,41 @@
 			<artifactId>mysql-connector-java</artifactId>
 			<version>${mysql-connector.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>xerces</groupId>
+			<artifactId>xercesImpl</artifactId>
+			<version>${xercesImpl.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.googlecode.json-simple</groupId>
+			<artifactId>json-simple</artifactId>
+			<version>${json-simple.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.numericalmethod</groupId>
+			<artifactId>algoquant</artifactId>
+			<version>${installed.algoquant.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.numericalmethod</groupId>
+			<artifactId>algoquant-core</artifactId>
+			<version>${installed.algoquant.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.numericalmethod</groupId>
+			<artifactId>algoquant-demo</artifactId>
+			<version>${installed.algoquant.version}</version>
+		</dependency>
 	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>nm-repo</id>
+			<name>Numerical Method's Maven Repository</name>
+			<url>http://repo.numericalmethod.com/maven/</url>
+			<layout>default</layout>
+		</repository>
+	</repositories>
 
 	<build>
 		<plugins>

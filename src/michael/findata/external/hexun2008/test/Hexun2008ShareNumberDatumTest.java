@@ -1,6 +1,5 @@
 package michael.findata.external.hexun2008.test;
 
-import michael.findata.external.ExternalDataException;
 import michael.findata.external.hexun2008.Hexun2008DataException;
 import michael.findata.external.hexun2008.Hexun2008ShareNumberDatum;
 

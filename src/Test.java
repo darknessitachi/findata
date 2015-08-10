@@ -30,7 +30,6 @@ import static michael.findata.util.FinDataConstants.*;
 public class Test {
 	static final Date earliest = new Date(3, 3, 3);
 	private static EntityManagerFactory entityManagerFactory;
-
 	public static void main (String [] args) throws ClassNotFoundException, SQLException, InstantiationException, IOException, IllegalAccessException, ParseException {
 
 		/**
@@ -89,7 +88,7 @@ public class Test {
 
 
 //		spds.updateFindataWithDates(91);
-//		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
+		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();

@@ -12,7 +12,7 @@ public class StringParserUtil {
 		while (line != null && index < characteristicStrings.length) {
 			if (line.contains(characteristicStrings[index])) index ++;
 			line = r.readLine();
-//				System.out.println(line);
+//			System.out.println(line);
 		}
 		return line;
 	}

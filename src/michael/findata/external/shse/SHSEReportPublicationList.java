@@ -35,7 +35,7 @@ public class SHSEReportPublicationList implements ReportPublicationList {
 		end.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
 	}
 	public SHSEReportPublicationList(LocalDate start, LocalDate end) throws IOException {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
+		CloseableHttpClient httpClient = FinDataConstants.httpClient;
 		long pageCount = 1000000;
 		long endPage = 0;
 		String code, dt, fin_year;

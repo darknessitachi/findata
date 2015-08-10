@@ -1,6 +1,8 @@
 package michael.findata.util;
 
 import michael.findata.service.EnumTypeCodeListFile;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -41,6 +43,8 @@ public final class FinDataConstants {
 
 
 	public static final Map<String, String> ABShareCodeRef = new HashMap<>();
+
+	public static final CloseableHttpClient httpClient = HttpClients.createDefault(); // todo: spring it
 
 	static {
 		ABShareCodeRef.put("000002", "200002");
