@@ -22,6 +22,8 @@ import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.execution.strategy.demo.TutorialStrategy;
 import com.numericalmethod.algoquant.model.util.returns.ReturnCalculators;
 import com.numericalmethod.suanshu.misc.datastructure.time.JodaTimeUtils;
+import michael.findata.algoquant.product.stock.shse.SHSEStock;
+import michael.findata.algoquant.product.stock.szse.SZSEStock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -46,12 +48,12 @@ public class AlgoQuantTest {
 
 	public void run() throws Exception {
 		// set up the product
-		final Stock stock = HSI.getInstance();
-//		final Stock stock = new SimpleStock();
+//		final Stock stock = HSI.getInstance();
+		final Stock stock = new SZSEStock("000568.SZ");
 
 		// specify the simulation period
-		DateTime begin = JodaTimeUtils.getDate(2000, 1, 1, stock.exchange().timeZone());
-		DateTime end = JodaTimeUtils.getDate(2012, 1, 1, stock.exchange().timeZone());
+		DateTime begin = JodaTimeUtils.getDate(2001, 1, 1, stock.exchange().timeZone());
+		DateTime end = JodaTimeUtils.getDate(2015, 8, 11, stock.exchange().timeZone());
 		Interval interval = new Interval(begin, end);
 
 		// set up the data source; we download data from Yahoo! Finance here.
@@ -80,7 +82,7 @@ public class AlgoQuantTest {
 		List<Execution> executions = tradeBlotter.allExecutions();
 
 		// compute the P&L
-		ExchangeRateTable rates = new SimpleExchangeRateTable(Currencies.HKD);
+		ExchangeRateTable rates = new SimpleExchangeRateTable(Currencies.CNY);
 		double pnl = new ProfitLoss().valueOf(executions, depthCaches, rates);
 
 		// compute the information ratio/Sharpe ratio
