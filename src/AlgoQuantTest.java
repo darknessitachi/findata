@@ -12,7 +12,6 @@ import com.numericalmethod.algoquant.execution.datatype.fxrate.ExchangeRateTable
 import com.numericalmethod.algoquant.execution.datatype.fxrate.SimpleExchangeRateTable;
 import com.numericalmethod.algoquant.execution.datatype.product.fx.Currencies;
 import com.numericalmethod.algoquant.execution.datatype.product.stock.Stock;
-import com.numericalmethod.algoquant.execution.datatype.product.stock.hkex.HSI;
 import com.numericalmethod.algoquant.execution.performance.measure.ProfitLoss;
 import com.numericalmethod.algoquant.execution.performance.measure.ir.InformationRatioForPeriods;
 import com.numericalmethod.algoquant.execution.performance.measure.omega.OmegaBySummation;
@@ -22,7 +21,6 @@ import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.execution.strategy.demo.TutorialStrategy;
 import com.numericalmethod.algoquant.model.util.returns.ReturnCalculators;
 import com.numericalmethod.suanshu.misc.datastructure.time.JodaTimeUtils;
-import michael.findata.algoquant.product.stock.shse.SHSEStock;
 import michael.findata.algoquant.product.stock.szse.SZSEStock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -49,7 +47,7 @@ public class AlgoQuantTest {
 	public void run() throws Exception {
 		// set up the product
 //		final Stock stock = HSI.getInstance();
-		final Stock stock = new SZSEStock("000568.SZ");
+		final Stock stock = new SZSEStock("000568.SZ"); //** Customization
 
 		// specify the simulation period
 		DateTime begin = JodaTimeUtils.getDate(2001, 1, 1, stock.exchange().timeZone());
@@ -61,19 +59,19 @@ public class AlgoQuantTest {
 		SequentialCache<Depth> dailyData = yahoo.newInstance(stock, interval);
 
 		// clean the data using filters; we simulate using only monthly data.
-		EquiTimeSampler<Depth> monthlySampler = new EquiTimeSampler<>(Period.months(1));
+		EquiTimeSampler<Depth> monthlySampler = new EquiTimeSampler<>(Period.months(1)); //** Customization
 		SequentialCache<Depth> monthlyData = monthlySampler.process(dailyData);
 
 		// set up the data source to feed into the simulator
 		DepthCaches depthCaches = new DepthCaches(stock, monthlyData);
 
 		// construct an instance of the strategy to simulate
-		Strategy strategy = new TutorialStrategy(stock);
+		Strategy strategy = new TutorialStrategy(stock); //** Customization
 
 		// set up a simulator to host the strategy
 		Simulator simulator = new SimpleSimulatorBuilder()
 				.withDepthUpdates(depthCaches)
-				.useStrategyPlotter(new SimpleStrategyPlotter("tutorial on " + stock.symbol()))
+				.useStrategyPlotter(new SimpleStrategyPlotter("Tutorial on " + stock.symbol()))
 				.build();
 		// here is where the actual simulation happens
 		TradeBlotter tradeBlotter = simulator.run(strategy);
@@ -106,6 +104,6 @@ public class AlgoQuantTest {
 		).valueOf(executions, depthCaches, rates);
 
 		// print out some stats
-//		LOGGER.info("pnl = {}; ir = {}; omega(0) = {}", pnl, ir, omega0);
+		LOGGER.info("pnl = {}; ir = {}; omega(0) = {}", pnl, ir, omega0);
 	}
 }
