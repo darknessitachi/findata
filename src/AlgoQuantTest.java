@@ -1,10 +1,11 @@
 import com.numericalmethod.algoquant.data.cache.SequentialCache;
-import com.numericalmethod.algoquant.data.cache.processor.sampler.EquiTimeSampler;
 import com.numericalmethod.algoquant.data.historicaldata.yahoo.YahooDepthCacheFactory;
+import com.numericalmethod.algoquant.data.historicaldata.yahoo.YahooEODCacheFactory;
 import com.numericalmethod.algoquant.execution.component.chart.plotter.SimpleStrategyPlotter;
 import com.numericalmethod.algoquant.execution.component.simulator.SimpleSimulatorBuilder;
 import com.numericalmethod.algoquant.execution.component.simulator.Simulator;
 import com.numericalmethod.algoquant.execution.component.tradeblotter.TradeBlotter;
+import com.numericalmethod.algoquant.execution.datatype.StockEOD;
 import com.numericalmethod.algoquant.execution.datatype.depth.Depth;
 import com.numericalmethod.algoquant.execution.datatype.depth.cache.DepthCaches;
 import com.numericalmethod.algoquant.execution.datatype.execution.Execution;
@@ -18,10 +19,10 @@ import com.numericalmethod.algoquant.execution.performance.measure.omega.OmegaBy
 import com.numericalmethod.algoquant.execution.performance.measure.omega.OmegaForPeriods;
 import com.numericalmethod.algoquant.execution.simulation.template.SimTemplateYahooEOD;
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
-import com.numericalmethod.algoquant.execution.strategy.demo.TutorialStrategy;
 import com.numericalmethod.algoquant.model.util.returns.ReturnCalculators;
 import com.numericalmethod.suanshu.misc.datastructure.time.JodaTimeUtils;
 import michael.findata.algoquant.product.stock.szse.SZSEStock;
+import michael.findata.algoquant.strategy.FixedPositionStrategy;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -50,27 +51,31 @@ public class AlgoQuantTest {
 		final Stock stock = new SZSEStock("000568.SZ"); //** Customization
 
 		// specify the simulation period
-		DateTime begin = JodaTimeUtils.getDate(2001, 1, 1, stock.exchange().timeZone());
-		DateTime end = JodaTimeUtils.getDate(2015, 8, 11, stock.exchange().timeZone());
+		DateTime begin = JodaTimeUtils.getDate(2008, 6, 17, stock.exchange().timeZone());
+		DateTime end = JodaTimeUtils.getDate(2015, 8, 14, stock.exchange().timeZone());
 		Interval interval = new Interval(begin, end);
 
 		// set up the data source; we download data from Yahoo! Finance here.
 		YahooDepthCacheFactory yahoo = new YahooDepthCacheFactory(SimTemplateYahooEOD.DEFAULT_DATA_FOLDER);
 		SequentialCache<Depth> dailyData = yahoo.newInstance(stock, interval);
 
-		// clean the data using filters; we simulate using only monthly data.
-		EquiTimeSampler<Depth> monthlySampler = new EquiTimeSampler<>(Period.months(1)); //** Customization
-		SequentialCache<Depth> monthlyData = monthlySampler.process(dailyData);
+		YahooEODCacheFactory yahooEOD = new YahooEODCacheFactory(SimTemplateYahooEOD.DEFAULT_DATA_FOLDER);
+		SequentialCache<StockEOD> dailyEOD = yahooEOD.newInstance(stock, interval);
 
-		// set up the data source to feed into the simulator
-		DepthCaches depthCaches = new DepthCaches(stock, monthlyData);
+		// clean the data using filters; we simulate using only monthly data.
+//		SequentialCache<Depth> monthlyData = new EquiTimeSampler<Depth>(Period.days(1)).process(dailyData);
+//		SequentialCache<StockEOD> monthlyEOD = new EquiTimeSampler<StockEOD>(Period.days(1)).process(dailyEOD);
+
+		//set up the data source to feed into the simulator
+		DepthCaches depthCaches = new DepthCaches(stock, dailyData);
 
 		// construct an instance of the strategy to simulate
-		Strategy strategy = new TutorialStrategy(stock); //** Customization
+		Strategy strategy = new FixedPositionStrategy(stock); //** Customization
 
 		// set up a simulator to host the strategy
 		Simulator simulator = new SimpleSimulatorBuilder()
 				.withDepthUpdates(depthCaches)
+				.withNonDepthUpdates(dailyEOD)
 				.useStrategyPlotter(new SimpleStrategyPlotter("Tutorial on " + stock.symbol()))
 				.build();
 		// here is where the actual simulation happens
