@@ -37,14 +37,15 @@ public class StockPriceService extends JdbcDaoSupport {
 		});
 	}
 
-	private class Position {
+	private class Slot {
 		public float buy_ceiling;
 		public float sell_floor;
 		public int serial;
 		public float paid_price;
 		public int number_shares = 0;
 		public Date buying_date;
-		Position (float buy_ceiling, float sell_floor, float paid_price, int number_shares, int serial, Date buying_date) {
+
+		Slot(float buy_ceiling, float sell_floor, float paid_price, int number_shares, int serial, Date buying_date) {
 			this.buy_ceiling = buy_ceiling;
 			this.sell_floor = sell_floor;
 			this.paid_price = paid_price;
@@ -62,19 +63,19 @@ public class StockPriceService extends JdbcDaoSupport {
 		}
 	}
 
-	public float getInvestedCash(Collection<Position> positions) {
-		return (float) positions.stream().mapToDouble(Position::getInvestment).sum();
+	public float getInvestedCash(Collection<Slot> slots) {
+		return (float) slots.stream().mapToDouble(Slot::getInvestment).sum();
 	}
 
 	public void stockPriceHistoryWalker(String code, Date start, Date end, float historyMax, float deltaPctg) {
 		float p = historyMax;
-		ArrayList<Position> pList = new ArrayList<>();
+		ArrayList<Slot> pList = new ArrayList<>();
 		final float[] cashProfit = {0f};
 		float investment = 0f;
 		Date lastDate = null;
 		int serial = 1;
 		while (p > 1f) {
-			pList.add(new Position(Math.round(p/deltaPctg*100)/100f, Math.round(p*100)/100f, -1f, 0, serial, null));
+			pList.add(new Slot(Math.round(p / deltaPctg * 100) / 100f, Math.round(p * 100) / 100f, -1f, 0, serial, null));
 			System.out.print("No." + pList.get(pList.size() - 1).serial);
 			System.out.print("\tS.Floor: " + pList.get(pList.size() - 1).sell_floor);
 			System.out.println("\tB.Ceiling: " + pList.get(pList.size() - 1).buy_ceiling);
@@ -88,8 +89,8 @@ public class StockPriceService extends JdbcDaoSupport {
 			"FROM stock s LEFT OUTER JOIN stock_price sp ON sp.stock_id = s.id " +
 			"WHERE s.code = ? AND sp.date >= ? AND sp.date <= ?", code, start, end);
 
-		ArrayList<Position> positionsToBuy = new ArrayList<>();
-		ArrayList<Position> positionsToSell = new ArrayList<>();
+		ArrayList<Slot> positionsToBuy = new ArrayList<>();
+		ArrayList<Slot> positionsToSell = new ArrayList<>();
 
 		while (rs.next()) {
 			positionsToBuy.clear();
@@ -100,7 +101,7 @@ public class StockPriceService extends JdbcDaoSupport {
 //			System.out.print("\t" + rs.getDate("date"));
 //			System.out.print("\t" + high);
 //			System.out.println("\t" + low);
-			Position pTemp;
+			Slot pTemp;
 
 			// Calculate money * time cost first;
 			Date currentDate = rs.getDate("date");
@@ -111,7 +112,7 @@ public class StockPriceService extends JdbcDaoSupport {
 			}
 			lastDate = currentDate;
 
-			// First find out what positions can be bought
+			// First find out what slots can be bought
 			int i = 0;
 			for (; i < pList.size(); i ++) {
 				pTemp = pList.get(i);
@@ -125,7 +126,7 @@ public class StockPriceService extends JdbcDaoSupport {
 			}
 //			float buying_price = (i == 0) ? low : (high > pList.get(i-1).buy_ceiling ? pList.get(i-1).buy_ceiling : high);
 //			float buying_price = (high < pList.get(i-1).buy_ceiling ? pList.get(i-1).buy_ceiling : high);
-			// Find out what positions can be sold
+			// Find out what slots can be sold
 			for (i = pList.size() - 1; i > -1; i --) {
 				pTemp = pList.get(i);
 				if (pTemp.sell_floor <= high) {

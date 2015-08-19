@@ -21,8 +21,10 @@ import com.numericalmethod.algoquant.execution.simulation.template.SimTemplateYa
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.model.util.returns.ReturnCalculators;
 import com.numericalmethod.suanshu.misc.datastructure.time.JodaTimeUtils;
+import michael.findata.algoquant.product.stock.shse.SHSEStock;
 import michael.findata.algoquant.product.stock.szse.SZSEStock;
 import michael.findata.algoquant.strategy.FixedPositionStrategy;
+import michael.findata.algoquant.strategy.GridStrategy;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -49,10 +51,11 @@ public class AlgoQuantTest {
 		// set up the product
 //		final Stock stock = HSI.getInstance();
 		final Stock stock = new SZSEStock("000568.SZ"); //** Customization
+//		final Stock stock = new SHSEStock("600000.SS"); //** Customization
 
 		// specify the simulation period
-		DateTime begin = JodaTimeUtils.getDate(2008, 6, 17, stock.exchange().timeZone());
-		DateTime end = JodaTimeUtils.getDate(2015, 8, 14, stock.exchange().timeZone());
+		DateTime begin = JodaTimeUtils.getDate(1997, 5, 12, stock.exchange().timeZone());
+		DateTime end = JodaTimeUtils.getDate(2006, 7, 12, stock.exchange().timeZone());
 		Interval interval = new Interval(begin, end);
 
 		// set up the data source; we download data from Yahoo! Finance here.
@@ -70,7 +73,7 @@ public class AlgoQuantTest {
 		DepthCaches depthCaches = new DepthCaches(stock, dailyData);
 
 		// construct an instance of the strategy to simulate
-		Strategy strategy = new FixedPositionStrategy(stock); //** Customization
+		Strategy strategy = new GridStrategy(stock, 1.0612, 0.45); //** Customization
 
 		// set up a simulator to host the strategy
 		Simulator simulator = new SimpleSimulatorBuilder()

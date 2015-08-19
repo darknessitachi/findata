@@ -5,6 +5,7 @@ import michael.findata.util.FinDataConstants;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.cyberneko.html.parsers.DOMParser;
 import org.dom4j.Document;
 import org.dom4j.Element;
@@ -24,9 +25,6 @@ import java.util.regex.Pattern;
 
 import static michael.findata.util.FinDataConstants.SheetType;
 
-// TODO this class has problem. It cannot extract data now
-// TODO for zcfz and pl hashMap is empty
-// TODO for xjll it can't even get the html content
 public class Hexun2008FinancialSheet extends FinancialSheet {
 //	public static final String[] FINANCIAL_SHEETNAMES = new String[]{
 //			michael.findata.util.FinDataConstants.FINANCIAL_SHEET_BALANCE_SHEET,
@@ -107,7 +105,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 	}
 
 	private void getData() {
-		CloseableHttpClient httpClient = FinDataConstants.httpClient;
+		CloseableHttpClient httpClient = HttpClients.createDefault();
 		DOMParser parser = new DOMParser();
 		try {
 			HttpGet get = new HttpGet(getURL());
@@ -122,6 +120,7 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 //			BufferedReader br = new BufferedReader();
 			parser.parse(new InputSource(new InputStreamReader(response.getEntity().getContent(), "GB2312")));
 //			parser.parse();
+			httpClient.close();
 		} catch (FileNotFoundException e) {
 			// No such stock
 			System.out.println("Error in getting data for " + stockCode + " " + this.accountingYear + " " + this.accountingSeason + " " + this.getSheetType());

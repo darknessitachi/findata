@@ -22,6 +22,9 @@
 		<xercesImpl.version>2.11.0</xercesImpl.version>
 		<json-simple.version>1.1.1</json-simple.version>
 		<installed.algoquant.version>1.0.0</installed.algoquant.version>
+		<jacob.version>1.14.3</jacob.version>
+		<disruptor.version>3.3.2</disruptor.version>
+		<jaxen.version>1.1.6</jaxen.version>
 	</properties>
 
 	<dependencies>
@@ -79,6 +82,21 @@
 			<groupId>com.numericalmethod</groupId>
 			<artifactId>algoquant-demo</artifactId>
 			<version>${installed.algoquant.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>net.sf.jacob-project</groupId>
+			<artifactId>jacob</artifactId>
+			<version>${jacob.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.lmax</groupId>
+			<artifactId>disruptor</artifactId>
+			<version>${disruptor.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>jaxen</groupId>
+			<artifactId>jaxen</artifactId>
+			<version>${jaxen.version}</version>
 		</dependency>
 	</dependencies>
 

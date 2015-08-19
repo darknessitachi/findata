@@ -44,9 +44,7 @@
 	</bean>
 
 	<bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
-		<constructor-arg>
-			<ref bean="ds"/>
-		</constructor-arg>
+		<constructor-arg ref="ds"/>
 	</bean>
 	<tx:annotation-driven transaction-manager="txManager" proxy-target-class="true"/>
 </beans>

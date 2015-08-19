@@ -82,14 +82,14 @@ public class Test {
 
 		// The following are used mainly during and immediately after earnings report seasons
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
-//		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
+		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 //		spds.fillLatestPublicationDateAccordingToLatestFinData();
 
 
 
 //		spds.updateFindataWithDates(91);
-		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
-		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
+//		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
+//		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
 

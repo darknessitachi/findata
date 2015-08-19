@@ -45,7 +45,8 @@ public class SZSEStock extends SimpleStock {
 
 	@Deprecated
 	public SZSEStock(String symbol, String companyName) {
-		super(symbol,
+		// symbol is according to yahoo finance
+		super(symbol.length() == 6? symbol+".SZ" : symbol,
 				companyName,
 				Currencies.CNY,
 				Exchange.SHSE);
