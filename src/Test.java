@@ -73,16 +73,20 @@ public class Test {
 
 		long stamp = System.currentTimeMillis();
 		// The following are used regularly throughout the year
-//		ss.refreshStockCodes();
-//		sps.refreshStockPriceHistories();
-//		ss.refreshLatestPriceAndName();
+		ss.refreshStockCodes();
+		sps.refreshStockPriceHistories();
+		ss.refreshLatestPriceAndName();
 //		ds.refreshDividendData();
 //		sncs.refreshNumberOfShares();
 //		ss.calculateAdjustmentFactor(10);
 
 		// The following are used mainly during and immediately after earnings report seasons
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
-		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
+//		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
+
+		// The following is used to update findata force fully when report dates of some stocks cannot be obtained from web
+//		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
+		// and then update report dates according to findata
 //		spds.fillLatestPublicationDateAccordingToLatestFinData();
 
 
@@ -96,84 +100,6 @@ public class Test {
 		// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
 //		spds.scanForPublicationDateGaps(2000, false);
 		System.out.println("Time taken: "+(System.currentTimeMillis() - stamp)/1000+" seconds.");
-	}
-
-	// Bulk-load stock pricing data from THS, make sure THS pricing data is complete before doing this!!!!!
-	public static void refreshStockPriceHistories() throws IOException, SQLException, ParseException, ClassNotFoundException, IllegalAccessException, InstantiationException {
-		EntityManager em = createEntityManager();
-		Connection c = jdbcConnection();
-		Date dt = new Date();
-		List<Stock> stocks = em.createQuery("SELECT s FROM Stock s ORDER BY s.code").getResultList();
-		System.out.println((new Date().getTime() - dt.getTime()));
-		int id;
-		String code, name;
-		for (Stock stock : stocks) {
-			id = stock.getId();
-			code = stock.getCode();
-			name = stock.getName();
-			if (name == null) continue;
-			System.out.println(code+" "+name);
-//			refreshStockPriceHistory(id, code, c, em);
-		}
-		c.close();
-		em.close();
-	}
-
-	private static void refreshStockPriceHistory(int stockId, String code, Connection con, EntityManager em) throws IOException, SQLException, ParseException {
-
-//		SecurityTimeSeriesData ts = new THSPriceHistory(code);
-		SecurityTimeSeriesData ts = new TDXPriceHistory(code);
-		Statement st = con.createStatement();
-		PreparedStatement ps = con.prepareStatement("INSERT INTO stock_price (stock_id, date, open, high, low, close, avg, adjustment_factor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-		Statement s = con.createStatement();
-		Date latest = null;
-		int currentYear = new Date().getYear()+1900;
-		ResultSet rs;
-
-//		em.cr // todo
-		rs = s.executeQuery("SELECT max(date) FROM stock_price WHERE stock_id = "+stockId);
-		if (rs.next()) {
-			latest = rs.getDate(1);
-		}
-
-		if (latest == null) {
-			latest = earliest;
-		}
-
-		SimpleDateFormat FORMAT_yyyyMMdd = new SimpleDateFormat(FinDataConstants.yyyyMMdd);
-		System.out.println("Latest: " + FORMAT_yyyyMMdd.format(latest));
-		con.setAutoCommit(false);
-		em.getTransaction().begin();
-		SecurityTimeSeriesDatum temp;
-		while (ts.hasNext()) {
-			temp = ts.next();
-
-			if (temp.getDate().after(latest)) {
-				System.out.println((temp.getDate().getYear()+1900) + " " + (temp.getDate().getMonth() + 1) + " " + temp.getDate().getDate());
-			} else {
-				break;
-			}
-			ps.setInt(1, stockId);
-			ps.setDate(2, temp.getDate());
-			ps.setInt(3, temp.getOpen());
-			ps.setInt(4, temp.getHigh());
-			ps.setInt(5, temp.getLow());
-			ps.setInt(6, temp.getClose());
-			ps.setInt(7, (temp.getOpen()+temp.getHigh()+temp.getLow()+temp.getClose())/4);
-			ps.setObject(8, null);
-//			ps.executeUpdate();
-			ps.addBatch();
-		}
-		try {
-			ps.executeBatch();
-			System.out.println(code + " updated.");
-		} catch (BatchUpdateException exx) {
-			System.out.println(exx.getMessage());
-		}
-		con.commit();
-		em.getTransaction().commit();
-		ts.close();
-		st.close();
 	}
 
 	private static EntityManager createEntityManager() {

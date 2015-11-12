@@ -185,7 +185,7 @@ public class FinDataService extends JdbcDaoSupport {
 //			}
 		}
 
-		stocks.parallelStream().forEach(stock -> {
+		stocks.stream().forEach(stock -> {
 			if (refreshFinDataForStock(stock.getCode(), stock.getId(), currentYear, currentMonth, stock.getLatestYear(), stock.getLatestSeason(), stock.isFinancial(), stock.getName())) {
 				stocksToUpdateReportDates.put(stock.getCode(), stock.getId());
 			}
@@ -358,4 +358,10 @@ public class FinDataService extends JdbcDaoSupport {
 		}
 		return !someSheetsAreEmpty;
 	}
+	/**
+	 * !! todo missing fin_data that can't be obtained from any source. please try harder!!
+	 * 000939 凯迪电力 2005 1 balance_sheet_nf missing
+	 * 000939 凯迪电力 2007 1 balance_sheet_nf missing
+	 * 000939 凯迪电力 2005 1 cash_flow_nf missing
+	 */
 }

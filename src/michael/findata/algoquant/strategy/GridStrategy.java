@@ -92,6 +92,7 @@ public class GridStrategy implements Strategy, DepthHandler, StockEODHandler {
 		slots.clear();
 		while (p > 1f) {
 			slots.add(new Slot(Math.min(Math.round(p / deltaPctg * 100) / 100f, historyMax * waitThreshold), Math.round(p * 100) / 100f, 0, 0, serial, null));
+//			slots.add(new Slot(Math.round(p / deltaPctg * 100) / 100f, Math.round(p * 100) / 100f, 0, 0, serial, null));
 			System.out.printf("No. %d\tS.Floor: %.2f\tB.Ceiling: %.2f\n",
 					slots.get(slots.size() - 1).serial,
 					slots.get(slots.size() - 1).sell_floor,
@@ -111,7 +112,10 @@ public class GridStrategy implements Strategy, DepthHandler, StockEODHandler {
 							  MarketCondition mc,
 							  TradeBlotter blotter,
 							  Broker broker) {
-//		broker.sendOrder(computeOrders(now, depth.ask(0), depth.ask(0), depth.bid(0), depth.bid(0)));
+		LOGGER.info("onDepthUpdate called: {}", depth);
+		if (depth.product().equals(product)) {
+//			broker.sendOrder(computeOrders(now, depth.ask(0), depth.ask(0), depth.bid(0), depth.bid(0)));
+		}
 	}
 
 	@Override
@@ -120,6 +124,7 @@ public class GridStrategy implements Strategy, DepthHandler, StockEODHandler {
 							MarketCondition mc,
 							TradeBlotter blotter,
 							Broker broker) {
+		LOGGER.info("onEODUpdate called: {}", eod);
 		double low = eod.adjClose()/eod.close()*eod.low();
 		double high = eod.adjClose()/eod.close()*eod.high();
 		double bestAsk = low;
@@ -129,17 +134,6 @@ public class GridStrategy implements Strategy, DepthHandler, StockEODHandler {
 		broker.sendOrder(computeOrders(now, bestAsk, worstAsk, bestBid, worstBid));
 	}
 
-	private Collection<Order> computeOrders(double currentPrice, double position) {
-		double qty = 0.;
-
-		if (position == 0.) {
-			qty = 100;
-		} else {
-			return Collections.emptySet();
-		}
-
-		return Collections.<Order>singletonList(new MarketOrder(product, qty));
-	}
 	private Collection<Order> computeOrders(DateTime now, double bestAsk, double worstAsk, double bestBid, double worstBid) {
 		Slot pTemp;
 		slotsToBuy.clear();

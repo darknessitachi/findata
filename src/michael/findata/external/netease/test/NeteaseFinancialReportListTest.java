@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat;
 public class NeteaseFinancialReportListTest {
 	public static void main (String [] args) throws IOException, ParseException {
 		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
-		for (ReportPublication p : new NeteaseFinancialReportList("600704").getReportPublications()) {
+		for (ReportPublication p : new NeteaseFinancialReportList("300189").getReportPublications()) {
 			System.out.println(p.getCode() + " " + p.getYear() + " " + p.getSeason() + ": "+ FORMAT_yyyyDashMMDashdd.format(p.getDate()));
 		}
 	}

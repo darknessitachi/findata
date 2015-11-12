@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * Created by nicky on 2015/8/18.
@@ -42,7 +43,12 @@ public class NeteaseInstantSnapshot {
 		}
 		depths = new Depth[codes.length];
 		for (int i = codes.length-1; i > -1; i--) {
-			Map stockSnapshot = (Map) data.get(neteaseInternalCodes[i]);
+			Map stockSnapshot;
+			try {
+				stockSnapshot = (Map) data.get(neteaseInternalCodes[i]);
+			} catch (NullPointerException npe) {
+				break;
+			}
 			if (codes[i].startsWith("6") || codes[i].startsWith("9")) {
 				depths[i] = new Depth(new SHSEStock((String)stockSnapshot.get("symbol")),
 								(double)stockSnapshot.get("bid5"),
