@@ -21,11 +21,8 @@ import com.numericalmethod.algoquant.execution.simulation.template.SimTemplateYa
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.model.util.returns.ReturnCalculators;
 import com.numericalmethod.suanshu.misc.datastructure.time.JodaTimeUtils;
-import michael.findata.algoquant.product.stock.shse.SHSEStock;
 import michael.findata.algoquant.product.stock.szse.SZSEStock;
-import michael.findata.algoquant.strategy.FixedPositionStrategy;
 import michael.findata.algoquant.strategy.GridStrategy;
-import michael.findata.external.netease.NeteaseInstantSnapshotFactory;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -39,24 +36,24 @@ import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
  * Author: Michael, Tang Ying Jian
  * Date: 2015/8/9
  */
-public class AlgoQuantTest {
+public class PairTest {
 
 	private static final Logger LOGGER = getClassLogger();
 
 	public static void main(String[] args) throws Exception {
-		AlgoQuantTest demo = new AlgoQuantTest();
+		PairTest demo = new PairTest();
 		demo.run();
 	}
 
 	public void run() throws Exception {
 		// set up the product
 //		final Stock stock = HSI.getInstance();
-		final Stock stock = new SHSEStock("600875.SS"); //** Customization
+		final Stock stock = new SZSEStock("000568.SZ"); //** Customization
 //		final Stock stock = new SHSEStock("600036.SS"); //** Customization
 
 		// specify the simulation period
-		DateTime begin = JodaTimeUtils.getDate(2010, 1, 1, stock.exchange().timeZone());
-		DateTime end = JodaTimeUtils.getDate(2015, 12, 5, stock.exchange().timeZone());
+		DateTime begin = JodaTimeUtils.getDate(2014, 1, 12, stock.exchange().timeZone());
+		DateTime end = JodaTimeUtils.getDate(2015, 11, 20, stock.exchange().timeZone());
 		Interval interval = new Interval(begin, end);
 
 		// set up the data source; we download data from Yahoo! Finance here.

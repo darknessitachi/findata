@@ -1,25 +1,26 @@
 package michael.findata.external;
 
+import org.joda.time.DateTime;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.IntBuffer;
+import java.nio.*;
 import java.nio.channels.FileChannel;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-
-import static michael.findata.util.FinDataConstants.yyyyMMdd;
+import java.sql.Date;
 
 public abstract class PriceHistory implements SecurityTimeSeriesData{
 	private int headerSize = 184, recordSize = 168;
-	private int coeff = 1;
-	protected int[] records = null;
+	protected int[] intRec = null;
 	protected String code;
 	protected File DataFile;
 	protected FileChannel fc = null;
 	protected IntBuffer lb;
+	protected ShortBuffer sb;
+	protected short[] shortRec;
+	protected FloatBuffer fb;
+	protected float[] floatRec;
+
 	protected long count;
 	protected ByteBuffer bb = null;
 
@@ -28,7 +29,6 @@ public abstract class PriceHistory implements SecurityTimeSeriesData{
 		recordSize = getRecordSize();
 		this.code = code;
 		DataFile = new File(getDataFileName());
-		coeff = getCoeff();
 		if (!DataFile.exists()) {
 			System.out.println("... No pricing data for stock " + code);
 			return;
@@ -37,7 +37,12 @@ public abstract class PriceHistory implements SecurityTimeSeriesData{
 		bb = ByteBuffer.allocate(recordSize);
 		bb.order(ByteOrder.LITTLE_ENDIAN);
 		lb = bb.asIntBuffer();
-		records = new int [5];
+		intRec = new int [8];
+		sb = bb.asShortBuffer();
+		shortRec = new short[16];
+		fb = bb.asFloatBuffer();
+		floatRec = new float[8];
+
 		try {
 			fc = new FileInputStream(DataFile).getChannel();
 			fc.position(headerSize);
@@ -69,22 +74,29 @@ public abstract class PriceHistory implements SecurityTimeSeriesData{
 			}
 			bb.flip();
 			lb.position(0);
-			lb.get(records);
-			java.sql.Date pricingDate;
-			try {
-				SimpleDateFormat format_yyyyMMdd = new SimpleDateFormat(yyyyMMdd);
-				pricingDate = new java.sql.Date(format_yyyyMMdd.parse(records[0] + "").getTime());
-			} catch (ParseException e) {
-				System.out.println("Cannot parse a date in stock price history file for " + code + ": " + records[0]);
-				e.printStackTrace();
-				return null;
-			}
+			lb.get(intRec);
+			sb.position(0);
+			sb.get(shortRec);
+			fb.position(0);
+			fb.get(floatRec);
+
+//			java.sql.Date pricingDate;
+//			try {
+//				SimpleDateFormat format_yyyyMMdd = new SimpleDateFormat(yyyyMMdd);
+//				pricingDate = new java.sql.Date(format_yyyyMMdd.parse(intRec[0] + "").getTime());
+//			} catch (ParseException e) {
+//				System.out.println("Cannot parse a date in stock price history file for " + code + ": " + intRec[0]);
+//				e.printStackTrace();
+//				return null;
+//			}
 			SecurityTimeSeriesDatum temp = new SecurityTimeSeriesDatum();
-			temp.setDate(pricingDate);
-			temp.setOpen((records[1] & 0x0fffffff)*coeff);
-			temp.setHigh((records[2] & 0x0fffffff)*coeff);
-			temp.setLow((records[3] & 0x0fffffff)*coeff);
-			temp.setClose((records[4] & 0x0fffffff)*coeff);
+			temp.setDateTime(calDateTime());
+			temp.setOpen(calOpen());
+			temp.setHigh(calHigh());
+			temp.setLow(calLow());
+			temp.setClose(calClose());
+			temp.setVolume(calVolume());
+			temp.setAmount(calAmount());
 			bb.clear();
 			count -= recordSize;
 			return temp;
@@ -113,5 +125,12 @@ public abstract class PriceHistory implements SecurityTimeSeriesData{
 	protected abstract int getHeaderSize();
 	protected abstract int getRecordSize();
 	protected abstract String getDataFileName ();
-	protected abstract int getCoeff ();
+	protected abstract DateTime calDateTime ();
+//	protected abstract int calMinute ();
+	protected abstract int calOpen ();
+	protected abstract int calHigh ();
+	protected abstract int calLow ();
+	protected abstract int calClose ();
+	protected abstract int calVolume ();
+	protected abstract float calAmount ();
 }

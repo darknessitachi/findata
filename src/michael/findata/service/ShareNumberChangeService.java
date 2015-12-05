@@ -15,12 +15,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ShareNumberChangeService extends JdbcDaoSupport {
-	@Transactional
+
 	public void refreshNumberOfShares() throws SQLException, IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
-//		java.sql.Date today = new java.sql.Date(new java.util.Date().getTime());
 		rs = getJdbcTemplate().queryForRowSet("SELECT code, id FROM stock WHERE NOT is_ignored ORDER BY code");
-//		ArrayList<SecurityShareNumberChange> ssnc;
 		Map<Integer, String> stockMap = new HashMap<>();
 
 		while (rs.next()) {
@@ -38,13 +36,7 @@ public class ShareNumberChangeService extends JdbcDaoSupport {
 			}
 		});
 
-//		while (rs.next()) {
-//			System.out.print(rs.getString("code"));
-//			refreshNumberOfSharesForStock(rs.getInt("id"), new Hexun2008ShareNumberDatum(rs.getString("code")).getShareNumberChanges());
-//		}
-
-		// Make sure only future share number changes are not used todo: shouldn't use max
-//		getJdbcTemplate().update("UPDATE stock, (SELECT stock_id, max(snc.number_of_shares) sn FROM share_number_change snc WHERE change_date <= current_date() GROUP BY stock_id) sn SET stock.number_of_shares = sn.sn WHERE stock.id = sn.stock_id");
+		// Make sure only future share number changes are not used
 		getJdbcTemplate().update(
 				"UPDATE " +
 					"stock s," +
@@ -57,13 +49,6 @@ public class ShareNumberChangeService extends JdbcDaoSupport {
 					"snc.stock_id = cdt.stock_id AND " +
 					"s.id = snc.stock_id");
 	}
-
-//	@Transactional
-//	public void refreshNumberOfSharesForStock (String stockCode) {
-//		int stockId = getJdbcTemplate().queryForObject("SELECT id FROM stock WHERE code = ?", Integer.class, stockCode);
-//		refreshNumberOfSharesForStock(stockId, new Hexun2008ShareNumberDatum(stockCode).getShareNumberChanges());
-//		getJdbcTemplate().update("UPDATE stock, (SELECT stock_id, number_of_shares sn FROM share_number_change snc WHERE stock_id = ? AND change_date <= current_date() ORDER BY change_date DESC LIMIT 1) sn SET stock.number_of_shares = sn.sn WHERE stock.id = sn.stock_id", stockId);
-//	}
 
 	// Please don't mark this as transactional as it purposely uses sql exception in its logic
 	private void refreshNumberOfSharesForStock(int stockId, ArrayList<SecurityShareNumberChange> snc) {

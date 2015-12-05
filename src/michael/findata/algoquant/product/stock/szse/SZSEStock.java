@@ -49,7 +49,7 @@ public class SZSEStock extends SimpleStock {
 		super(symbol.length() == 6? symbol+".SZ" : symbol,
 				companyName,
 				Currencies.CNY,
-				Exchange.SHSE);
+				Exchange.SZSE);
 	}
 
 	@Deprecated

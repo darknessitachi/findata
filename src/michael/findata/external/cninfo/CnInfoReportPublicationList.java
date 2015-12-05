@@ -30,6 +30,7 @@ public class CnInfoReportPublicationList implements ReportPublicationList{
 				new String[]{"http://www.cninfo.com.cn/disclosure/3qreport/stocks/3qr1y/cninfo/${code}.js", "3"},
 				new String[]{"http://www.cninfo.com.cn/disclosure/annualreport/stocks/ar1y/cninfo/${code}.js", "4"}
 		);
+		// todo following map-map-flatmap procedure can be replaced by flatmap-map
 		List result = urls.map(s -> {
 			BufferedReader br = null;
 			try {

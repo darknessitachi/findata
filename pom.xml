@@ -16,18 +16,26 @@
 		<spring.version>4.1.3.RELEASE</spring.version>
 		<hibernate.version>4.3.7.Final</hibernate.version>
 		<testng.version>6.8.8</testng.version>
+		<commons-math3.version>3.5</commons-math3.version>
+		<poi.version>3.13</poi.version>
 		<mysql-connector.version>5.1.34</mysql-connector.version>
 		<maven-compiler-plugin.version>3.2</maven-compiler-plugin.version>
 		<maven-war-plugin.version>2.5</maven-war-plugin.version>
 		<xercesImpl.version>2.11.0</xercesImpl.version>
 		<json-simple.version>1.1.1</json-simple.version>
 		<installed.algoquant.version>1.0.0</installed.algoquant.version>
+		<suanshu.version>3.3.0</suanshu.version>
 		<jacob.version>1.14.3</jacob.version>
 		<disruptor.version>3.3.2</disruptor.version>
 		<jaxen.version>1.1.6</jaxen.version>
 	</properties>
 
 	<dependencies>
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi</artifactId>
+			<version>${poi.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
@@ -84,6 +92,11 @@
 			<version>${installed.algoquant.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>com.numericalmethod</groupId>
+			<artifactId>suanshu</artifactId>
+			<version>${suanshu.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>net.sf.jacob-project</groupId>
 			<artifactId>jacob</artifactId>
 			<version>${jacob.version}</version>
@@ -97,6 +110,11 @@
 			<groupId>jaxen</groupId>
 			<artifactId>jaxen</artifactId>
 			<version>${jaxen.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-math3</artifactId>
+			<version>${commons-math3.version}</version>
 		</dependency>
 	</dependencies>
 

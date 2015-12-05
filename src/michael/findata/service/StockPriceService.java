@@ -3,7 +3,11 @@ package michael.findata.service;
 import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.tdx.TDXPriceHistory;
+import michael.findata.model.AdjFactor;
+import michael.findata.util.CalendarUtil;
+import michael.findata.util.Consumer5;
 import michael.findata.util.FinDataConstants;
+import org.joda.time.DateTime;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.dao.DuplicateKeyException;
@@ -65,6 +69,87 @@ public class StockPriceService extends JdbcDaoSupport {
 
 	public float getInvestedCash(Collection<Slot> slots) {
 		return (float) slots.stream().mapToDouble(Slot::getInvestment).sum();
+	}
+
+//	public void cointegrationTestOHLC(String start, String end, String codeA, String codeB) {
+//		Stack<AdjFactor> divA = new Stack<>();
+//		Stack<AdjFactor> divB = new Stack<>();
+//		getAdjFactors(start, end, codeA, codeB, divA, divB);
+//		walk(start, end, codeA, codeB, (date, closeA, closeB) -> {
+//			while ((!divA.isEmpty()) && divA.peek().paymentDate.compareTo(date) <= 0) {
+//				divA.pop();
+//			}
+//			while ((!divB.isEmpty()) && divB.peek().paymentDate.compareTo(date) <= 0) {
+//				divB.pop();
+//			}
+//			double adjFctA = divA.empty()? 1.0d : divA.peek().factor;
+//			double adjFctB = divB.empty()? 1.0d : divB.peek().factor;
+//			System.out.println(date+"\t"+closeA/adjFctA+"\t"+closeB/adjFctB);
+//		});
+//
+//		double [] statistics = stats.stream().mapToDouble(Double::doubleValue).toArray();
+//		AugmentedDickeyFuller adfTest = new AugmentedDickeyFuller(statistics);
+//		System.out.println("ADF p value: "+adfTest.pValue());
+//	}
+
+	private static class Tuple {
+		DateTime date;
+		Double prA;
+		Double prB;
+
+		Tuple (DateTime d, Double pA, Double pB) {
+			date = d;
+			prA = pA;
+			prB = pB;
+		}
+
+		Tuple (Date d, Double pA, Double pB) {
+			date = new DateTime(d);
+			prA = pA;
+			prB = pB;
+		}
+	}
+
+	public void walk(DateTime start,
+					 DateTime end,
+					 int maxSteps,
+					 String codeA,
+					 String codeB,
+					 boolean log,
+					 Consumer5<DateTime, Double, Double, Float, Float> doStuff) {
+
+		Stack<AdjFactor> adjFctA = new Stack<>();
+		Stack<AdjFactor> adjFctB = new Stack<>();
+		DividendService.getAdjFactors(start, end, codeA, codeB, adjFctA, adjFctB, getJdbcTemplate());
+
+		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
+			"SELECT stockA.date date, stockA.close closeA, stockB.close closeB "+
+			"FROM code_price stockA INNER JOIN code_price stockB ON stockA.date = stockB.date " +
+			"WHERE stockA.code = ? AND stockB.code = ? AND ? <= stockA.date AND stockA.date <= ? ORDER BY stockA.date DESC LIMIT ?"
+			, codeA, codeB, start.toLocalDate().toDate(), end.toLocalDate().toDate(), maxSteps);
+		Stack<Tuple> temp = new Stack<>();
+		while (rs.next()) {
+			temp.push(new Tuple(rs.getDate("date"), rs.getInt("closeA")/1000d, rs.getInt("closeB")/1000d));
+		}
+		Tuple t;
+		DateTime date;
+		while (!temp.isEmpty()) {
+			t = temp.pop();
+			date = t.date;
+			while ((!adjFctA.isEmpty()) && CalendarUtil.daysBetween(adjFctA.peek().paymentDate, date) >= 0) {
+				adjFctA.pop();
+			}
+			while ((!adjFctB.isEmpty()) && CalendarUtil.daysBetween(adjFctB.peek().paymentDate, date) >= 0) {
+				adjFctB.pop();
+			}
+			double prA = t.prA / (adjFctA.empty() ? 1.0d : adjFctA.peek().factor);
+			double prB = t.prB / (adjFctB.empty() ? 1.0d : adjFctB.peek().factor);
+
+			doStuff.apply(date, prA, prB, 100000f, 100000f);
+			if (log) {
+				System.out.println(date + "\t" + "\t" + prA + "\t" + "\t" + prB);
+			}
+		}
 	}
 
 	public void stockPriceHistoryWalker(String code, Date start, Date end, float historyMax, float deltaPctg) {
@@ -180,7 +265,7 @@ public class StockPriceService extends JdbcDaoSupport {
 	public void refreshStockPriceHistory(String code) throws IOException, SQLException, ParseException {
 //		SecurityTimeSeriesData ts = new THSPriceHistory(code);
 		SecurityTimeSeriesData ts = new TDXPriceHistory(code);
-		Date latest = null;
+		DateTime latest = null;
 		int stockId;
 		String name;
 
@@ -193,7 +278,7 @@ public class StockPriceService extends JdbcDaoSupport {
 			return;
 		}
 		if (rs.next()) {
-			latest = rs.getDate("date");
+			latest = new DateTime(rs.getDate("date"));
 			stockId = rs.getInt("stock_id");
 			name = rs.getString("name");
 		} else {
@@ -202,7 +287,7 @@ public class StockPriceService extends JdbcDaoSupport {
 		}
 
 		if (latest == null) {
-			latest = FinDataConstants.EARLIEST;
+			latest = new DateTime(FinDataConstants.EARLIEST);
 		}
 
 		System.out.println(code+" Latest price: " + new SimpleDateFormat(yyyyDashMMDashdd).format(latest));
@@ -211,15 +296,15 @@ public class StockPriceService extends JdbcDaoSupport {
 		while (ts.hasNext()) {
 			temp = ts.next();
 
-			if (temp.getDate().after(latest)) {
-				System.out.println((temp.getDate().getYear()+1900) + "-" + (temp.getDate().getMonth() + 1) + "-" + temp.getDate().getDate());
+			if (temp.getDateTime().isAfter(latest)) {
+				System.out.println((temp.getDateTime().getYear()) + "-" + (temp.getDateTime().getMonthOfYear()) + "-" + temp.getDateTime().getDayOfMonth());
 			} else {
 				break;
 			}
 
 			try {
 				getJdbcTemplate().update("INSERT INTO stock_price (stock_id, date, open, high, low, close, avg, adjustment_factor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-						stockId, temp.getDate(), temp.getOpen(), temp.getHigh(), temp.getLow(), temp.getClose(),
+						stockId, temp.getDateTime().toLocalDate().toDate(), temp.getOpen(), temp.getHigh(), temp.getLow(), temp.getClose(),
 						(temp.getOpen() + temp.getHigh() + temp.getLow() + temp.getClose()) / 4, null);
 			} catch (DuplicateKeyException ex) {
 				System.err.println(ex.getMessage());
@@ -236,11 +321,11 @@ public class StockPriceService extends JdbcDaoSupport {
 		StockPriceService sps = (StockPriceService) context.getBean("stockPriceService");
 		long stamp = System.currentTimeMillis();
 		sps.stockPriceHistoryWalker(
-			args[0],
-			FORMAT_yyyyDashMMDashdd.parse(args[1]),
-			FORMAT_yyyyDashMMDashdd.parse(args[2]),
-			Float.parseFloat(args[3]),
-			Float.parseFloat(args[4]));
+				args[0],
+				FORMAT_yyyyDashMMDashdd.parse(args[1]),
+				FORMAT_yyyyDashMMDashdd.parse(args[2]),
+				Float.parseFloat(args[3]),
+				Float.parseFloat(args[4]));
 		System.out.println("Time taken: " + (System.currentTimeMillis() - stamp) / 1000+" seconds.");
 	}
 }

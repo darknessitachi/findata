@@ -1,6 +1,7 @@
 package michael.findata.external.netease;
 
-import com.numericalmethod.algoquant.execution.datatype.depth.Depth;
+import com.numericalmethod.algoquant.execution.datatype.product.stock.Stock;
+import michael.findata.algoquant.execution.datatype.depth.Depth;
 import michael.findata.algoquant.product.stock.shse.SHSEStock;
 import michael.findata.algoquant.product.stock.szse.SZSEStock;
 import org.json.simple.JSONObject;
@@ -10,7 +11,6 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * Created by nicky on 2015/8/18.
@@ -19,7 +19,7 @@ public class NeteaseInstantSnapshot {
 	protected JSONObject data = null;
 	protected String [] codes;
 	protected String [] neteaseInternalCodes;
-	protected Depth [] depths;
+	protected Depth[] depths;
 	public NeteaseInstantSnapshot (String ... codes) {
 		this.codes = codes;
 		neteaseInternalCodes = new String [codes.length];
@@ -42,6 +42,7 @@ public class NeteaseInstantSnapshot {
 		} catch (Exception e) {
 		}
 		depths = new Depth[codes.length];
+		Stock stock;
 		for (int i = codes.length-1; i > -1; i--) {
 			Map stockSnapshot;
 			try {
@@ -50,30 +51,33 @@ public class NeteaseInstantSnapshot {
 				break;
 			}
 			if (codes[i].startsWith("6") || codes[i].startsWith("9")) {
-				depths[i] = new Depth(new SHSEStock((String)stockSnapshot.get("symbol")),
-								(double)stockSnapshot.get("bid5"),
-								(double)stockSnapshot.get("bid4"),
-								(double)stockSnapshot.get("bid3"),
-								(double)stockSnapshot.get("bid2"),
-								(double)stockSnapshot.get("bid1"),
-								(double)stockSnapshot.get("ask1"),
-								(double)stockSnapshot.get("ask2"),
-								(double)stockSnapshot.get("ask3"),
-								(double)stockSnapshot.get("ask4"),
-								(double)stockSnapshot.get("ask5"));
+				stock = new SHSEStock((String)stockSnapshot.get("symbol"));
 			} else {
-				depths[i] = new Depth(new SZSEStock((String)stockSnapshot.get("symbol")),
-								(double)stockSnapshot.get("bid5"),
-								(double)stockSnapshot.get("bid4"),
-								(double)stockSnapshot.get("bid3"),
-								(double)stockSnapshot.get("bid2"),
-								(double)stockSnapshot.get("bid1"),
-								(double)stockSnapshot.get("ask1"),
-								(double)stockSnapshot.get("ask2"),
-								(double)stockSnapshot.get("ask3"),
-								(double)stockSnapshot.get("ask4"),
-								(double)stockSnapshot.get("ask5"));
+				stock = new SZSEStock((String)stockSnapshot.get("symbol"));
 			}
+			depths[i] = new Depth(stock,
+					(double)stockSnapshot.get("bid5"),
+					(double)stockSnapshot.get("bid4"),
+					(double)stockSnapshot.get("bid3"),
+					(double)stockSnapshot.get("bid2"),
+					(double)stockSnapshot.get("bid1"),
+					(double)stockSnapshot.get("ask1"),
+					(double)stockSnapshot.get("ask2"),
+					(double)stockSnapshot.get("ask3"),
+					(double)stockSnapshot.get("ask4"),
+					(double)stockSnapshot.get("ask5"));
+			depths[i].setVols(
+					(long)stockSnapshot.get("bidvol5"),
+					(long)stockSnapshot.get("bidvol4"),
+					(long)stockSnapshot.get("bidvol3"),
+					(long)stockSnapshot.get("bidvol2"),
+					(long)stockSnapshot.get("bidvol1"),
+					(long)stockSnapshot.get("askvol1"),
+					(long)stockSnapshot.get("askvol2"),
+					(long)stockSnapshot.get("askvol3"),
+					(long)stockSnapshot.get("askvol4"),
+					(long)stockSnapshot.get("askvol5")
+			);
 		}
 	}
 	public Depth[] getDepths () {

@@ -1,9 +1,12 @@
 package michael.findata.external;
 
-import java.io.IOException;
+import michael.findata.model.AdjFactor;
+
+import java.util.Date;
+import java.util.Stack;
 
 public interface SecurityTimeSeriesData {
-	public SecurityTimeSeriesDatum next();
-	public void close ();
-	public boolean hasNext ();
+	SecurityTimeSeriesDatum next();
+	void close();
+	boolean hasNext ();
 }

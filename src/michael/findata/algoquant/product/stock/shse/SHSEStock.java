@@ -45,7 +45,7 @@ public class SHSEStock extends SimpleStock {
 
 	@Deprecated
 	public SHSEStock(String symbol, String companyName) {
-		super(symbol.length() == 6? symbol+".SS" : symbol,
+		super(symbol.length() == 6? symbol+".SH" : symbol,
 				companyName,
 				Currencies.CNY,
 				Exchange.SHSE);

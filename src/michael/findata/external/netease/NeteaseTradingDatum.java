@@ -18,7 +18,7 @@ public class NeteaseTradingDatum extends SecurityTradingDatum {
 	public NeteaseTradingDatum(String stockCode) throws IOException {
 		this.stockCode = stockCode;
 		try {
-			if (stockCode.startsWith("6") || stockCode.startsWith("9")) {
+			if (stockCode.startsWith("6") || stockCode.startsWith("9") || stockCode.startsWith("51")) {
 				neteaseInternalCode = "0" + stockCode;
 			} else {
 				neteaseInternalCode = "1" + stockCode;

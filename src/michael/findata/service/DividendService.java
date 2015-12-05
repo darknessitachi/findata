@@ -3,7 +3,10 @@ package michael.findata.service;
 import michael.findata.external.SecurityDividendData;
 import michael.findata.external.SecurityDividendRecord;
 import michael.findata.external.hexun2008.Hexun2008DividendData;
+import michael.findata.model.AdjFactor;
 import michael.findata.model.Stock;
+import org.joda.time.DateTime;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +39,33 @@ public class DividendService extends JdbcDaoSupport {
 				System.err.println(e.getMessage());
 			}
 		});
+	}
+
+	@Transactional
+	public void calculateAdjFactorForStock(String code) {
+		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
+				"SELECT dividend.id id, stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct, amount " +
+				"FROM dividend, stock " +
+				"WHERE stock_id = stock.id " +
+//				"AND payment_date >= '2015-01-01' " +
+//				"AND dividend.adj_factor is NULL " +
+				"AND stock.code = ? " +
+				"ORDER BY code, payment_date", code);
+		Date payment_date;
+		double yest_close, adj;
+		while (rs.next()) {
+			payment_date = rs.getDate("payment_date");
+			System.out.print(rs.getString("code")+" Payment date: " + payment_date);
+			try {
+				yest_close = getJdbcTemplate().queryForObject("SELECT close FROM code_price WHERE code = ? AND date < ? ORDER BY date DESC LIMIT 1", Double.class, code, payment_date) / 1000d;
+			} catch (Exception e) {
+				continue;
+			}
+			System.out.print("\tyest_clse: " + yest_close);
+			adj = rs.getDouble("fct")*yest_close/(yest_close-rs.getDouble("amount"));
+			System.out.println("\tadj: " + adj);
+			getJdbcTemplate().update("UPDATE dividend SET adj_factor = ? WHERE id = ?", adj, rs.getInt("id"));
+		}
 	}
 
 	@Transactional
@@ -74,5 +104,37 @@ public class DividendService extends JdbcDaoSupport {
 			}
 			e = sdd.getDividendRecords().pollLastEntry();
 		}
+	}
+
+	public static void getAdjFactors (DateTime start, DateTime end, String codeA, String codeB, Stack<AdjFactor> divA, Stack<AdjFactor> divB,  JdbcTemplate jdbcTemplate) {
+		SqlRowSet rsAdj = jdbcTemplate.queryForRowSet(
+				"SELECT payment_date, adj_factor, code " +
+						"FROM dividend, stock " +
+						"WHERE stock_id = stock.id " +
+						"AND code IN (?, ?) " +
+						"AND (payment_date BETWEEN ? AND ?) " +
+						"ORDER BY payment_date DESC", codeA, codeB, start.toLocalDate().toDate(), end.toLocalDate().toDate());
+		while (rsAdj.next()) {
+			if (rsAdj.getString("code").equals(codeA)) {
+				if (divA.isEmpty()) {
+					divA.push(new AdjFactor(rsAdj.getDate("payment_date"), rsAdj.getDouble("adj_factor")));
+				} else {
+					divA.push(new AdjFactor(rsAdj.getDate("payment_date"), divA.peek().factor *rsAdj.getDouble("adj_factor")));
+				}
+			} else {
+				if (divB.isEmpty()) {
+					divB.push(new AdjFactor(rsAdj.getDate("payment_date"), rsAdj.getDouble("adj_factor")));
+				} else {
+					divB.push(new AdjFactor(rsAdj.getDate("payment_date"), divB.peek().factor *rsAdj.getDouble("adj_factor")));
+				}
+			}
+//			System.out.print(rsAdj.getString("code")+"\t");
+//			System.out.print(rsAdj.getDate("payment_date") + "\t");
+//			System.out.println(rsAdj.getDouble("adj_factor"));
+		}
+	}
+
+	public void getAdjFactors(DateTime start, DateTime end, String codeA, String codeB, Stack<AdjFactor> divA, Stack<AdjFactor> divB) {
+		getAdjFactors(start, end, codeA, codeB, divA, divB, getJdbcTemplate());
 	}
 }
