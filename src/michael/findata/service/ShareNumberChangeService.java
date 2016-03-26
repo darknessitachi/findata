@@ -18,7 +18,7 @@ public class ShareNumberChangeService extends JdbcDaoSupport {
 
 	public void refreshNumberOfShares() throws SQLException, IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
-		rs = getJdbcTemplate().queryForRowSet("SELECT code, id FROM stock WHERE NOT is_ignored ORDER BY code");
+		rs = getJdbcTemplate().queryForRowSet("SELECT code, id FROM stock WHERE (NOT is_ignored) AND (NOT is_fund) ORDER BY code");
 		Map<Integer, String> stockMap = new HashMap<>();
 
 		while (rs.next()) {
@@ -28,9 +28,10 @@ public class ShareNumberChangeService extends JdbcDaoSupport {
 		stockMap.entrySet().parallelStream().forEach(entry -> {
 			Integer id = entry.getKey();
 			String code = entry.getValue();
-			System.out.println("Refreshing share # for stock " + code);
+			System.out.println("Updating share # changes for stock " + code);
 			try {
 				refreshNumberOfSharesForStock(id, new Hexun2008ShareNumberDatum(code).getShareNumberChanges());
+				System.out.println("Share # changes updated for stock "+code);
 			} catch (Hexun2008DataException ex) {
 				System.out.println(ex.getMessage());
 			}
@@ -71,6 +72,5 @@ public class ShareNumberChangeService extends JdbcDaoSupport {
 				}
 			}
 		}
-		System.out.println("Changes in number of shares updated.");
 	}
 }

@@ -48,7 +48,8 @@ public class Hexun2008ShareNumberDatum extends SecurityShareNumberDatum implemen
             BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), "GB2312"));
             line = StringParserUtil.skipByCharacteristicStrings(br, characteristicsString);
 			if (line == null) {
-				throw new Hexun2008DataException("Cannot find total number of shares for " + stockCode);
+				br.close();
+				throw new Hexun2008DataException("Cannot find total # of shares for " + stockCode);
 			}
 			int index, changeCounter = 0;
 			Number nos;
@@ -93,7 +94,8 @@ public class Hexun2008ShareNumberDatum extends SecurityShareNumberDatum implemen
 				line = br.readLine();
 			}
 			if (getShareNumberChanges().isEmpty()) {
-				throw new Hexun2008DataException("Cannot find total number of shares for " + stockCode);
+				br.close();
+				throw new Hexun2008DataException("Cannot find total # of shares for " + stockCode);
 			} else {
 				numberOfShares = getShareNumberChanges().get(0).getNumberOfShares();
 			}

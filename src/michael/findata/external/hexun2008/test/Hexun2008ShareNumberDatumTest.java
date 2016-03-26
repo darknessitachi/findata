@@ -5,6 +5,6 @@ import michael.findata.external.hexun2008.Hexun2008ShareNumberDatum;
 
 public class Hexun2008ShareNumberDatumTest {
 	public static void main (String [] args) throws Hexun2008DataException {
-		System.out.print(new Hexun2008ShareNumberDatum ("000338").getValue());
+		System.out.print(new Hexun2008ShareNumberDatum ("300484").getValue());
 	}
 }

@@ -1,7 +1,9 @@
 package michael.findata.algoquant.execution.component.broker;
 
 import autoitx4java.AutoItX;
+import com.jacob.activeX.ActiveXComponent;
 import com.jacob.com.LibraryLoader;
+import com.jacob.com.Variant;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
@@ -35,6 +37,7 @@ public class HexinBroker implements Broker{
 	private AutoItX x;
 	private RingBuffer<OrderEvent> ringBuffer;
 	private Timer timer;
+	private String hWnd;
 
 	public HexinBroker () {
 		this("网上股票交易系统5.0", false);
@@ -61,6 +64,7 @@ public class HexinBroker implements Broker{
 			startTradingConsole(consoleProgramPath, capitalPass, commPass);
 		}
 
+		hWnd = x.winGetHandle(winTitle);
 		// start disruptor
 		startDisruptor();
 
@@ -172,6 +176,34 @@ public class HexinBroker implements Broker{
 					issueKeepAlive();
 			}
 		}
+	}
+
+	public void issueBuyOrder2 (String securityCode,
+								String amtStr,
+								String priceStr) {
+//		System.out.println(x.controlTreeViewExists(winTitle, "", "SysTreeView321", "ETF网下"));
+
+		x.controlTreeViewSelect(winTitle, "", "SysTreeView321", "ETF网下");
+		ActiveXComponent autoItX = x.autoItX;
+		Variant vTitle = new Variant(winTitle);
+		Variant vText = new Variant("");
+		Variant vControl = new Variant("SysTreeView321");
+		Variant vCommand = new Variant("Expand1");
+		Variant vOption = new Variant("ETF网下");
+		Variant vOption2 = new Variant("");
+//		Variant[] params = new Variant[]{vTitle, vText, vControl, vCommand, vOption, vOption2};
+//		System.out.println(autoItX.invoke("ControlTreeView", params));
+//		System.out.println(x.controlGetText(winTitle, "", "CVirtualGridCtrl1"));
+//		x.controlTreeViewGetItemCount(winTitle, "", "SysTreeView321", "ETF网下");
+//		System.out.println(autoItX.invoke("ControlTreeView",params));
+//		for (int i = 0; i < 2; i++) {
+//			System.out.print("Static"+i+":\t\t");
+//			System.out.println(autoItX.invoke(
+//					"ControlGetText",
+//					vTitle,
+//					vText,
+//					new Variant("Static"+i)));
+//		}
 	}
 
 	private DecimalFormat chinaStockPriceFormat = new DecimalFormat("#.###");

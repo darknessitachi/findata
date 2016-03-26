@@ -34,7 +34,7 @@ public class AutoItX {
 	/**
 	 * The AutoItX Component.
 	 */
-	protected ActiveXComponent autoItX;
+	public ActiveXComponent autoItX;
 
 	/**
 	 * Maximizes the specified window.
@@ -1657,6 +1657,7 @@ public class AutoItX {
 		Variant vOption = new Variant(option);
 		Variant vOption2 = new Variant(option2);
 		Variant[] params = new Variant[]{vTitle, vText, vControl, vCommand, vOption, vOption2};
+		System.out.println(function+": {"+vTitle+"}{"+vText+"}{"+vControl+"}{"+vCommand+"}{"+vOption+"}{"+vOption2+"}");
 		return autoItX.invoke(function, params);
 	}
 
@@ -1838,6 +1839,7 @@ public class AutoItX {
 		Variant vText = new Variant(text);
 		Variant vControl = new Variant(control);
 		Variant[] params = new Variant[]{vTitle, vText, vControl};
+		System.out.println(function+": {"+vTitle+"}{"+vText+"}{"+vControl+"}");
 		return autoItX.invoke(function, params);
 	}
 

@@ -52,6 +52,7 @@ public class Hexun2008DividendData implements SecurityDividendData {
 			BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), "GB2312"));
 			String line = StringParserUtil.skipByCharacteristicStrings(br, characteristicsStrings);
 			if (line == null) {
+				br.close();
 				throw new Hexun2008DataException("Cannot find dividend data for " + stockCode);
 			}
 			Matcher m = Pattern.compile("([\\d-]{10})\\D+font10\">(\\d+\\.\\d+)\\D+font10\">(\\d+\\.\\d+)\\D+font10\">(\\d+\\.\\d+)\\D+font10\">([\\d-]{10}|-)\\D+font10\">([\\d,]+\\.\\d+)\\D+font10\">([\\d-]{10}|-)").matcher(line);
@@ -68,6 +69,7 @@ public class Hexun2008DividendData implements SecurityDividendData {
 				} else if (temp instanceof Integer) {
 					total_amount = 10000 * (Integer)temp;
 				} else {
+					br.close();
 					throw new NumberFormatException("Unexpected Number Type: "+temp);
 				}
 				dividendRecords.put(d, new SecurityDividendRecord(d, Float.parseFloat(m.group(2)), Float.valueOf(m.group(3)), Float.valueOf(m.group(4)), paymentDateString.length() == 10 ? sdf.parse(paymentDateString) : null, total_amount));

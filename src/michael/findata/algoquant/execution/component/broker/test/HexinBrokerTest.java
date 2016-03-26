@@ -22,15 +22,8 @@ public class HexinBrokerTest {
 	// Test only
 	public static void main (String [] args) {
 		HexinBroker hxBroker = new HexinBroker("网上股票交易系统5.0", false);
-		while (true) {
-			try {
-				Thread.sleep(15000);
-				LOGGER.info("Heartbeating.");
-				hxBroker.sendOrder(Collections.<Order>singletonList(new LimitOrder(new SZSEStock("000568.SZ"), Side.BUY, 100, 20)));
-				hxBroker.sendOrder(Collections.<Order>singletonList(new LimitOrder(new SHSEStock("601398.SS"), Side.SELL, 100, 20)));
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
+//				hxBroker.sendOrder(Collections.<Order>singletonList(new LimitOrder(new SZSEStock("000568.SZ"), Side.BUY, 100, 20)));
+//				hxBroker.sendOrder(Collections.<Order>singletonList(new LimitOrder(new SHSEStock("601398.SS"), Side.SELL, 100, 20)));
+		hxBroker.issueBuyOrder2(null, null, null);
 	}
 }

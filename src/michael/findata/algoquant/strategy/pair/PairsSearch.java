@@ -1,472 +1,355 @@
 package michael.findata.algoquant.strategy.pair;
 
-import com.numericalmethod.algoquant.data.cache.SequentialCacheFactory;
-import com.numericalmethod.algoquant.data.cache.TimedEntry;
-import com.numericalmethod.algoquant.data.cache.VectorCache;
-import com.numericalmethod.algoquant.data.calendar.TimeZoneUtils;
-import com.numericalmethod.algoquant.data.historicaldata.yahoo.YahooEODCacheFactory;
-import com.numericalmethod.algoquant.execution.datatype.StockEOD;
-import com.numericalmethod.algoquant.execution.datatype.product.fx.Currencies;
-import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
-import com.numericalmethod.algoquant.execution.datatype.product.stock.SimpleStock;
 import com.numericalmethod.algoquant.execution.datatype.product.stock.Stock;
-import com.numericalmethod.algoquant.execution.simulation.template.SimTemplateYahooEOD;
-import com.numericalmethod.suanshu.misc.datastructure.time.JodaTimeUtils;
 import com.numericalmethod.suanshu.stats.test.timeseries.adf.AugmentedDickeyFuller;
+import michael.findata.algoquant.strategy.ETFPair;
+import michael.findata.algoquant.strategy.Pair;
+import michael.findata.external.shse.SHSEShortableStockList;
+import michael.findata.external.szse.SZSEShortableStockList;
+import michael.findata.service.*;
+import michael.findata.util.Consumer5;
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
-import org.joda.time.Interval;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import static michael.findata.algoquant.strategy.Pair.PairStatus.*;
+import static michael.findata.algoquant.strategy.Pair.PairStatus.OPENED;
+import static michael.findata.util.FinDataConstants.yyyyMMDDHHmmss;
+import static michael.findata.util.FinDataConstants.yyyyMMdd;
 
 /**
- * Created by nicky on 2015/11/21.
+ * Created by nicky on 2015/11/27.
  */
 public class PairsSearch {
-	public static void main (String [] args) throws Exception {
-		// set up the list of products
-		ArrayList<Stock> stockList = new ArrayList<>();
+	public static void main (String [] args) throws IOException, ParseException {
+		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/findata_spring.xml");
+//		ReportPubDateService spds = (ReportPubDateService) context.getBean("reportPubDateService");
+//		StockService ss = (StockService) context.getBean("stockService");
+//		FinDataService fds = (FinDataService) context.getBean("finDataService");
+//		DividendService ds = (DividendService) context.getBean("dividendService");
+//		ShareNumberChangeService sncs = (ShareNumberChangeService) context.getBean("shareNumberChangeService");
+		StockPriceService sps = (StockPriceService) context.getBean("stockPriceService");
+		SecurityTimeSeriesDataService stsds = (SecurityTimeSeriesDataService) context.getBean("securityTimeSeriesDataService");
 
-		// 电力
-		stockList.add(new SimpleStock("000027.SZ", "深圳能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000037.SZ", "深南电Ａ", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000301.SZ", "东方市场", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000531.SZ", "穗恒运Ａ", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000539.SZ", "粤电力Ａ", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000543.SZ", "皖能电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000600.SZ", "建投能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000601.SZ", "韶能股份", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000690.SZ", "宝新能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000692.SZ", "惠天热电", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000695.SZ", "滨海能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000720.SZ", "新能泰山", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000722.SZ", "湖南发展", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000767.SZ", "漳泽电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000791.SZ", "甘肃电投", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000862.SZ", "银星能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000875.SZ", "吉电股份", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000883.SZ", "湖北能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000899.SZ", "赣能股份", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000939.SZ", "凯迪生态", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000958.SZ", "东方能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000966.SZ", "长源电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("000993.SZ", "闽东电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("001896.SZ", "豫能控股", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("002039.SZ", "黔源电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600011.SS", "华能国际", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600021.SS", "上海电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600023.SS", "浙能电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600027.SS", "华电国际", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600098.SS", "广州发展", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600101.SS", "明星电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600116.SS", "三峡水利", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600131.SS", "岷江水电", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600167.SS", "联美控股", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600236.SS", "桂冠电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600310.SS", "桂东电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600396.SS", "金山股份", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600452.SS", "涪陵电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600483.SS", "福能股份", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600505.SS", "西昌电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600509.SS", "天富能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600578.SS", "京能电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600642.SS", "申能股份", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600644.SS", "*ST乐电", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600674.SS", "川投能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600719.SS", "大连热电", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600726.SS", "华电能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600744.SS", "华银电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600758.SS", "红阳能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600780.SS", "通宝能源", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600795.SS", "国电电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600863.SS", "内蒙华电", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600864.SS", "哈投股份", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600868.SS", "梅雁吉祥", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600886.SS", "国投电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600900.SS", "长江电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600969.SS", "郴电国际", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600979.SS", "广安爱众", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600982.SS", "宁波热电", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("600995.SS", "文山电力", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("601016.SS", "节能风电", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("601985.SS", "中国核电", Currencies.CNY, Exchange.SZSE));
-		stockList.add(new SimpleStock("601991.SS", "大唐发电", Currencies.CNY, Exchange.SZSE));
-
-		// 酒
-//		stockList.add(new SimpleStock("000557.SZ", "*ST广夏", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000568.SZ", "泸州老窖", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000596.SZ", "古井贡酒", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000729.SZ", "燕京啤酒", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000752.SZ", "西藏发展", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000799.SZ", "*ST酒鬼", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000858.SZ", "五 粮 液", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000860.SZ", "顺鑫农业", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000869.SZ", "张  裕Ａ", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000929.SZ", "兰州黄河", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000995.SZ", "*ST皇台", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("002304.SZ", "洋河股份", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("002461.SZ", "珠江啤酒", Currencies.CNY, Exchange.SZSE));
-////		stockList.add(new SimpleStock("002646.SZ", "青青稞酒", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("600059.SS", "古越龙山", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600084.SS", "中葡股份", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600090.SS", "啤酒花", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600132.SS", "重庆啤酒", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600197.SS", "伊力特", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600199.SS", "金种子酒", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600238.SS", "海南椰岛", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600260.SS", "凯乐科技", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600365.SS", "通葡股份", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600519.SS", "贵州茅台", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600543.SS", "莫高股份", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600559.SS", "老白干酒", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600573.SS", "惠泉啤酒", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600600.SS", "青岛啤酒", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600616.SS", "金枫酒业", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600702.SS", "沱牌舍得", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600779.SS", "*ST水井", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600809.SS", "山西汾酒", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("601579.SS", "会稽山", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("603198.SS", "迎驾贡酒", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("603369.SS", "今世缘", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("603589.SS", "口子窖", Currencies.CNY, Exchange.SHSE));
-
-
-		// 保险
-//		stockList.add(new SimpleStock("601318.SS", "中国平安", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("601336.SS", "新华保险", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601601.SS", "中国太保", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601628.SS", "中国人寿", Currencies.CNY, Exchange.SHSE));
-
-		// 证券
-//		stockList.add(new SimpleStock("000166.SZ", "申万宏源", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000686.SZ", "东北证券", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000728.SZ", "国元证券", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000750.SZ", "国海证券", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000776.SZ", "广发证券", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000783.SZ", "长江证券", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("002500.SZ", "山西证券", Currencies.CNY, Exchange.SZSE));
-////		stockList.add(new SimpleStock("002673.SZ", "西部证券", Currencies.CNY, Exchange.SZSE));
-////		stockList.add(new SimpleStock("002736.SZ", "国信证券", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("600030.SS", "中信证券", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600061.SS", "国投安信", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600109.SS", "国金证券", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600369.SS", "西南证券", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600837.SS", "海通证券", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("600958.SS", "东方证券", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600999.SS", "招商证券", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601099.SS", "太平洋", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("601198.SS", "东兴证券", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("601211.SS", "国泰君安", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601377.SS", "兴业证券", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("601555.SS", "东吴证券", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601688.SS", "华泰证券", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601788.SS", "光大证券", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601901.SS", "方正证券", Currencies.CNY, Exchange.SHSE));
-
-		// Coal
-//		stockList.add(new SimpleStock("000571.SZ", "新大洲Ａ", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000723.SZ", "美锦能源", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000780.SZ", "平庄能源", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000933.SZ", "神火股份", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000937.SZ", "冀中能源", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000968.SZ", "煤 气 化", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("000983.SZ", "西山煤电", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("002128.SZ", "露天煤业", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("600121.SS", "郑州煤电", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600123.SS", "兰花科创", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600157.SS", "永泰能源", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600179.SS", "黑化股份", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600188.SS", "兖州煤业", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600348.SS", "阳泉煤业", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600395.SS", "盘江股份", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600397.SS", "安源煤业", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600403.SS", "大有能源", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600408.SS", "*ST安泰", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600508.SS", "上海能源", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600546.SS", "山煤国际", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600714.SS", "金瑞矿业", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600721.SS", "百花村", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600725.SS", "云维股份", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600740.SS", "山西焦化", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600792.SS", "云煤能源", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600971.SS", "恒源煤电", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600997.SS", "开滦股份", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601001.SS", "大同煤业", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601011.SS", "宝泰隆", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("601015.SS", "陕西黑猫", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601088.SS", "中国神华", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601101.SS", "昊华能源", Currencies.CNY, Exchange.SHSE));
-////		stockList.add(new SimpleStock("601225.SS", "陕西煤业", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601666.SS", "平煤股份", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601699.SS", "潞安环能", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601898.SS", "中煤能源", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601918.SS", "国投新集", Currencies.CNY, Exchange.SHSE));
-
-		// Banking
-//		stockList.add(new SimpleStock("000001.SZ", "平安银行", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("002142.SZ", "宁波银行", Currencies.CNY, Exchange.SZSE));
-//		stockList.add(new SimpleStock("600000.SS", "浦发银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600015.SS", "华夏银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600016.SS", "民生银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("600036.SS", "招商银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601009.SS", "南京银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601166.SS", "兴业银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601169.SS", "北京银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601288.SS", "农业银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601328.SS", "交通银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601398.SS", "工商银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601818.SS", "光大银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601939.SS", "建设银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601988.SS", "中国银行", Currencies.CNY, Exchange.SHSE));
-//		stockList.add(new SimpleStock("601998.SS", "中信银行", Currencies.CNY, Exchange.SHSE));
-
-		// specify the search interval
-		DateTime end = DateTime.now(TimeZoneUtils.SINGAPORE).minusDays(1);
-		DateTime begin = end.minusDays(365*4);
-		Interval interval = new Interval(begin, end);
-
-		// set up the data source; we download data from Yahoo! Finance here.
-		YahooEODCacheFactory yahooEOD = new YahooEODCacheFactory(SimTemplateYahooEOD.DEFAULT_DATA_FOLDER);
-		stockList.stream().forEach(stockA -> stockList.stream().forEach(stockB -> {
-			if (stockA.symbol().compareTo(stockB.symbol()) < 0) {
-				performADFTest(stockA, stockB, interval, yahooEOD);
+		pairSearch(sps, stsds);
+	}
+	// TODO parameterize this, lots need to be parameterized
+	public static void pairSearch(StockPriceService sps, SecurityTimeSeriesDataService stsds) throws ParseException, IOException {
+		SimpleDateFormat sdfDisplay = new SimpleDateFormat(yyyyMMDDHHmmss);
+		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
+		SortedMap<String, Counts> counts = new TreeMap<>();
+		Arrays.stream(filter("20150902", "20151101", 100000, StockGroups.ETF, sps, stsds))
+				.flatMap(pair -> simulate("20151102", "20151121", "20151202", pair, stsds).stream())
+				.sorted().forEach(pair1 -> {
+			int age;
+			System.out.print(pair1.toShort.symbol().substring(0, 6) + " -> " + pair1.toLong.symbol().substring(0, 6) + " slope: " + pair1.slope + " stdev: " + pair1.stdev);
+			switch (pair1.status) {
+				case OPENED:
+					System.out.print("\tOpen: Short A, Long B\t\t\t\t");
+					System.out.println(sdfDisplay.format(pair1.dateOpened.toDate()) + "\t" + pair1.shortOpen + "\t" + pair1.longOpen + "\t" + pair1.minResidual + "\t\t\t\t" + pair1.maxAmountPossibleOpen);
+					updateCount(counts, sdf.format(pair1.dateOpened.toDate()), CountType.OPEN);
+					break;
+				case CLOSED:
+					age = pair1.closureAge();
+					System.out.print((age == 0 ? "\tSame-day closure\t" : "\tClosure\t") + pair1.thresholdClose / pair1.stdev + "\tfee\t" + pair1.feeEstimate() + "\t");
+					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual + "\t" + (age == 0 ? 1 : age));
+					System.out.println("\tProfit:\t" + pair1.profitPercentageEstimate() + "\t" + pair1.maxAmountPossibleClose);
+					updateCount(counts, sdf.format(pair1.dateClosed.toDate()), (age == 0 ? CountType.SAME_DAY_CLOSE : CountType.CLOSE));
+					break;
+				case FORCED:
+					age = pair1.closureAge();
+					System.out.print("\tForce closure\t"+pair1.thresholdClose / pair1.stdev + "\tfee\t" + pair1.feeEstimate() + "\t");
+					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual + "\t" + (age == 0 ? 1 : age));
+					System.out.println("\tProfit/Loss:\t" + pair1.profitPercentageEstimate() + "\t" + pair1.maxAmountPossibleClose);
+					updateCount(counts, sdf.format(pair1.dateClosed.toDate()), (age == 0 ? CountType.SAME_DAY_CLOSE : CountType.CLOSE));
+					break;
 			}
-		}));
-//		System.out.println();
+		});
+		System.out.println("Date\tOpen#\tClose#\tSame Day Close#");
+		counts.entrySet().stream().forEach(entry -> {
+			System.out.println(entry.getKey() + "\t" + entry.getValue().open + "\t" + entry.getValue().close + "\t" + entry.getValue().sameDayClose);
+		});
 	}
 
-	private static void performADFTest (Stock stockA, Stock stockB, Interval interval, SequentialCacheFactory<Stock, StockEOD> cacheFactory) {
-		VectorCache<StockEOD> vc;
+	private enum CountType {
+		OPEN,
+		CLOSE,
+		SAME_DAY_CLOSE
+	}
+
+	private static class Counts {
+		int open = 0;
+		int close = 0;
+		int sameDayClose = 0;
+	}
+
+	private static void updateCount (Map<String, Counts> countMap, String date, CountType type) {
+		Counts c;
+		if (!countMap.containsKey(date)) {
+			c = new Counts();
+		} else {
+			c = countMap.get(date);
+		}
+		switch (type) {
+			case OPEN:
+				c.open ++;
+				break;
+			case CLOSE:
+				c.close ++;
+				break;
+			case SAME_DAY_CLOSE:
+				c.sameDayClose ++;
+				break;
+		}
+		countMap.put(date, c);
+	}
+
+	private static Pair[] filter (String trainingStart, String trainingEnd,
+								  int maxSteps, Stock[] stocks, StockPriceService sps,
+								  SecurityTimeSeriesDataService stsds) throws ParseException, IOException {
+
+		Set<String> shortables = new SHSEShortableStockList().getShortables();
+		shortables.addAll(new SZSEShortableStockList().getShortables());
+
+		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
+		DateTime startTraining = new DateTime(sdf.parse(trainingStart));
+		DateTime endTraining = new DateTime(sdf.parse(trainingEnd)).withHourOfDay(23);
+
+		String codeA;
+		String codeB;
+		ArrayList<Pair> pairs = new ArrayList<>();
+		for (int i = 0; i < stocks.length; i++) {
+			codeA = stocks[i].symbol().substring(0, 6);
+			for (int j = i + 1; j < stocks.length; j++) {
+				codeB = stocks[j].symbol().substring(0, 6);
+				if (!shortables.contains(codeA)) {
+					if (!shortables.contains(codeB)) {
+						break;
+					}
+					codeA += "*";
+				} else if (!shortables.contains(codeB)) {
+					codeB += "*";
+				}
+				System.out.print(codeA+"\t"+codeB+"\t");
+				codeA = codeA.substring(0, 6);
+				codeB = codeB.substring(0, 6);
+
+				// Use file data to do days test
+//				cointcorrel(startTraining, endTraining, codeA, codeB, 1000000, stsds, sps, false);
+				try {
+					// Use file data to do minutes test
+					double [] result = cointcorrel(startTraining, endTraining, codeA, codeB, maxSteps, 0.7, 0.05, stsds, sps, true);
+					if (null != result) {
+						// Make this pair
+						if (shortables.contains(codeA)) {
+							pairs.add(new ETFPair(stocks[i], stocks[j], result[0], result[1]));
+						}
+						if (shortables.contains(codeB)) {
+							pairs.add(new ETFPair(stocks[j], stocks[i], 1/result[0], result[1]/result[0]));
+						}
+					}
+				} catch (Exception e) {}
+				System.out.print("\t");
+				try {
+					// Use db data to do days test
+//					cointcorrel(startTraining, endTraining, codeA, codeB, maxSteps, 0.7, 0.05, null, sps, false);
+				} catch (Exception e) {}
+				System.out.println();
+			}
+		}
+		return pairs.toArray(new Pair[pairs.size()]);
+	}
+
+	private static List<Pair> simulate (String simStart, String openStop, String simEnd, Pair pair, SecurityTimeSeriesDataService stsds) {
+		float amountPerSlot = 15000f;
+		pair.thresholdOpen = pair.stdev * 3;
+		DateTime startSim;
+		DateTime endSim;
+		DateTime stopOpen;
+		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
+		List<Pair> executions = new ArrayList<>();
 		try {
-			vc = new VectorCache(cacheFactory.newInstance(stockA, interval), cacheFactory.newInstance(stockB, interval));
-		} catch (Exception e) {
-			e.printStackTrace();
-			return;
+			startSim = new DateTime(sdf.parse(simStart));
+			stopOpen = new DateTime(sdf.parse(openStop));
+			endSim = new DateTime(sdf.parse(simEnd)).withHourOfDay(23);
+		} catch (ParseException pe) {
+			pe.printStackTrace();
+			return executions;
 		}
-		DateTime now = DateTime.now();
-		DateTime oneYearMark = now.minusDays(365);
-		DateTime twoYearMark = now.minusDays(365*2);
-		DateTime threeYearMark = now.minusDays(365*3);
 
-		ArrayList<Double> year4 = new ArrayList<>();
-		ArrayList<Double> year3 = new ArrayList<>();
-		ArrayList<Double> year2 = new ArrayList<>();
-		ArrayList<Double> year1 = new ArrayList<>();
-		System.out.print(stockA.companyName()+" "+stockA.symbol()+"\t"+stockB.companyName()+" "+stockB.symbol());
-		for (TimedEntry<VectorCache.Vector<StockEOD>> te : vc) {
-			if (te.data().get(1).volume() > 0 && te.data().get(2).volume() > 0) {
-				double ratio = te.data().get(1).adjClose() / te.data().get(2).adjClose();
-//				double ratio = Math.log(te.data().get(1).adjClose() / te.data().get(2).adjClose());
-				if (te.time().isAfter(oneYearMark)) {
-					year1.add(ratio);
+		// find ops
+		String codeA = pair.toShort.symbol().substring(0, 6);
+		String codeB = pair.toLong.symbol().substring(0, 6);
+		stsds.walkMinutes(startSim, endSim, 1000000, codeA, codeB, false,
+				(dateTime, priceA, priceB, amountA, amountB) -> {
+					double residual = priceA * pair.slope - priceB;
+					long age = 0;
+					if (pair.status == OPENED || pair.status == CLOSED || pair.status == FORCED) {
+						age = pair.age(dateTime);
+					}
+//					if ((dateTime.withMillisOfDay(1).compareTo(endSim.withMillisOfDay(1)) == 0) && dateTime.getMinuteOfDay() > 880 )
+//						System.out.println(sdfDisplay.format(dateTime.toDate()) + "\t\t" + priceA + "\t" + priceB + "\t"+residual+"\t"+(dateTime.getMinuteOfDay() == 890 || (residual < pair.stdev * 2.5))+"\t"+pair.status);
+					// forcefully close positions 10 minutes before ending
+					if (dateTime.withMillisOfDay(1).compareTo(endSim.withMillisOfDay(1)) == 0 && pair.status == OPENED) {
+						if (dateTime.getMinuteOfDay() >= 890 || (residual < pair.stdev * 3 && amountA >= amountPerSlot && amountB >= amountPerSlot)) {
+							pair.status = FORCED;
+							pair.dateClosed = dateTime;
+							pair.shortClose = priceA;
+							pair.longClose = priceB;
+							pair.thresholdClose = residual;
+							pair.maxAmountPossibleClose = Math.min(amountA, amountB);
+//							System.out.print(codeA + " -> " + codeB + " slope: " + pair.slope + " stdev: " + pair.stdev);
+//							System.out.print("\tForce closure\t"+pair.thresholdClose/pair.stdev+"\tfee\t" + pair.feeEstimate() + "\t");
+//							System.out.print(sdfDisplay.format(dateTime.toDate()) + "\t" + priceA + "\t" + priceB + "\t" + pair.minResidual + "\t" + (age == 0 ? 1 : age));
+//							System.out.println("\tProfit/Loss:\t" + pair.profitPercentageEstimate() + "\t" + pair.maxAmountPossibleClose);
+							executions.add(pair.copy());
+							pair.reset();
+							return;
+						}
+					}
+
+					if (pair.status == OPENED) {
+						if (Math.abs(amountA) < amountPerSlot || Math.abs(amountB) < amountPerSlot)
+							return; // do not close if vol = 0
+						pair.minResidual = pair.minResidual > residual ? residual : pair.minResidual;
+						if (age <= 7) {
+							pair.thresholdClose = pair.stdev * 0.7;
+						} else if (age <= 13) {
+							pair.thresholdClose = pair.stdev * 2.0;
+						} else {
+							pair.thresholdClose = pair.stdev * 2.8;
+						}
+						if (residual < pair.thresholdClose) {
+//							double fee = 4 * 0.0003 + (age==0?1:age)* 0.1085 / 360; // ETF cost
+							pair.dateClosed = dateTime;
+							pair.shortClose = priceA;
+							pair.longClose = priceB;
+							pair.status = CLOSED;
+							pair.minResidual = residual;
+							pair.maxAmountPossibleClose = Math.min(amountA, amountB);
+//							System.out.print(codeA + " -> " + codeB + " slope: " + pair.slope + " stdev: " + pair.stdev);
+//							System.out.print((age == 0 ? "\tSame-day closure\t" : "\tClosure\t") + pair.thresholdClose / pair.stdev + "\tfee\t" + pair.feeEstimate() + "\t");
+//							System.out.print(sdfDisplay.format(dateTime.toDate()) + "\t" + priceA + "\t" + priceB + "\t" + pair.minResidual + "\t" + (age == 0 ? 1 : age));
+//							System.out.println("\tProfit:\t" + pair.profitPercentageEstimate() + "\t" + pair.maxAmountPossibleClose);
+							executions.add(pair.copy());
+							pair.reset();
+						}
+					} else if (pair.status == NEW && residual >= pair.thresholdOpen && dateTime.compareTo(stopOpen) < 0) {
+						if (Math.abs(amountA) < amountPerSlot || Math.abs(amountB) < amountPerSlot)
+							return; // do not open if vol = 0
+						pair.status = OPENED;
+						pair.shortOpen = priceA;
+						pair.longOpen = priceB;
+						pair.dateOpened = dateTime;
+						pair.minResidual = residual;
+						pair.maxAmountPossibleOpen = Math.min(amountA, amountB);
+//						System.out.print(codeA + " -> " + codeB + " slope: " + pair.slope + " stdev: " + pair.stdev);
+//						System.out.print("\tOpen: Short A, Long B\t\t\t\t");
+//						System.out.println(sdfDisplay.format(dateTime.toDate()) + "\t" + priceA + "\t" + priceB + "\t" + residual + "\t\t\t\t" + pair.maxAmountPossibleOpen);
+						executions.add(pair.copy());
+					}
 				}
-				if (te.time().isAfter(twoYearMark)) {
-					year2.add(ratio);
-				}
-				if (te.time().isAfter(threeYearMark)) {
-					year3.add(ratio);
-				}
-				year4.add(ratio);
-			}
-		}
-		System.out.print("\t");
-		System.out.print(new AugmentedDickeyFuller(year1.stream().mapToDouble(b->b).toArray()).pValue() + "\t");
-		System.out.print(new AugmentedDickeyFuller(year2.stream().mapToDouble(b->b).toArray()).pValue() + "\t");
-		System.out.print(new AugmentedDickeyFuller(year3.stream().mapToDouble(b->b).toArray()).pValue() + "\t");
-		System.out.print(new AugmentedDickeyFuller(year4.stream().mapToDouble(b->b).toArray()).pValue() + "\t");
-		System.out.print(new AugmentedDickeyFuller(year1.stream().mapToDouble(b->Math.log(b)).toArray()).pValue() + "\t");
-		System.out.print(new AugmentedDickeyFuller(year2.stream().mapToDouble(b->Math.log(b)).toArray()).pValue() + "\t");
-		System.out.print(new AugmentedDickeyFuller(year3.stream().mapToDouble(b->Math.log(b)).toArray()).pValue() + "\t");
-		System.out.println(new AugmentedDickeyFuller(year4.stream().mapToDouble(b->Math.log(b)).toArray()).pValue() + "\t");
+		);
+//		System.out.println();
+		return executions;
 	}
 
-	public static Stock[] ETF = new Stock[]{
-			new SimpleStock("510010.SS", "治理ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510050.SS", "50ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510180.SS", "180ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510230.SS", "金融ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510300.SS", "300ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510310.SS", "HS300ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510330.SS", "华夏300", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510500.SS", "500ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510510.SS", "广发500", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510880.SS", "红利ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510900.SS", "H股ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("511010.SS", "国债ETF", Currencies.CNY, Exchange.SHSE),
-//			new SimpleStock("512070.SS", "非银ETF", Currencies.CNY, Exchange.SHSE), loss maker
-			new SimpleStock("512500.SS", "中证500", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("512990.SS", "MSCIA股", Currencies.CNY, Exchange.SHSE),
-//			new SimpleStock("518880.SS", "黄金ETF", Currencies.CNY, Exchange.SHSE)  loss maker
-	};
-	public static Stock[] Highway = new Stock[] {
-			new SimpleStock("000429.SZ", "粤高速Ａ", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000548.SZ", "湖南投资", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000828.SZ", "东莞控股", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000900.SZ", "现代投资", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000916.SZ", "华北高速", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600012.SS", "皖通高速", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600020.SS", "中原高速", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600033.SS", "福建高速", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600035.SS", "楚天高速", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600269.SS", "赣粤高速", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600350.SS", "山东高速", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600377.SS", "宁沪高速", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600548.SS", "深高速", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601188.SS", "龙江交通", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601518.SS", "吉林高速", Currencies.CNY, Exchange.SHSE)
-	};
+	/**
+	 *	if stsds is not null then {
+	 *		use stsds to do tests
+	 *		minutesOrDays: true - minutes - do minutes test
+	 *		minutesOrDays: false - days - do days test
+	 *	} else {
+	 *		use sps to do days test
+	 *	}
+	 *	Print output: 	[Correlation][n-Sample][regression slop][adf p-value][residual standard deviation][reference price]
+	 *	Return value: if fail test - null
+	 *				  if pass test - [slope, stdev]
+	 */
+	private static double[] cointcorrel (DateTime startTraining, DateTime endTraining, String codeA, String codeB, int maxSteps,
+										 double correlThreshold, double cointThreshold,
+										 SecurityTimeSeriesDataService stsds,
+										 StockPriceService sps,
+										 boolean minutesOrDays) {
+		SimpleRegression regression = new SimpleRegression (false);
+		PearsonsCorrelation pearsonsCorrelation = new PearsonsCorrelation();
 
-	public static Stock[] Banking = new Stock[]{
-			new SimpleStock("000001.SZ", "平安银行", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("002142.SZ", "宁波银行", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600000.SS", "浦发银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600015.SS", "华夏银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600016.SS", "民生银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600036.SS", "招商银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601009.SS", "南京银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601166.SS", "兴业银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601169.SS", "北京银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601288.SS", "农业银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601328.SS", "交通银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601398.SS", "工商银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601818.SS", "光大银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601939.SS", "建设银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601988.SS", "中国银行", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601998.SS", "中信银行", Currencies.CNY, Exchange.SHSE)
-	};
+		ArrayList<Double> pA = new ArrayList<>();
+		ArrayList<Double> pB = new ArrayList<>();
 
-	public static Stock[] Electricity = new Stock[]{
-			new SimpleStock("000027.SZ", "深圳能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000037.SZ", "深南电Ａ", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000301.SZ", "东方市场", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000531.SZ", "穗恒运Ａ", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000539.SZ", "粤电力Ａ", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000543.SZ", "皖能电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000600.SZ", "建投能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000601.SZ", "韶能股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000690.SZ", "宝新能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000692.SZ", "惠天热电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000695.SZ", "滨海能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000720.SZ", "新能泰山", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000722.SZ", "湖南发展", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000767.SZ", "漳泽电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000791.SZ", "甘肃电投", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000862.SZ", "银星能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000875.SZ", "吉电股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000883.SZ", "湖北能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000899.SZ", "赣能股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000939.SZ", "凯迪生态", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000958.SZ", "东方能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000966.SZ", "长源电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000993.SZ", "闽东电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("001896.SZ", "豫能控股", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("002039.SZ", "黔源电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600011.SS", "华能国际", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600021.SS", "上海电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600023.SS", "浙能电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600027.SS", "华电国际", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600098.SS", "广州发展", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600101.SS", "明星电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600116.SS", "三峡水利", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600131.SS", "岷江水电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600167.SS", "联美控股", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600236.SS", "桂冠电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600310.SS", "桂东电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600396.SS", "金山股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600452.SS", "涪陵电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600483.SS", "福能股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600505.SS", "西昌电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600509.SS", "天富能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600578.SS", "京能电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600642.SS", "申能股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600644.SS", "*ST乐电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600674.SS", "川投能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600719.SS", "大连热电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600726.SS", "华电能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600744.SS", "华银电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600758.SS", "红阳能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600780.SS", "通宝能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600795.SS", "国电电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600863.SS", "内蒙华电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600864.SS", "哈投股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600868.SS", "梅雁吉祥", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600886.SS", "国投电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600900.SS", "长江电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600969.SS", "郴电国际", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600979.SS", "广安爱众", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600982.SS", "宁波热电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600995.SS", "文山电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("601016.SS", "节能风电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("601985.SS", "中国核电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("601991.SS", "大唐发电", Currencies.CNY, Exchange.SZSE)
-	};
+		Consumer5<DateTime, Double, Double, Float, Float> doTest = (dateTime, prA, prB, amountA, amountB) -> {
+//			System.out.println(date + "\t" + prA + "\t" + prB);
+//			if (volA == 0 || volB == 0) return;
+			regression.addData(prA, prB);
+			pA.add(prA);
+			pB.add(prB);
+		};
 
-	public static Stock[] Coal = new Stock[]{
-			new SimpleStock("000571.SZ", "新大洲Ａ", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000723.SZ", "美锦能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000780.SZ", "平庄能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000933.SZ", "神火股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000937.SZ", "冀中能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000968.SZ", "煤 气 化", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000983.SZ", "西山煤电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("002128.SZ", "露天煤业", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600121.SS", "郑州煤电", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600123.SS", "兰花科创", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600157.SS", "永泰能源", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600179.SS", "黑化股份", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600188.SS", "兖州煤业", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600348.SS", "阳泉煤业", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600395.SS", "盘江股份", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600397.SS", "安源煤业", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600403.SS", "大有能源", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600408.SS", "*ST安泰", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600508.SS", "上海能源", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600546.SS", "山煤国际", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600714.SS", "金瑞矿业", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600721.SS", "百花村", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600725.SS", "云维股份", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600740.SS", "山西焦化", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600792.SS", "云煤能源", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600971.SS", "恒源煤电", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("600997.SS", "开滦股份", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601001.SS", "大同煤业", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601011.SS", "宝泰隆", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601015.SS", "陕西黑猫", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601088.SS", "中国神华", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601101.SS", "昊华能源", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601225.SS", "陕西煤业", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601666.SS", "平煤股份", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601699.SS", "潞安环能", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601898.SS", "中煤能源", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("601918.SS", "国投新集", Currencies.CNY, Exchange.SHSE)
-	};
+		if (stsds != null) {
+			if (minutesOrDays) {
+				stsds.walkMinutes(startTraining, endTraining, maxSteps, codeA, codeB, false, doTest);
+			} else {
+				stsds.walkDays(startTraining, endTraining, maxSteps, codeA, codeB, false, doTest);
+			}
+		} else {
+			sps.walk(startTraining, endTraining, maxSteps, codeA, codeB, false, doTest);
+		}
 
-	public static Stock [] Securities = new Stock[] {
-		new SimpleStock("000166.SZ", "申万宏源", Currencies.CNY, Exchange.SZSE),
-		new SimpleStock("000686.SZ", "东北证券", Currencies.CNY, Exchange.SZSE),
-		new SimpleStock("000728.SZ", "国元证券", Currencies.CNY, Exchange.SZSE),
-		new SimpleStock("000750.SZ", "国海证券", Currencies.CNY, Exchange.SZSE),
-		new SimpleStock("000776.SZ", "广发证券", Currencies.CNY, Exchange.SZSE),
-		new SimpleStock("000783.SZ", "长江证券", Currencies.CNY, Exchange.SZSE),
-		new SimpleStock("002500.SZ", "山西证券", Currencies.CNY, Exchange.SZSE),
-		new SimpleStock("002673.SZ", "西部证券", Currencies.CNY, Exchange.SZSE),
-		new SimpleStock("002736.SZ", "国信证券", Currencies.CNY, Exchange.SZSE),
-		new SimpleStock("600030.SS", "中信证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("600061.SS", "国投安信", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("600109.SS", "国金证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("600369.SS", "西南证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("600837.SS", "海通证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("600958.SS", "东方证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("600999.SS", "招商证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("601099.SS", "太平洋", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("601198.SS", "东兴证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("601211.SS", "国泰君安", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("601377.SS", "兴业证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("601555.SS", "东吴证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("601688.SS", "华泰证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("601788.SS", "光大证券", Currencies.CNY, Exchange.SHSE),
-		new SimpleStock("601901.SS", "方正证券", Currencies.CNY, Exchange.SHSE)
-	};
+		double [] priceListA, priceListB;
+		priceListA = pA.stream().mapToDouble(d -> d).toArray();
+		priceListB = pB.stream().mapToDouble(d -> d).toArray();
+
+		// Correlation coefficient
+		double correl = pearsonsCorrelation.correlation(priceListA, priceListB);
+		System.out.print(correl);
+
+		long ticks = regression.getN();
+		System.out.print("\t"+ticks);
+
+		// Regression Parameter slope: pB = slope * pA;
+		double slope = regression.getSlope();
+		System.out.print("\t"+slope);
+
+		// ADF test for regression residuals on previously collected end-of-day data
+		double [] residuals = new double[priceListA.length];
+		for (int i = 0; i <priceListA.length; i++) {
+			// Calculate residuals according to parameters obtains from linear regression
+			// ie. residual = quoteB - slope * quoteA
+			residuals[i] = priceListB[i] - priceListA[i] * slope;
+		}
+		double adf_p = new AugmentedDickeyFuller(residuals).pValue();
+		System.out.print("\t" + adf_p);
+
+		// ADF test for regression residuals on minute data
+//		ArrayList<Double> res = new ArrayList<>();
+//		stsds.walkMinutes(startTraining, endTraining, 100000, codeA, codeB, false,
+//				(date, prA, prB) -> {
+//					// Calculate residuals according to parameters obtains from linear regression
+//					// ie. residual = quoteB - slope * quoteA
+//					res.add(prB - prA * slope);
+//				}
+//		);
+//		double [] residuals = res.stream().mapToDouble(d->d).toArray();
+//		adf_p = new AugmentedDickeyFuller(residuals).pValue();
+//		System.out.println("adf p: " + adf_p);
+
+		// Residual standard deviation
+		double std = new StandardDeviation().evaluate(residuals);
+		System.out.print("\t"+std);
+		System.out.print("\t"+priceListB[0]);
+
+		if (correl >= correlThreshold && adf_p <= cointThreshold) {
+			return new double[] {slope, std};
+		} else {
+			return null;
+		}
+	}
 }

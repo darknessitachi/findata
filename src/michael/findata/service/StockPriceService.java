@@ -8,6 +8,8 @@ import michael.findata.util.CalendarUtil;
 import michael.findata.util.Consumer5;
 import michael.findata.util.FinDataConstants;
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.dao.DuplicateKeyException;
@@ -289,8 +291,8 @@ public class StockPriceService extends JdbcDaoSupport {
 		if (latest == null) {
 			latest = new DateTime(FinDataConstants.EARLIEST);
 		}
-
-		System.out.println(code+" Latest price: " + new SimpleDateFormat(yyyyDashMMDashdd).format(latest));
+		DateTimeFormatter format = DateTimeFormat.forPattern(yyyyDashMMDashdd);
+		System.out.println(code+" Latest price: " + format.print(latest));
 //		System.err.println((fc.size()-headerSize)/recordSize);
 		SecurityTimeSeriesDatum temp;
 		while (ts.hasNext()) {
