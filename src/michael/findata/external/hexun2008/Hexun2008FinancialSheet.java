@@ -105,8 +105,9 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 	}
 
 	private void getData() {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
+		CloseableHttpClient httpClient = FinDataConstants.httpClient;
 		DOMParser parser = new DOMParser();
+		CloseableHttpResponse response = null;
 		try {
 			HttpGet get = new HttpGet(getURL());
 			get.setHeader("Host", "stockdata.stock.hexun.com");
@@ -116,19 +117,24 @@ public class Hexun2008FinancialSheet extends FinancialSheet {
 			get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.130 Safari/537.36");
 			get.setHeader("Accept-Encoding", "gzip, deflate, sdch");
 			get.setHeader("Accept-Language", "en-US,en;q=0.8");
-			CloseableHttpResponse response = httpClient.execute(get);
+			response = httpClient.execute(get);
 //			BufferedReader br = new BufferedReader();
 			parser.parse(new InputSource(new InputStreamReader(response.getEntity().getContent(), "GB2312")));
 //			parser.parse();
-			httpClient.close();
+			response.close();
 		} catch (FileNotFoundException e) {
 			// No such stock
 			System.out.println("Error in getting data for " + stockCode + " " + this.accountingYear + " " + this.accountingSeason + " " + this.getSheetType());
 			return;
-		} catch (SAXException e) {
+		} catch (SAXException | IOException e) {
 			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
+		} finally {
+			try {
+				assert response != null;
+				response.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		DOMReader domReader = new DOMReader();
 		Document doc = domReader.read(parser.getDocument());

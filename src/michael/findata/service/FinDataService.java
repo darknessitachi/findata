@@ -185,7 +185,7 @@ public class FinDataService extends JdbcDaoSupport {
 //			}
 		}
 
-		stocks.stream().forEach(stock -> {
+		stocks.parallelStream().forEach(stock -> {
 			if (refreshFinDataForStock(stock.getCode(), stock.getId(), currentYear, currentMonth, stock.getLatestYear(), stock.getLatestSeason(), stock.isFinancial(), stock.getName())) {
 				stocksToUpdateReportDates.put(stock.getCode(), stock.getId());
 			}
