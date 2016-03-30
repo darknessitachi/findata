@@ -1,4 +1,4 @@
-package michael.findata.external.netease.test;
+package michael.findata.util;
 
 import com.numericalmethod.algoquant.data.cache.SequentialCache;
 import com.numericalmethod.algoquant.data.cache.TimedEntry;
@@ -9,20 +9,20 @@ import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import michael.findata.algoquant.execution.component.broker.HexinBroker;
 import michael.findata.algoquant.product.stock.szse.SZSEStock;
-import michael.findata.algoquant.strategy.PairStrategy.Pair;
+import michael.findata.algoquant.strategy.PairStrategy;
 import michael.findata.external.netease.NeteaseInstantSnapshotFactory;
 import org.slf4j.Logger;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
 
-import static com.numericalmethod.algoquant.execution.datatype.order.BasicOrderDescription.Side.*;
+import static com.numericalmethod.algoquant.execution.datatype.order.BasicOrderDescription.Side.BUY;
+import static com.numericalmethod.algoquant.execution.datatype.order.BasicOrderDescription.Side.SELL;
 import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
-import static michael.findata.util.CalculationUtil.*;
+import static michael.findata.util.CalculationUtil.findBestPrice;
 
-/**
- * Created by nicky on 2015/8/23.
- */
-public class NeteaseInstantSnapshotFactoryTest {
+public class AutoOrder {
 	private static final Logger LOGGER = getClassLogger();
 	public static void main (String [] args) {
 
@@ -44,9 +44,9 @@ public class NeteaseInstantSnapshotFactoryTest {
 //		华电国际 600027.SS	大唐发电 601991.SS -- little weak
 //
 		// Pair Trading
-		Pair [] pairs = new Pair [2];
-		pairs[0] = new Pair(new SZSEStock("000858.SZ"), new SZSEStock("000568.SZ"), 1.052362448, 1.083541845, 1.0032, false);
-		pairs[1] = new Pair(new SZSEStock("000568.SZ"), new SZSEStock("000858.SZ"), 0.950242952, 0.983178327, 1.0032, false);
+		PairStrategy.Pair[] pairs = new PairStrategy.Pair[2];
+		pairs[0] = new PairStrategy.Pair(new SZSEStock("000858.SZ"), new SZSEStock("000568.SZ"), 1.052362448, 1.083541845, 1.0032, false);
+		pairs[1] = new PairStrategy.Pair(new SZSEStock("000568.SZ"), new SZSEStock("000858.SZ"), 0.950242952, 0.983178327, 1.0032, false);
 		Depth depShort;
 		Depth depLong;
 		double setRatio; // ratio to determine whether we should start short pair1 & long pair2
@@ -54,14 +54,14 @@ public class NeteaseInstantSnapshotFactoryTest {
 		double baseAmount = 40000;
 		// End Pair Trading
 
-		LimitOrder [] orders = new LimitOrder[] {
+		LimitOrder[] orders = new LimitOrder[] {
 				new LimitOrder(new SZSEStock("000568.SZ"), BUY, 200, 22.75)
 		};
 		HashSet<Product> stocks = new HashSet<>();
 		for (LimitOrder o: orders) {
 			stocks.add(o.product());
 		}
-		for (Pair pair : pairs) {
+		for (PairStrategy.Pair pair : pairs) {
 			stocks.add(pair.getToShort());
 			stocks.add(pair.getToLong());
 		}
@@ -84,7 +84,7 @@ public class NeteaseInstantSnapshotFactoryTest {
 			}
 
 			// Pair Trading
-			for (Pair pair : pairs) {
+			for (PairStrategy.Pair pair : pairs) {
 				LOGGER.info("Pair: "+pair.getToShort().symbol()+" -> "+pair.getToLong().symbol()+".\tPositionHeld: " + pair.isPositionHeld());
 				depShort = depths.get(pair.getToShort());
 				depLong = depths.get(pair.getToLong());
@@ -111,7 +111,7 @@ public class NeteaseInstantSnapshotFactoryTest {
 							// short toShort & long toLong
 							LOGGER.info(
 									pair.getToShort().symbol() + " is too over-priced. "
-									+ "Short " + pair.getToShort().symbol() + "@" + shortPrice + ":" + targetShortPosition + " & long " + pair.getToLong().symbol() + "@" + longPrice + ":" + targetLongPosition);
+											+ "Short " + pair.getToShort().symbol() + "@" + shortPrice + ":" + targetShortPosition + " & long " + pair.getToLong().symbol() + "@" + longPrice + ":" + targetLongPosition);
 							hxBroker.sendOrder(new LimitOrder(pair.getToShort(), SELL, targetShortPosition, shortPrice));
 							hxBroker.sendOrder(new LimitOrder(pair.getToLong(), BUY, targetLongPosition, longPrice));
 							pair.setPositionHeld(true);
@@ -138,7 +138,7 @@ public class NeteaseInstantSnapshotFactoryTest {
 							// sell toLong buy back toShort
 							LOGGER.info(
 									pair.getToShort().symbol() + " and " + pair.getToLong().symbol() +" converged. "
-									+ "Sell out " + pair.getToLong().symbol() + "@" + sellLongPrice + ":" + pair.getLongPositionHeld() + " & buy back " + pair.getToShort().symbol() + "@" + buyShortPrice + ":" + pair.getShortPositionHeld());
+											+ "Sell out " + pair.getToLong().symbol() + "@" + sellLongPrice + ":" + pair.getLongPositionHeld() + " & buy back " + pair.getToShort().symbol() + "@" + buyShortPrice + ":" + pair.getShortPositionHeld());
 							hxBroker.sendOrder(new LimitOrder(pair.getToLong(), SELL, pair.getLongPositionHeld(), sellLongPrice));
 							hxBroker.sendOrder(new LimitOrder(pair.getToShort(), BUY, pair.getShortPositionHeld(), buyShortPrice));
 							pair.setPositionHeld(false);

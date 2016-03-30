@@ -20,7 +20,8 @@ public class NeteaseInstantSnapshotFactory {
 
 	private static final Logger LOGGER = getClassLogger();
 
-	public SequentialCache<MarketCondition> newInstance(Product ... p) {
+	// check quotes every # milliseconds
+	public SequentialCache<MarketCondition> newInstance(int interval, Product ... p) {
 		return new SequentialCache<MarketCondition> () {
 			private final Timer timer = new Timer();
 			private Product [] products = p;
@@ -37,7 +38,7 @@ public class NeteaseInstantSnapshotFactory {
 							timer.notifyAll();
 						}
 					}
-				}, 0, 15000);
+				}, 0, interval);
 			}
 			@Override
 			public Iterator<TimedEntry<MarketCondition>> iterator() {

@@ -9,8 +9,7 @@ import java.util.Date;
 public class Hexun2008DividendDataTest {
 	public static void main (String [] args) throws Hexun2008DataException {
 		SecurityDividendData sdd = new Hexun2008DividendData("200726");
-		for (Date d : sdd.getDividendRecords().keySet())
-		{
+		for (Date d : sdd.getDividendRecords().keySet()) {
 			System.out.print(d);
 			System.out.print("\t");
 			System.out.print(sdd.getDividendRecords().get(d).getAmount());

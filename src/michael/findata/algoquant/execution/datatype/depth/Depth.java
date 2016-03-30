@@ -10,20 +10,22 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 	 * @param product
 	 * @param prices  bids then asks in ascending order, e.g., bid3, bid2, bid1, ask1, ask2, ask3
 	 */
-	public Depth(Product product, double... prices) {
+	public Depth(double spotPrice, Product product, double... prices) {
 		super(product, prices);
 		this.bidVol = new long[nLevels()];
 		this.askVol = new long[nLevels()];
+		this.spotPrice = spotPrice;
 	}
 
 	/**
 	 * @param product
 	 * @param price   bid is the same as ask, mainly used in simple simulation
 	 */
-	public Depth(Product product, double price) {
+	public Depth(double spotPrice, Product product, double price) {
 		super(product, price);
 		this.bidVol = new long[nLevels()];
 		this.askVol = new long[nLevels()];
+		this.spotPrice = spotPrice;
 	}
 
 	public void setVols(long... vols){
@@ -36,6 +38,7 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 
 	private final long[] bidVol;
 	private final long[] askVol;
+	private final double spotPrice;
 
 	public long bidVol(int level) {
 		return bidVol[level - 1];
@@ -43,5 +46,9 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 
 	public long askVol(int level) {
 		return askVol[level - 1];
+	}
+
+	public double spotPrice () {
+		return spotPrice;
 	}
 }

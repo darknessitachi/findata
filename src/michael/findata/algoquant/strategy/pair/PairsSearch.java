@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static michael.findata.algoquant.strategy.Pair.PairStatus.*;
 import static michael.findata.algoquant.strategy.Pair.PairStatus.OPENED;
@@ -39,17 +40,41 @@ public class PairsSearch {
 		StockPriceService sps = (StockPriceService) context.getBean("stockPriceService");
 		SecurityTimeSeriesDataService stsds = (SecurityTimeSeriesDataService) context.getBean("securityTimeSeriesDataService");
 
-		pairSearch(sps, stsds);
+//		Set<String> shortables = new SHSEShortableStockList().getShortables();
+//		shortables.addAll(new SZSEShortableStockList().getShortables());
+		Set<String> shortables = Arrays
+				.stream(StockGroups.ETFShortable)
+				.map(stock -> stock.symbol().substring(0, 6))
+				.collect(Collectors.toSet());
+		pairSearch(StockGroups.ETF, shortables, sps, stsds);
 	}
 	// TODO parameterize this, lots need to be parameterized
-	public static void pairSearch(StockPriceService sps, SecurityTimeSeriesDataService stsds) throws ParseException, IOException {
+	public static void pairSearch(Stock[] stocks,
+								  Set<String> shortables,
+								  StockPriceService sps,
+								  SecurityTimeSeriesDataService stsds) throws ParseException, IOException {
 		SimpleDateFormat sdfDisplay = new SimpleDateFormat(yyyyMMDDHHmmss);
 		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
 		SortedMap<String, Counts> counts = new TreeMap<>();
-		Arrays.stream(filter("20150902", "20151101", 100000, StockGroups.ETF, sps, stsds))
-				.flatMap(pair -> simulate("20151102", "20151121", "20151202", pair, stsds).stream())
+		DateTime simulationStart = new DateTime(sdf.parse("20160308"));
+		// Training window: 61 days
+		DateTime trainingEnd = simulationStart.minusDays(1);
+		DateTime trainingStart = trainingEnd.minusDays(60);
+		// Open/Close-Trade window: 19 days
+		DateTime stopOpen = simulationStart.plusDays(19);
+		// Close-Trade-Only window: 12 days
+		DateTime simulationEnd = stopOpen.plusDays(11);
+		System.out.println("Training Start: "+trainingStart);
+		System.out.println("Training End: "+trainingEnd);
+		System.out.println("Simulation Start: "+simulationStart);
+		System.out.println("Open Stop: "+stopOpen);
+		System.out.println("Simulation End: "+simulationEnd);
+
+		Arrays.stream(filter(trainingStart, trainingEnd, 100000, stocks, shortables, sps, stsds))
+				.flatMap(pair -> simulate(simulationStart, stopOpen, simulationEnd, pair, false, stsds).stream())
 				.sorted().forEach(pair1 -> {
 			int age;
+			System.out.print(pair1.id+"\t");
 			System.out.print(pair1.toShort.symbol().substring(0, 6) + " -> " + pair1.toLong.symbol().substring(0, 6) + " slope: " + pair1.slope + " stdev: " + pair1.stdev);
 			switch (pair1.status) {
 				case OPENED:
@@ -60,14 +85,14 @@ public class PairsSearch {
 				case CLOSED:
 					age = pair1.closureAge();
 					System.out.print((age == 0 ? "\tSame-day closure\t" : "\tClosure\t") + pair1.thresholdClose / pair1.stdev + "\tfee\t" + pair1.feeEstimate() + "\t");
-					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual + "\t" + (age == 0 ? 1 : age));
+					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual / pair1.stdev + "\t" + (age == 0 ? 1 : age));
 					System.out.println("\tProfit:\t" + pair1.profitPercentageEstimate() + "\t" + pair1.maxAmountPossibleClose);
 					updateCount(counts, sdf.format(pair1.dateClosed.toDate()), (age == 0 ? CountType.SAME_DAY_CLOSE : CountType.CLOSE));
 					break;
 				case FORCED:
 					age = pair1.closureAge();
 					System.out.print("\tForce closure\t"+pair1.thresholdClose / pair1.stdev + "\tfee\t" + pair1.feeEstimate() + "\t");
-					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual + "\t" + (age == 0 ? 1 : age));
+					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual / pair1.stdev + "\t" + (age == 0 ? 1 : age));
 					System.out.println("\tProfit/Loss:\t" + pair1.profitPercentageEstimate() + "\t" + pair1.maxAmountPossibleClose);
 					updateCount(counts, sdf.format(pair1.dateClosed.toDate()), (age == 0 ? CountType.SAME_DAY_CLOSE : CountType.CLOSE));
 					break;
@@ -112,20 +137,21 @@ public class PairsSearch {
 		countMap.put(date, c);
 	}
 
-	private static Pair[] filter (String trainingStart, String trainingEnd,
-								  int maxSteps, Stock[] stocks, StockPriceService sps,
+	// use sz and sh shortable list to create pairs, with correlation and cointegration calculated
+	private static Pair[] filter (DateTime startTraining,
+								  DateTime endTraining,
+								  int maxSteps,
+								  Stock[] stocks,
+								  Set<String> shortables,
+								  StockPriceService sps,
 								  SecurityTimeSeriesDataService stsds) throws ParseException, IOException {
 
-		Set<String> shortables = new SHSEShortableStockList().getShortables();
-		shortables.addAll(new SZSEShortableStockList().getShortables());
-
-		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
-		DateTime startTraining = new DateTime(sdf.parse(trainingStart));
-		DateTime endTraining = new DateTime(sdf.parse(trainingEnd)).withHourOfDay(23);
+		endTraining = endTraining.withHourOfDay(23);
 
 		String codeA;
 		String codeB;
 		ArrayList<Pair> pairs = new ArrayList<>();
+		int running = 0;
 		for (int i = 0; i < stocks.length; i++) {
 			codeA = stocks[i].symbol().substring(0, 6);
 			for (int j = i + 1; j < stocks.length; j++) {
@@ -150,10 +176,10 @@ public class PairsSearch {
 					if (null != result) {
 						// Make this pair
 						if (shortables.contains(codeA)) {
-							pairs.add(new ETFPair(stocks[i], stocks[j], result[0], result[1]));
+							pairs.add(new ETFPair(running++, stocks[i], stocks[j], result[0], result[1]));
 						}
 						if (shortables.contains(codeB)) {
-							pairs.add(new ETFPair(stocks[j], stocks[i], 1/result[0], result[1]/result[0]));
+							pairs.add(new ETFPair(running++, stocks[j], stocks[i], 1/result[0], result[1]/result[0]));
 						}
 					}
 				} catch (Exception e) {}
@@ -168,27 +194,32 @@ public class PairsSearch {
 		return pairs.toArray(new Pair[pairs.size()]);
 	}
 
-	private static List<Pair> simulate (String simStart, String openStop, String simEnd, Pair pair, SecurityTimeSeriesDataService stsds) {
+	private static List<Pair> simulate (DateTime startSim,
+										DateTime stopOpen,
+										final DateTime endSim,
+										Pair pair,
+										boolean allowSameDayClosure,
+										SecurityTimeSeriesDataService stsds) {
 		float amountPerSlot = 15000f;
 		pair.thresholdOpen = pair.stdev * 3;
-		DateTime startSim;
-		DateTime endSim;
-		DateTime stopOpen;
-		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
 		List<Pair> executions = new ArrayList<>();
-		try {
-			startSim = new DateTime(sdf.parse(simStart));
-			stopOpen = new DateTime(sdf.parse(openStop));
-			endSim = new DateTime(sdf.parse(simEnd)).withHourOfDay(23);
-		} catch (ParseException pe) {
-			pe.printStackTrace();
-			return executions;
-		}
+//		DateTime startSim;
+//		DateTime endSim;
+//		DateTime stopOpen;
+//		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
+//		try {
+//			startSim = new DateTime(sdf.parse(simStart));
+//			stopOpen = new DateTime(sdf.parse(openStop));
+//		} catch (ParseException pe) {
+//			pe.printStackTrace();
+//			return executions;
+//		}
+		DateTime startOfEndSim = endSim.withMillisOfDay(1);
 
 		// find ops
 		String codeA = pair.toShort.symbol().substring(0, 6);
 		String codeB = pair.toLong.symbol().substring(0, 6);
-		stsds.walkMinutes(startSim, endSim, 1000000, codeA, codeB, false,
+		stsds.walkMinutes(startSim, endSim.withHourOfDay(23), 1000000, codeA, codeB, false,
 				(dateTime, priceA, priceB, amountA, amountB) -> {
 					double residual = priceA * pair.slope - priceB;
 					long age = 0;
@@ -198,7 +229,7 @@ public class PairsSearch {
 //					if ((dateTime.withMillisOfDay(1).compareTo(endSim.withMillisOfDay(1)) == 0) && dateTime.getMinuteOfDay() > 880 )
 //						System.out.println(sdfDisplay.format(dateTime.toDate()) + "\t\t" + priceA + "\t" + priceB + "\t"+residual+"\t"+(dateTime.getMinuteOfDay() == 890 || (residual < pair.stdev * 2.5))+"\t"+pair.status);
 					// forcefully close positions 10 minutes before ending
-					if (dateTime.withMillisOfDay(1).compareTo(endSim.withMillisOfDay(1)) == 0 && pair.status == OPENED) {
+					if (dateTime.withMillisOfDay(1).compareTo(startOfEndSim) == 0 && pair.status == OPENED) {
 						if (dateTime.getMinuteOfDay() >= 890 || (residual < pair.stdev * 3 && amountA >= amountPerSlot && amountB >= amountPerSlot)) {
 							pair.status = FORCED;
 							pair.dateClosed = dateTime;
@@ -227,13 +258,13 @@ public class PairsSearch {
 						} else {
 							pair.thresholdClose = pair.stdev * 2.8;
 						}
-						if (residual < pair.thresholdClose) {
+						if (residual < pair.thresholdClose && (allowSameDayClosure || age > 0)) {
 //							double fee = 4 * 0.0003 + (age==0?1:age)* 0.1085 / 360; // ETF cost
 							pair.dateClosed = dateTime;
 							pair.shortClose = priceA;
 							pair.longClose = priceB;
 							pair.status = CLOSED;
-							pair.minResidual = residual;
+//							pair.minResidual = residual;
 							pair.maxAmountPossibleClose = Math.min(amountA, amountB);
 //							System.out.print(codeA + " -> " + codeB + " slope: " + pair.slope + " stdev: " + pair.stdev);
 //							System.out.print((age == 0 ? "\tSame-day closure\t" : "\tClosure\t") + pair.thresholdClose / pair.stdev + "\tfee\t" + pair.feeEstimate() + "\t");
@@ -264,18 +295,23 @@ public class PairsSearch {
 
 	/**
 	 *	if stsds is not null then {
-	 *		use stsds to do tests
+	 *		use SecurityTimeSeriesDataService stsds to do tests
 	 *		minutesOrDays: true - minutes - do minutes test
 	 *		minutesOrDays: false - days - do days test
 	 *	} else {
-	 *		use sps to do days test
+	 *  	use StockPriceService sps to do days test, ignoring minutesOrDays
 	 *	}
 	 *	Print output: 	[Correlation][n-Sample][regression slop][adf p-value][residual standard deviation][reference price]
 	 *	Return value: if fail test - null
 	 *				  if pass test - [slope, stdev]
 	 */
-	private static double[] cointcorrel (DateTime startTraining, DateTime endTraining, String codeA, String codeB, int maxSteps,
-										 double correlThreshold, double cointThreshold,
+	private static double[] cointcorrel (DateTime startTraining,
+										 DateTime endTraining,
+										 String codeA,
+										 String codeB,
+										 int maxSteps,
+										 double correlThreshold,
+										 double cointThreshold,
 										 SecurityTimeSeriesDataService stsds,
 										 StockPriceService sps,
 										 boolean minutesOrDays) {
@@ -347,6 +383,7 @@ public class PairsSearch {
 		System.out.print("\t"+priceListB[0]);
 
 		if (correl >= correlThreshold && adf_p <= cointThreshold) {
+			System.out.print("\tselected");
 			return new double[] {slope, std};
 		} else {
 			return null;

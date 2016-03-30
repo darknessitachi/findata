@@ -12,6 +12,8 @@ import static michael.findata.algoquant.strategy.Pair.PairStatus.OPENED;
  */
 public abstract class Pair implements Comparable {
 
+	public int id;
+
 	public enum PairStatus {
 		NEW,
 		OPENED,
@@ -38,7 +40,8 @@ public abstract class Pair implements Comparable {
 	public long longPositionHeld;
 	public double minResidual;
 
-	public Pair (Product toShort, Product toLong, double slope, double stdev) {
+	public Pair (int id, Product toShort, Product toLong, double slope, double stdev) {
+		this.id = id;
 		this.toShort = toShort;
 		this.toLong = toLong;
 		this.slope = slope;
@@ -48,11 +51,12 @@ public abstract class Pair implements Comparable {
 		this.longPositionHeld = 0;
 	}
 
-	public Pair (Product toShort, Product toLong,
+	public Pair (int id, Product toShort, Product toLong,
 				 double slope, double stdev,
 				 double shortOpen, double longOpen,
 				 long shortPositionHeld, long longPositionHeld,
 				 DateTime dateOpened, double thresholdOpen, double maxAmountPossibleOpen) {
+		this.id = id;
 		this.toShort = toShort;
 		this.toLong = toLong;
 		this.slope = slope;
@@ -67,7 +71,7 @@ public abstract class Pair implements Comparable {
 		this.maxAmountPossibleOpen = maxAmountPossibleOpen;
 	}
 
-	public Pair (Product toShort, Product toLong,
+	public Pair (int id, Product toShort, Product toLong,
 				 double slope, double stdev,
 				 double shortOpen, double longOpen,
 				 long shortPositionHeld, long longPositionHeld,
@@ -75,6 +79,7 @@ public abstract class Pair implements Comparable {
 				 double shortClose, double longClose,
 				 DateTime dateClosed, double thresholdClose, double maxAmountPossibleClose,
 				 PairStatus status, double minResidual) {
+		this.id = id;
 		this.toShort = toShort;
 		this.toLong = toLong;
 		this.slope = slope;

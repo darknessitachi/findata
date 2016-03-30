@@ -55,16 +55,16 @@ public class Test {
 
 		long stamp = System.currentTimeMillis();
 		// The following are used regularly throughout the year
-//		ss.refreshStockCodes();
+		ss.refreshStockCodes();
 //		sps.refreshStockPriceHistories();
 //		ss.refreshLatestPriceAndName();
-//		ds.refreshDividendData();
+		ds.refreshDividendData();
 //		sncs.refreshNumberOfShares();
 //		ss.calculateAdjustmentFactor(10);
 
 		// The following are used mainly during and immediately after earnings report seasons
-		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
-		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
+//		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
+//		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 
 		// The following is used to update findata forcefully when report dates of some stocks cannot be obtained from web
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);

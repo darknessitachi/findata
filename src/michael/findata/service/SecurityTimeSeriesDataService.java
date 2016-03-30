@@ -5,12 +5,16 @@ import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.tdx.TDXMinuteLine;
 import michael.findata.external.tdx.TDXPriceHistory;
 import michael.findata.model.AdjFactor;
+import michael.findata.model.AdjFunction;
 import michael.findata.util.CalendarUtil;
 import michael.findata.util.Consumer5;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeFieldType;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 
+import java.util.DoubleSummaryStatistics;
 import java.util.Stack;
+import java.util.function.Function;
 
 /**
  * Created by nicky on 2015/11/29.
@@ -51,10 +55,10 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 					 String codeB,
 					 boolean log,
 					 Consumer5<DateTime, Double, Double, Float, Float> doStuff) {
-		Stack<AdjFactor> adjFctA = new Stack<>();
-		Stack<AdjFactor> adjFctB = new Stack<>();
+		Stack<AdjFunction<Integer, Integer>> adjFctA = new Stack<>();
+		Stack<AdjFunction<Integer, Integer>> adjFctB = new Stack<>();
 		try {
-			DividendService.getAdjFactors(start, end, codeA, codeB, adjFctA, adjFctB, getJdbcTemplate());
+			DividendService.getAdjFunctions(start, end, codeA, codeB, adjFctA, adjFctB, getJdbcTemplate());
 		} catch (Exception e) {
 			// no adj factor found
 		}
@@ -123,17 +127,23 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 				}
 			}
 		}
+		Function<Integer, Integer> currentAdjFunA = pri -> pri;
+		Function<Integer, Integer> currentAdjFunB = pri -> pri;
 		while ((!quotesA.isEmpty()) && !quotesB.isEmpty()) {
 			quoteA = quotesA.pop();
 			quoteB = quotesB.pop();
 			while ((!adjFctA.isEmpty()) && CalendarUtil.daysBetween(adjFctA.peek().paymentDate, quoteA.getDateTime()) >= 0) {
-				adjFctA.pop();
+				currentAdjFunA = currentAdjFunA.andThen(adjFctA.pop());
 			}
 			while ((!adjFctB.isEmpty()) && CalendarUtil.daysBetween(adjFctB.peek().paymentDate, quoteB.getDateTime()) >= 0) {
-				adjFctB.pop();
+				currentAdjFunB = currentAdjFunB.andThen(adjFctB.pop());
 			}
-			double prA = quoteA.getClose() / 1000d / (adjFctA.empty() ? 1.0d : adjFctA.peek().factor);
-			double prB = quoteB.getClose() / 1000d / (adjFctB.empty() ? 1.0d : adjFctB.peek().factor);
+			//前复权
+			double prA = currentAdjFunA.apply(quoteA.getClose()) / 1000d;
+			double prB = currentAdjFunB.apply(quoteB.getClose()) / 1000d;
+			if (Double.isInfinite(prA) || Double.isInfinite(prB)) {
+				System.out.println("@@@@");
+			}
 			doStuff.apply(quoteA.getDateTime(), prA, prB, quoteA.getAmount(), quoteB.getAmount());
 			if (log) {
 				System.out.println(quoteA.getDateTime() + "\t" + "\t" + prA + "\t" + quoteB.getDateTime() + "\t" + prB + "\t");

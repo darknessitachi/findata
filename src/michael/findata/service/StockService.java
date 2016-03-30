@@ -62,7 +62,7 @@ public class StockService extends JdbcDaoSupport {
 				boolean enterMarket = false;
 				DecimalFormat dm = new DecimalFormat("000000");
 				while ((line = br.readLine()) != null) {
-					if (line.contains("[Market_16_17]") || line.contains("[Market_16_18]") || line.contains("[Market_32_33]") || line.contains("[Market_32_34]")) {
+					if (line.contains("[Market_16_17]") || line.contains("[Market_16_18]") || line.contains("[Market_16_20]") || line.contains("[Market_32_33]") || line.contains("[Market_32_34]") || line.contains("[Market_32_36]")) {
 						enterMarket = true;
 					} else if (line.startsWith("[Market_")) {
 						enterMarket = false;
@@ -73,8 +73,12 @@ public class StockService extends JdbcDaoSupport {
 							line = tk.nextToken();
 							if (line.contains("-")) {
 								temp = line.split("-");
-								start = Integer.parseInt(temp[0]);
-								end = Integer.parseInt(temp[1]);
+								try {
+									start = Integer.parseInt(temp[0]);
+									end = Integer.parseInt(temp[1]);
+								} catch (NumberFormatException nfe) {
+									continue;
+								}
 								for (int i = start; i <= end; i++) {
 									line = dm.format(i);
 									if (!codeSetOriginal.contains(line)) {
@@ -112,7 +116,7 @@ public class StockService extends JdbcDaoSupport {
 			updateCount = 0;
 			System.out.print(code + "...");
 			try {
-				updateCount = getJdbcTemplate().update("INSERT INTO stock (code, is_ignored) VALUES (?, FALSE)", code);
+				updateCount = getJdbcTemplate().update("INSERT INTO stock (code, is_fund, is_ignored) VALUES (?, ?, FALSE)", code, code.startsWith("1")||code.startsWith("5"));
 			} catch (Exception e) {
 				if (e.getMessage().contains("Duplicate")) {
 					System.err.println(" already exists.");

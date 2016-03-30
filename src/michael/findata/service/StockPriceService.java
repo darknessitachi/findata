@@ -144,6 +144,7 @@ public class StockPriceService extends JdbcDaoSupport {
 			while ((!adjFctB.isEmpty()) && CalendarUtil.daysBetween(adjFctB.peek().paymentDate, date) >= 0) {
 				adjFctB.pop();
 			}
+			//前复权
 			double prA = t.prA / (adjFctA.empty() ? 1.0d : adjFctA.peek().factor);
 			double prB = t.prB / (adjFctB.empty() ? 1.0d : adjFctB.peek().factor);
 

@@ -26,7 +26,7 @@ public class NeteaseInstantSnapshot {
 		try {
 			StringBuffer urlStr = new StringBuffer("http://api.money.163.com/data/feed/");
 			for (int i = codes.length-1; i > -1; i--) {
-				if (codes[i].startsWith("6") || codes[i].startsWith("9")) {
+				if (codes[i].startsWith("6") || codes[i].startsWith("9") || codes[i].startsWith("5")) {
 					neteaseInternalCodes[i] = "0" + codes [i];
 				} else {
 					neteaseInternalCodes[i] = "1" + codes [i];
@@ -50,12 +50,14 @@ public class NeteaseInstantSnapshot {
 			} catch (NullPointerException npe) {
 				break;
 			}
-			if (codes[i].startsWith("6") || codes[i].startsWith("9")) {
+			if (codes[i].startsWith("6") || codes[i].startsWith("9") || codes[i].startsWith("5")) {
 				stock = new SHSEStock((String)stockSnapshot.get("symbol"));
 			} else {
 				stock = new SZSEStock((String)stockSnapshot.get("symbol"));
 			}
-			depths[i] = new Depth(stock,
+			depths[i] = new Depth(
+					(double)stockSnapshot.get("price"),
+					stock,
 					(double)stockSnapshot.get("bid5"),
 					(double)stockSnapshot.get("bid4"),
 					(double)stockSnapshot.get("bid3"),

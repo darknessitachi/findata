@@ -8,7 +8,7 @@ import michael.findata.external.netease.NeteaseInstantSnapshot;
  */
 public class NeteaseInstantSnapshotTest {
 	public static void main (String [] args) {
-		String [] codes = {"600000", "000568"};
+		String [] codes = {"600000", "510050" , "159919"};
 		NeteaseInstantSnapshot snapshot = new NeteaseInstantSnapshot(codes);
 		System.out.println();
 	}

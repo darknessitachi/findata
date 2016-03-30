@@ -4,9 +4,6 @@ import org.joda.time.DateTime;
 
 import java.util.Date;
 
-/**
- * Created by nicky on 2015/11/28.
- */
 public class AdjFactor {
 	public DateTime paymentDate;
 	public double factor;
