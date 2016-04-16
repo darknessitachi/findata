@@ -11,7 +11,7 @@ public class TDXPriceHistoryTest {
 		TDXPriceHistory ml = new TDXPriceHistory("000568");
 		SecurityTimeSeriesDatum minute;
 		while (ml.hasNext()) {
-			minute = ml.next();
+			minute = ml.popNext();
 			System.out.println(minute.getDateTime());
 			System.out.println(minute.getOpen());
 			System.out.println(minute.getHigh());

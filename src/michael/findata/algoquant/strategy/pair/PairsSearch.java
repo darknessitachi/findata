@@ -14,6 +14,8 @@ import michael.findata.external.szse.SZSEShortableStockList;
 import michael.findata.external.tdx.TDXMinuteLine;
 import michael.findata.model.AdjFunction;
 import michael.findata.service.*;
+import michael.findata.util.Consumer2;
+import michael.findata.util.Consumer3;
 import michael.findata.util.Consumer5;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
@@ -29,6 +31,7 @@ import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,19 +50,51 @@ public class PairsSearch {
 		StockPriceService sps = (StockPriceService) context.getBean("stockPriceService");
 		SecurityTimeSeriesDataService stsds = (SecurityTimeSeriesDataService) context.getBean("securityTimeSeriesDataService");
 		DividendService ds = (DividendService) context.getBean("dividendService");
+		NeteaseInstantSnapshotService niss = (NeteaseInstantSnapshotService) context.getBean("neteaseInstantSnapshotService");
+
 		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
 
 		// *** When Group Switches, switch the following
 
-		// eft filtering with	0.7/0.1/3.0 -> 0.7 -> 2.0 ->2.8
-		// 				or		0.7/0.1/3.0 -> 1.5 -> 2.0 ->2.8
-		// 				or		0.7/0.1/3.0 -> 2.0 -> 2.0 ->2.8
+		// eft filtering with	0.7/0.10/3.0 -> 0.7 -> 2.0 ->2.8
+		// 				or		0.7/0.10/3.0 -> 1.5 -> 2.0 ->2.8
+		// 				or		0.7/0.10/3.0 -> 2.0 -> 2.0 ->2.8
+		// 				or		0.7/0.12/2.0 -> 1.0 -> 1.0 ->1.5*
 		// stock filtering with 0.7/0.1/3.7 -> 2.6 -> 2.6 -> 2.8
-		double correlThreshold = 0.01d;
-		double cointThreshold = 0.1d;
-		double openThresholdCoefficient = 3.7d;
+		// 				or		0.01/0.1/3.7 -> 2.6 -> 2.6 -> 2.8
+		double correlThreshold = 0.7d;
+		double cointThreshold = 0.12d;
+		double openThresholdCoefficient = 2.0d;
+		// does not allow random pair close on the same day,
+		// still allow t+0 pairs to close on the same day.
+		boolean allowSameDayClosure = false;
 
-		DateTime simulationStart = new DateTime(sdf.parse("20151104"));
+		Consumer2<Pair, Integer> relaxer = (pair, age) -> {
+			// *** When Group Switches, switch the following
+			// etf relaxing algo
+			if (age <= 7) {
+				pair.thresholdClose = pair.stdev * 1.0d;
+			} else if (age <= 13) {
+				pair.thresholdClose = pair.stdev * 1.0d;
+			} else {
+				pair.thresholdClose = pair.stdev * 1.5d;
+			}
+
+			// banking relaxing algo
+//			if (age < 8) {
+//				pair.thresholdClose = pair.stdev * 2.6;
+//			} else if (age < 14) {
+//				pair.thresholdClose = pair.stdev * 2.6;
+//			} else {
+//				pair.thresholdClose = pair.stdev * 2.8;
+//			}
+		};
+
+		float amountPerSlot = 20000f;
+		int maxShortsPerTickPerStock = 200;
+		int maxNetPositionPerStock = 2000;
+
+		DateTime simulationStart = new DateTime(sdf.parse("20151203"));
 		// Training window: 61 days
 		DateTime trainingEnd = simulationStart.minusDays(1);
 		DateTime trainingStart = trainingEnd.minusDays(60);
@@ -71,37 +106,42 @@ public class PairsSearch {
 		// *** When Group Switches, switch the following
 
 		// for stocks
-		Set<String> shortables = new SHSEShortableStockList().getShortables();
-		shortables.addAll(new SZSEShortableStockList().getShortables());
+//		Set<String> shortables = new SHSEShortableStockList().getShortables();
+//		shortables.addAll(new SZSEShortableStockList().getShortables());
 
 		// for ETF
-//		Set<String> shortables = Arrays
-//				.stream(StockGroups.ETFShortable)
-//				.map(stock -> stock.symbol().substring(0, 6))
-//				.collect(Collectors.toSet());
+		Set<String> shortables = Arrays
+				.stream(StockGroups.ETFShortable)
+				.map(stock -> stock.symbol().substring(0, 6))
+				.collect(Collectors.toSet());
 
-		// for stocks
-		Stock [] stocks = (Stream.concat(Stream.concat(Stream.concat(
-				Arrays.stream(StockGroups.Highway),
-				Arrays.stream(StockGroups.Banking)),
-				Arrays.stream(StockGroups.Insurance)),
-				Arrays.stream(StockGroups.Securities))).toArray(Stock[]::new);
 
-		pairSearch(StockGroups.LargeMarketCap, shortables,
-				correlThreshold, cointThreshold, openThresholdCoefficient,
-				trainingStart, trainingEnd, simulationStart, stopOpen, simulationEnd, sps, stsds);
+		ArrayList<Stock[]> stocks = new ArrayList<>();
+//		stocks.add(StockGroups.ETFBlueChips);
+//		stocks.add(StockGroups.ETFSmallCaps);
+		stocks.add(StockGroups.GoldETF);
+		pairSearch(stocks, shortables,
+				correlThreshold, cointThreshold, openThresholdCoefficient, allowSameDayClosure, amountPerSlot,
+				maxShortsPerTickPerStock, maxNetPositionPerStock,
+				trainingStart, trainingEnd, simulationStart, stopOpen, simulationEnd,
+				relaxer, sps, stsds);
 	}
 
-	public static void pairSearch(Stock[] stocks,
+	public static void pairSearch(Collection<Stock[]> stocks,
 								  Set<String> shortables,
 								  double correlThreshold,
 								  double cointThreshold,
 								  double openThresholdCoefficient,
+								  boolean allowSameDayClosure,
+								  float amountPerSlot,
+								  int maxShortsPerTickPerStock,
+								  int maxNetPositionPerStock,
 								  DateTime trainingStart,
 								  DateTime trainingEnd,
 								  DateTime simulationStart,
 								  DateTime stopOpen,
 								  DateTime simulationEnd,
+								  Consumer2<Pair, Integer> closeThresholdRelaxer,
 								  StockPriceService sps,
 								  SecurityTimeSeriesDataService stsds) throws ParseException, IOException {
 		SimpleDateFormat sdfDisplay = new SimpleDateFormat(yyyyMMDDHHmmss);
@@ -117,28 +157,39 @@ public class PairsSearch {
 
 		DecimalFormat df = new DecimalFormat(Hexun2008Constants.ACCURATE_DECIMAL_FORMAT);
 
-		Arrays.stream(filter(trainingStart, trainingEnd, 100000, stocks, shortables, correlThreshold, cointThreshold, sps, stsds))
-				.flatMap(pair -> simulate(simulationStart, stopOpen, simulationEnd, pair, openThresholdCoefficient, false, stsds).stream())
+		ArrayList<Pair> pairs = new ArrayList<>();
+		stocks.forEach(sts -> {
+			try {
+				pairs.addAll(filter(trainingStart, trainingEnd, 100000, sts, shortables, correlThreshold, cointThreshold, sps, stsds));
+			} catch (ParseException | IOException e) {
+				e.printStackTrace();
+			}
+		});
+
+		simulate(trainingStart, simulationStart, stopOpen, simulationEnd, pairs.toArray(new Pair[pairs.size()]),
+				amountPerSlot,
+				openThresholdCoefficient, allowSameDayClosure, maxShortsPerTickPerStock, maxNetPositionPerStock,
+				closeThresholdRelaxer, stsds).stream()
 				.sorted().forEach(pair1 -> {
 			int age;
 			System.out.print(pair1.toShort.symbol().substring(0, 6) + "->" + pair1.toLong.symbol().substring(0, 6) + "\tslope: " + df.format(pair1.slope) + " stdev: " + df.format(pair1.stdev) + " correl: " + df.format(pair1.correlco) + " adf_p: " + df.format(pair1.adf_p));
 			switch (pair1.status) {
 				case OPENED:
 					System.out.print("\tOpen: Short->Long\t\t\t\t");
-					System.out.println(sdfDisplay.format(pair1.dateOpened.toDate()) + "\t" + pair1.shortOpen + "\t" + pair1.longOpen + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev + "\t\t\t\t" + pair1.maxAmountPossibleOpen);
+					System.out.println(sdfDisplay.format(pair1.dateOpened.toDate()) + "\t" + pair1.shortOpen + "\t" + pair1.longOpen + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev + "\t\t\t\t\t\t" + pair1.maxAmountPossibleOpen);
 					updateCount(counts, sdf.format(pair1.dateOpened.toDate()), CountType.OPEN);
 					break;
 				case CLOSED:
 					age = pair1.closureAge();
 					System.out.print((age == 0 ? "\tSame-day closure\t" : "\tClosure\t") + pair1.thresholdClose / pair1.stdev + "\tfee\t" + pair1.feeEstimate() + "\t");
-					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev + "\t" + (age == 0 ? 1 : age));
+					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev +"\t"+ sdfDisplay.format(pair1.minResDate.toDate())+"\t"+ sdfDisplay.format(pair1.maxResDate.toDate())+"\t" + (age == 0 ? 1 : age));
 					System.out.println("\tProfit:\t" + pair1.profitPercentageEstimate() + "\t" + pair1.maxAmountPossibleClose);
 					updateCount(counts, sdf.format(pair1.dateClosed.toDate()), (age == 0 ? CountType.SAME_DAY_CLOSE : CountType.CLOSE));
 					break;
 				case FORCED:
 					age = pair1.closureAge();
 					System.out.print("\tForce closure\t"+pair1.thresholdClose / pair1.stdev + "\tfee\t" + pair1.feeEstimate() + "\t");
-					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev + "\t" + (age == 0 ? 1 : age));
+					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev +"\t"+ sdfDisplay.format(pair1.minResDate.toDate())+"\t"+ sdfDisplay.format(pair1.maxResDate.toDate())+"\t" + (age == 0 ? 1 : age));
 					System.out.println("\tProfit/Loss:\t" + pair1.profitPercentageEstimate() + "\t" + pair1.maxAmountPossibleClose);
 					updateCount(counts, sdf.format(pair1.dateClosed.toDate()), (age == 0 ? CountType.SAME_DAY_CLOSE : CountType.CLOSE));
 					break;
@@ -187,7 +238,7 @@ public class PairsSearch {
 	}
 
 	// use sz and sh shortable list to create pairs, with correlation and cointegration calculated
-	private static Pair[] filter (DateTime startTraining,
+	private static Collection<Pair> filter (DateTime startTraining,
 								  DateTime endTraining,
 								  int maxSteps,
 								  Stock[] stocks,
@@ -247,7 +298,7 @@ public class PairsSearch {
 				} catch (Exception e) {}
 			}
 		}
-		return pairs.toArray(new Pair[pairs.size()]);
+		return pairs;
 	}
 
 	// Simulate real world orders for a group of pairs and produce a list of executions
@@ -256,20 +307,24 @@ public class PairsSearch {
 										final DateTime stopOpen,
 										final DateTime endSim,
 										Pair [] pairs,
+
+										// If the amount traded in a tick is less than this amount, do not execute an order, ignore it.
+										// This is used to filter out ticks with too little trades
+										float amountPerSlot,
+
 										double openThresholdCoefficient,
 										boolean allowSameDayClosure,
 
 										// for etf, liquidity is a real issue, this limits the shorts of a ticker
+										// not yet in use
 										int maxShortsPerTickPerStock,
 
 										// for mass pair-trading, we limit the net long/short position of a stock
-										// not in use yet
-										int maxNetPostisionPerStock,
+										int maxNetPositionPerStock,
+										Consumer2<Pair, Integer> closeThresholdRelaxer,
 										SecurityTimeSeriesDataService stsds) {
 
-		// If the amount traded in a tick is less than this amount, do not execute an order, ignore it.
-		// This is used to filter out ticks with too little trades
-		float amountPerSlot = 100000f;
+		final int maxNetPosition = maxNetPositionPerStock > 0 ? maxNetPositionPerStock : -maxNetPositionPerStock;
 
 		// How many stdev of a price gap to open the trade?
 		Arrays.stream(pairs).forEach(pair -> pair.thresholdOpen = pair.stdev * openThresholdCoefficient);
@@ -279,131 +334,135 @@ public class PairsSearch {
 				.collect(Collectors.toSet())
 				.stream().toArray(String[]::new);
 
-		SecurityTimeSeriesData[] serieses = Arrays.stream(codes).map(TDXMinuteLine::new).toArray(TDXMinuteLine[]::new);
+		HashMap<String, Integer> netPosition = new HashMap<>();
+		Arrays.stream(codes).forEach(code -> netPosition.put(code, 0));
+
 		List<Pair> executions = new ArrayList<>();
 		DateTime startOfEndSim = endSim.withMillisOfDay(1);
 
-		// todo should use adjStart here
-		stsds.walk(startSim, startSim, endSim.withHourOfDay(23), 1000000, serieses, codes, false,
-				(dateTime, stockCodes, snapshots, adjFuns) -> {
-					String codeA;
-					String codeB;
-					SecurityTimeSeriesDatum datumA;
-					SecurityTimeSeriesDatum datumB;
-					double adjustedPriceA;
-					double adjustedPriceB;
-					double actualPriceA;
-					double actualPriceB;
-					float amountA;
-					float amountB;
-					for (Pair pair : pairs) {
+		Consumer3<DateTime, HashMap<String, SecurityTimeSeriesDatum>, HashMap<String, Function<Integer, Integer>>>
+				tickOp = (dateTime, snapshots, adjFuns) -> {
+			String codeShort;
+			String codeLong;
+			SecurityTimeSeriesDatum datumA;
+			SecurityTimeSeriesDatum datumB;
+			double adjustedPriceA;
+			double adjustedPriceB;
+			double actualPriceA;
+			double actualPriceB;
+			float amountA;
+			float amountB;
+			for (Pair pair : pairs) {
 
-						// if a is not traded, skip
-						codeA = pair.toShort.symbol().substring(0, 6);
-						datumA = snapshots.get(codeA);
-						if ((!datumA.isTraded()) || datumA.getVolume() == 0) {
-							continue;
-						}
+				// if a is not traded, skip
+				codeShort = pair.toShort.symbol().substring(0, 6);
+				datumA = snapshots.get(codeShort);
+				if ((!datumA.isTraded()) || datumA.getVolume() == 0) {
+					continue;
+				}
 
-						// if b is not traded, skip
-						codeB = pair.toLong.symbol().substring(0, 6);
-						datumB = snapshots.get(codeB);
-						if ((!datumB.isTraded()) || datumB.getVolume() == 0) {
-							continue;
-						}
+				// if b is not traded, skip
+				codeLong = pair.toLong.symbol().substring(0, 6);
+				datumB = snapshots.get(codeLong);
+				if ((!datumB.isTraded()) || datumB.getVolume() == 0) {
+					continue;
+				}
 
-						actualPriceA = datumA.getClose()/1000d;
-						adjustedPriceA = adjFuns.get(codeA).apply(datumA.getClose())/1000d;
-						amountA = datumA.getAmount();
+				actualPriceA = datumA.getClose()/1000d;
+				adjustedPriceA = adjFuns.get(codeShort).apply(datumA.getClose())/1000d;
+				amountA = datumA.getAmount();
 
-						actualPriceB = datumB.getClose()/1000d;
-						adjustedPriceB = adjFuns.get(codeB).apply(datumB.getClose())/1000d;
-						amountB = datumB.getAmount();
+				actualPriceB = datumB.getClose()/1000d;
+				adjustedPriceB = adjFuns.get(codeLong).apply(datumB.getClose())/1000d;
+				amountB = datumB.getAmount();
 
-						double residual = adjustedPriceA * pair.slope - adjustedPriceB;
-						long age = 0;
-						if (pair.status == OPENED || pair.status == CLOSED || pair.status == FORCED) {
-							age = pair.age(dateTime);
-						}
-//					if ((dateTime.withMillisOfDay(1).compareTo(endSim.withMillisOfDay(1)) == 0) && dateTime.getMinuteOfDay() > 880 )
-//						System.out.println(sdfDisplay.format(dateTime.toDate()) + "\t\t" + priceA + "\t" + priceB + "\t"+residual+"\t"+(dateTime.getMinuteOfDay() == 890 || (residual < pair.stdev * 2.5))+"\t"+pair.status);
-						// forcefully close positions 10 minutes before ending
-						if ((age >= 20 || dateTime.withMillisOfDay(1).compareTo(startOfEndSim) == 0) && pair.status == OPENED) {
-							if (dateTime.getMinuteOfDay() >= 890 || (residual < pair.thresholdOpen && amountA >= amountPerSlot && amountB >= amountPerSlot)) {
-								pair.status = FORCED;
-								pair.dateClosed = dateTime;
-								pair.shortClose = actualPriceA;
-								pair.longClose = actualPriceB;
-								pair.thresholdClose = residual;
-								pair.maxAmountPossibleClose = Math.min(amountA, amountB);
-//							System.out.print(codeA + " -> " + codeB + " slope: " + pair.slope + " stdev: " + pair.stdev);
-//							System.out.print("\tForce closure\t"+pair.thresholdClose/pair.stdev+"\tfee\t" + pair.feeEstimate() + "\t");
-//							System.out.print(sdfDisplay.format(dateTime.toDate()) + "\t" + priceA + "\t" + priceB + "\t" + pair.minResidual + "\t" + (age == 0 ? 1 : age));
-//							System.out.println("\tProfit/Loss:\t" + pair.profitPercentageEstimate() + "\t" + pair.maxAmountPossibleClose);
-								executions.add(pair.copy());
-								pair.reset();
-								return;
-							}
-						}
+				double residual = adjustedPriceA * pair.slope - adjustedPriceB;
+				int age = 0;
+				age = pair.age(dateTime);
+				// forcefully close positions 10 minutes before ending
+				if ((age >= 20 || dateTime.withMillisOfDay(1).compareTo(startOfEndSim) == 0) && pair.status == OPENED) {
+					if (dateTime.getMinuteOfDay() >= 890 || (residual < pair.thresholdOpen && amountA >= amountPerSlot && amountB >= amountPerSlot)) {
+						pair.status = FORCED;
+						pair.dateClosed = dateTime;
+						pair.shortClose = actualPriceA;
+						pair.longClose = actualPriceB;
+						pair.thresholdClose = residual;
+						pair.maxAmountPossibleClose = Math.min(amountA, amountB);
+//						System.out.print(codeA + " -> " + codeB + " slope: " + pair.slope + " stdev: " + pair.stdev);
+//						System.out.print("\tForce closure\t"+pair.thresholdClose/pair.stdev+"\tfee\t" + pair.feeEstimate() + "\t");
+//						System.out.print(sdfDisplay.format(dateTime.toDate()) + "\t" + priceA + "\t" + priceB + "\t" + pair.minResidual + "\t" + (age == 0 ? 1 : age));
+//						System.out.println("\tProfit/Loss:\t" + pair.profitPercentageEstimate() + "\t" + pair.maxAmountPossibleClose);
+						executions.add(pair.copy());
+						pair.reset();
+						netPosition.put(codeShort, netPosition.get(codeShort) + 1);
+						netPosition.put(codeLong, netPosition.get(codeLong) - 1);
+						continue;
+					}
+				}
 
-						if (pair.status == OPENED) {
-							if (Math.abs(amountA) < amountPerSlot || Math.abs(amountB) < amountPerSlot)
-								return; // do not close if vol = 0
-							pair.minResidual = pair.minResidual > residual ? residual : pair.minResidual;
-							pair.maxResidual = pair.maxResidual < residual ? residual : pair.maxResidual;
+				if (pair.status == OPENED) {
+					if (Math.abs(amountA) < amountPerSlot || Math.abs(amountB) < amountPerSlot)
+						continue; // do not close if vol = 0
+//						pair.minResidual = pair.minResidual > residual ? residual : pair.minResidual;
+					if (pair.minResidual > residual) {
+						pair.minResidual = residual;
+						pair.minResDate = dateTime;
+					}
+//						pair.maxResidual = pair.maxResidual < residual ? residual : pair.maxResidual;
+					if (pair.maxResidual < residual) {
+						pair.maxResidual = residual;
+						pair.maxResDate = dateTime;
+					}
 
-							// *** When Group Switches, switch the following
-							// etf relaxing algo
-//						if (age <= 7) {
-//							pair.thresholdClose = pair.stdev * 2.0;
-//						} else if (age <= 13) {
-//							pair.thresholdClose = pair.stdev * 2.0;
-//						} else {
-//							pair.thresholdClose = pair.stdev * 2.8;
-//						}
+					// relax closing threshold according to eg etc.
+					closeThresholdRelaxer.apply(pair, age);
 
-							// banking relaxing algo
-							if (age <= 7) {
-								pair.thresholdClose = pair.stdev * 2.6;
-							} else if (age <= 13) {
-								pair.thresholdClose = pair.stdev * 2.6;
-							} else {
-								pair.thresholdClose = pair.stdev * 2.8;
-							}
+					if (residual < pair.thresholdClose && (allowSameDayClosure || age > 0 || StockGroups.TPlus0.contains(codeLong))) {
+						pair.dateClosed = dateTime;
+						pair.shortClose = actualPriceA;
+						pair.longClose = actualPriceB;
+						pair.status = CLOSED;
+						pair.maxAmountPossibleClose = Math.min(amountA, amountB);
+//						System.out.print(codeA + " -> " + codeB + " slope: " + pair.slope + " stdev: " + pair.stdev);
+//						System.out.print((age == 0 ? "\tSame-day closure\t" : "\tClosure\t") + pair.thresholdClose / pair.stdev + "\tfee\t" + pair.feeEstimate() + "\t");
+//						System.out.print(sdfDisplay.format(dateTime.toDate()) + "\t" + priceA + "\t" + priceB + "\t" + pair.minResidual + "\t" + (age == 0 ? 1 : age));
+//						System.out.println("\tProfit:\t" + pair.profitPercentageEstimate() + "\t" + pair.maxAmountPossibleClose);
+						executions.add(pair.copy());
+						pair.reset();
+						netPosition.put(codeShort, netPosition.get(codeShort) + 1);
+						netPosition.put(codeLong, netPosition.get(codeLong) - 1);
+					}
+				} else if (pair.status == NEW && residual >= pair.thresholdOpen && dateTime.compareTo(stopOpen) < 0) {
+					// do not open if vol = 0
+					if (Math.abs(amountA) < amountPerSlot || Math.abs(amountB) < amountPerSlot) {
+						continue;
+					}
 
-							if (residual < pair.thresholdClose && (allowSameDayClosure || age > 0)) {
-//							double fee = 4 * 0.0003 + (age==0?1:age)* 0.1085 / 360; // ETF cost
-								pair.dateClosed = dateTime;
-								pair.shortClose = actualPriceA;
-								pair.longClose = actualPriceB;
-								pair.status = CLOSED;
-//							pair.minResidual = residual;
-								pair.maxAmountPossibleClose = Math.min(amountA, amountB);
-//							System.out.print(codeA + " -> " + codeB + " slope: " + pair.slope + " stdev: " + pair.stdev);
-//							System.out.print((age == 0 ? "\tSame-day closure\t" : "\tClosure\t") + pair.thresholdClose / pair.stdev + "\tfee\t" + pair.feeEstimate() + "\t");
-//							System.out.print(sdfDisplay.format(dateTime.toDate()) + "\t" + priceA + "\t" + priceB + "\t" + pair.minResidual + "\t" + (age == 0 ? 1 : age));
-//							System.out.println("\tProfit:\t" + pair.profitPercentageEstimate() + "\t" + pair.maxAmountPossibleClose);
-								executions.add(pair.copy());
-								pair.reset();
-							}
-						} else if (pair.status == NEW && residual >= pair.thresholdOpen && dateTime.compareTo(stopOpen) < 0) {
-							if (Math.abs(amountA) < amountPerSlot || Math.abs(amountB) < amountPerSlot)
-								return; // do not open if vol = 0
-							pair.status = OPENED;
-							pair.shortOpen = actualPriceA;
-							pair.longOpen = actualPriceB;
-							pair.dateOpened = dateTime;
-							pair.minResidual = residual;
-							pair.maxResidual = residual;
-							pair.maxAmountPossibleOpen = Math.min(amountA, amountB);
+					// do not open if maxNetPositionPerStock is reached
+					if (netPosition.get(codeShort) <= -maxNetPosition || netPosition.get(codeLong) >= maxNetPosition) {
+						continue;
+					}
+
+					pair.status = OPENED;
+					pair.shortOpen = actualPriceA;
+					pair.longOpen = actualPriceB;
+					pair.dateOpened = dateTime;
+					pair.minResidual = residual;
+					pair.maxResidual = residual;
+					pair.minResDate = dateTime;
+					pair.maxResDate = dateTime;
+					pair.maxAmountPossibleOpen = Math.min(amountA, amountB);
 //						System.out.print(codeA + " -> " + codeB + " slope: " + pair.slope + " stdev: " + pair.stdev);
 //						System.out.print("\tOpen: Short A, Long B\t\t\t\t");
 //						System.out.println(sdfDisplay.format(dateTime.toDate()) + "\t" + priceA + "\t" + priceB + "\t" + residual + "\t\t\t\t" + pair.maxAmountPossibleOpen);
-							executions.add(pair.copy());
-						}
-					}
+					executions.add(pair.copy());
+					netPosition.put(codeShort, netPosition.get(codeShort) - 1);
+					netPosition.put(codeLong, netPosition.get(codeLong) + 1);
 				}
-		);
+			}
+		};
+
+		stsds.walkMinutes(adjStart, startSim, endSim.withHourOfDay(23), 1000000, codes, false, tickOp);
 
 		return executions;
 	}

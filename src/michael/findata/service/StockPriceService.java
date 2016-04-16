@@ -29,7 +29,7 @@ import static michael.findata.util.FinDataConstants.yyyyDashMMDashdd;
 public class StockPriceService extends JdbcDaoSupport {
 	// Bulk-load stock pricing data from THS, make sure THS pricing data is complete before doing this!!!!!
 	public void refreshStockPriceHistories() throws IOException, SQLException, ParseException, ClassNotFoundException, IllegalAccessException, InstantiationException {
-		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT code, id, name FROM stock WHERE NOT is_ignored ORDER BY code");
+		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT code, id, name FROM stock WHERE (NOT is_fund) AND NOT is_ignored ORDER BY code");
 		List<String> codes = new ArrayList<>();
 		while (rs.next()) {
 			codes.add(rs.getString("code"));
@@ -297,7 +297,7 @@ public class StockPriceService extends JdbcDaoSupport {
 //		System.err.println((fc.size()-headerSize)/recordSize);
 		SecurityTimeSeriesDatum temp;
 		while (ts.hasNext()) {
-			temp = ts.next();
+			temp = ts.popNext();
 
 			if (temp.getDateTime().isAfter(latest)) {
 				System.out.println((temp.getDateTime().getYear()) + "-" + (temp.getDateTime().getMonthOfYear()) + "-" + temp.getDateTime().getDayOfMonth());

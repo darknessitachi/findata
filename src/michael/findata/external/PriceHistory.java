@@ -23,6 +23,7 @@ public abstract class PriceHistory implements SecurityTimeSeriesData{
 
 	protected long count;
 	protected ByteBuffer bb = null;
+	private SecurityTimeSeriesDatum buffer = null;
 
 	public PriceHistory(String code) {
 		headerSize = getHeaderSize();
@@ -54,7 +55,25 @@ public abstract class PriceHistory implements SecurityTimeSeriesData{
 	}
 
 	@Override
-	public SecurityTimeSeriesDatum next() {
+	public SecurityTimeSeriesDatum peekNext () {
+		if (buffer == null) {
+			buffer = getNext();
+		}
+		return buffer;
+	}
+
+	@Override
+	public SecurityTimeSeriesDatum popNext () {
+		if (buffer != null) {
+			SecurityTimeSeriesDatum temp = buffer;
+			buffer = null;
+			return temp;
+		} else {
+			return getNext();
+		}
+	}
+
+	private SecurityTimeSeriesDatum getNext() {
 		if (count > headerSize) {
 			try {
 				fc.position(count);
@@ -89,14 +108,21 @@ public abstract class PriceHistory implements SecurityTimeSeriesData{
 //				e.printStackTrace();
 //				return null;
 //			}
-			SecurityTimeSeriesDatum temp = new SecurityTimeSeriesDatum();
-			temp.setDateTime(calDateTime());
-			temp.setOpen(calOpen());
-			temp.setHigh(calHigh());
-			temp.setLow(calLow());
-			temp.setClose(calClose());
-			temp.setVolume(calVolume());
-			temp.setAmount(calAmount());
+			SecurityTimeSeriesDatum temp = new SecurityTimeSeriesDatum(
+					calDateTime(),
+					calOpen(),
+					calHigh(),
+					calLow(),
+					calClose(),
+					calVolume(),
+					calAmount());
+//			temp.setDateTime(calDateTime());
+//			temp.setOpen(calOpen());
+//			temp.setHigh(calHigh());
+//			temp.setLow(calLow());
+//			temp.setClose(calClose());
+//			temp.setVolume(calVolume());
+//			temp.setAmount(calAmount());
 			bb.clear();
 			count -= recordSize;
 			return temp;

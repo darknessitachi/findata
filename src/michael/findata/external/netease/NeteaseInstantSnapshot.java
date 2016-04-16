@@ -10,18 +10,16 @@ import org.json.simple.JSONValue;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Created by nicky on 2015/8/18.
- */
 public class NeteaseInstantSnapshot {
 	protected JSONObject data = null;
-	protected String [] codes;
-	protected String [] neteaseInternalCodes;
 	protected Depth[] depths;
+	protected HashMap<String, Depth> depthMap;
 	public NeteaseInstantSnapshot (String ... codes) {
-		this.codes = codes;
+		String [] neteaseInternalCodes;
 		neteaseInternalCodes = new String [codes.length];
 		try {
 			StringBuffer urlStr = new StringBuffer("http://api.money.163.com/data/feed/");
@@ -40,24 +38,33 @@ public class NeteaseInstantSnapshot {
 			data = (JSONObject) JSONValue.parse(s);
 			br.close();
 		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		depths = new Depth[codes.length];
+		buildDepths();
+	}
+
+	public NeteaseInstantSnapshot (String JSON) {
+		data = (JSONObject) JSONValue.parse(JSON);
+		buildDepths();
+	}
+
+	private void buildDepths() {
+		depthMap = new HashMap<>();
+		Long zero = 0L;
+		depths = new Depth[data.size()];
 		Stock stock;
-		for (int i = codes.length-1; i > -1; i--) {
-			Map stockSnapshot;
-			try {
-				stockSnapshot = (Map) data.get(neteaseInternalCodes[i]);
-			} catch (NullPointerException npe) {
-				break;
-			}
-			if (codes[i].startsWith("6") || codes[i].startsWith("9") || codes[i].startsWith("5")) {
-				stock = new SHSEStock((String)stockSnapshot.get("symbol"));
+		String code;
+		int i = 0;
+		for (Map stockSnapshot : (Collection<Map>) data.values()) {
+			code = (String) stockSnapshot.get("symbol");
+			if (code.startsWith("6") || code.startsWith("9") || code.startsWith("5")) {
+				stock = new SHSEStock(code);
 			} else {
-				stock = new SZSEStock((String)stockSnapshot.get("symbol"));
+				stock = new SZSEStock(code);
 			}
 			depths[i] = new Depth(
 					(double)stockSnapshot.get("price"),
-					stock,
+					stock, zero.equals(stockSnapshot.get("status")),
 					(double)stockSnapshot.get("bid5"),
 					(double)stockSnapshot.get("bid4"),
 					(double)stockSnapshot.get("bid3"),
@@ -80,9 +87,20 @@ public class NeteaseInstantSnapshot {
 					(long)stockSnapshot.get("askvol4"),
 					(long)stockSnapshot.get("askvol5")
 			);
+			depthMap.put(code, depths[i]);
+			i++;
 		}
 	}
+
 	public Depth[] getDepths () {
 		return depths;
+	}
+
+	public JSONObject getData () {
+		return data;
+	}
+
+	public Depth getDepth(String code) {
+		return depthMap.get(code);
 	}
 }

@@ -11,34 +11,28 @@ import static michael.findata.algoquant.strategy.Pair.PairStatus.*;
 public class ETFPair extends Pair {
 
 	public ETFPair(int id, Product toShort, Product toLong,
-				   double slope, double stdev) {
-		super(id, toShort, toLong, slope, stdev);
+				   double slope, double stdev, double correlco, double adf_p) {
+		super(id, toShort, toLong, slope, stdev, correlco, adf_p);
 	}
 
 	public ETFPair(int id, Product toShort, Product toLong,
-				   double slope, double stdev,
+				   double slope, double stdev, double correlco, double adf_p,
 				   double shortOpen, double longOpen,
 				   long shortPositionHeld, long longPositionHeld,
-				   DateTime dateOpened, double thresholdOpen, double maxAmountPossibleOpen) {
-		super(id, toShort, toLong, slope, stdev, shortOpen, longOpen, shortPositionHeld, longPositionHeld, dateOpened, thresholdOpen, maxAmountPossibleOpen);
+				   DateTime dateOpened, double thresholdOpen, double maxAmountPossibleOpen, double minResidual, double maxResidual, DateTime minResDate, DateTime maxResDate) {
+		super(id, toShort, toLong, slope, stdev, correlco, adf_p, shortOpen, longOpen, shortPositionHeld, longPositionHeld, dateOpened, thresholdOpen, maxAmountPossibleOpen, minResidual, maxResidual, minResDate, maxResDate);
 	}
 
 	public ETFPair(int id, Product toShort, Product toLong,
-				   double slope, double stdev,
+				   double slope, double stdev, double correlco, double adf_p,
 				   double shortOpen, double longOpen,
 				   long shortPositionHeld, long longPositionHeld,
 				   DateTime dateOpened, double thresholdOpen, double maxAmountPossibleOpen,
 				   double shortClose, double longClose,
 				   DateTime dateClosed, double thresholdClose, double maxAmountPossibleClose,
-				   PairStatus status, double minResidual) {
-		super(id, toShort, toLong, slope, stdev, shortOpen, longOpen, shortPositionHeld, longPositionHeld, dateOpened, thresholdOpen, maxAmountPossibleOpen,
-				shortClose, longClose, dateClosed, thresholdClose, maxAmountPossibleClose, status, minResidual);
-	}
-
-	@Override
-	public double feeEstimate() {
-		int age = closureAge();
-		return 4 * 0.0004 + (age==0?1:age) * 0.0835 / 360;
+				   PairStatus status, double minResidual, double maxResidual, DateTime minResDate, DateTime maxResDate) {
+		super(id, toShort, toLong, slope, stdev, correlco, adf_p, shortOpen, longOpen, shortPositionHeld, longPositionHeld, dateOpened, thresholdOpen, maxAmountPossibleOpen,
+				shortClose, longClose, dateClosed, thresholdClose, maxAmountPossibleClose, status, minResidual, maxResidual, minResDate, maxResDate);
 	}
 
 	@Override
@@ -47,20 +41,20 @@ public class ETFPair extends Pair {
 			return new ETFPair(
 					id,
 					toShort, toLong,
-					slope, stdev,
+					slope, stdev, correlco, adf_p,
 					shortOpen, longOpen,
 					shortPositionHeld, longPositionHeld,
-					dateOpened, thresholdOpen, maxAmountPossibleOpen);
+					dateOpened, thresholdOpen, maxAmountPossibleOpen, minResidual, maxResidual, minResDate, maxResDate);
 		} else if (status == CLOSED || status == FORCED) {
 			return new ETFPair(
 					id,
 					toShort, toLong,
-					slope, stdev,
+					slope, stdev, correlco, adf_p,
 					shortOpen, longOpen,
 					shortPositionHeld, longPositionHeld,
 					dateOpened, thresholdOpen, maxAmountPossibleOpen,
 					shortClose, longClose, dateClosed, thresholdClose, maxAmountPossibleClose,
-					status, minResidual);
+					status, minResidual, maxResidual, minResDate, maxResDate);
 		} else {
 			return null;
 		}

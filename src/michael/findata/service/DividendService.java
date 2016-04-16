@@ -8,6 +8,7 @@ import michael.findata.model.AdjFactor;
 import michael.findata.model.AdjFunction;
 import michael.findata.model.Stock;
 import org.joda.time.DateTime;
+import org.joda.time.LocalDate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
@@ -25,7 +26,7 @@ public class DividendService extends JdbcDaoSupport {
 	 */
 	public void refreshDividendData() throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
-		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE is_fund AND NOT is_ignored ORDER BY code");
+		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE (NOT is_fund) AND NOT is_ignored ORDER BY code");
 		List<Stock> stocks = new ArrayList<>();
 		while (rs.next()) {
 			Stock s = new Stock();
@@ -159,7 +160,8 @@ public class DividendService extends JdbcDaoSupport {
 		while (rsAdj.next()) {
 
 			// Currently this only handles dividends not bonus and split
-			// todo: handle bonus and splits 并且改为后复权
+			// todo: handle bonus and splits
+			// 已经改为后复权
 			// Two types of adjustments: 1. always re-invest dividend; 2. always take away dividend cash
 			// This can only do type 2, not type 1, because type 1 requires spot price at the time of dividend
 
@@ -173,14 +175,65 @@ public class DividendService extends JdbcDaoSupport {
 			} else {
 				divB.push(new AdjFunction<>(rsAdj.getDate("payment_date"), adjFunc));
 			}
-			System.out.print("Adj: ");
-			System.out.print(rsAdj.getString("code")+"\t");
-			System.out.print(rsAdj.getDate("payment_date") + "\t");
-			System.out.println(i);
+//			System.out.print("Adj: ");
+//			System.out.print(rsAdj.getString("code")+"\t");
+//			System.out.print(rsAdj.getDate("payment_date") + "\t");
+//			System.out.println(i);
 		}
 	}
 
 	public void getAdjFunctions(DateTime start, DateTime end, String codeA, String codeB, Stack<AdjFunction<Integer, Integer>> divA, Stack<AdjFunction<Integer, Integer>> divB) {
 		getAdjFunctions(start, end, codeA, codeB, divA, divB, getJdbcTemplate());
+	}
+
+	// Currently this only handles dividends not bonus and split
+	public static Map<String, Stack<AdjFunction<Integer, Integer>>> getAdjFunctions (LocalDate start, LocalDate end, String [] codes, JdbcTemplate jdbcTemplate) {
+		Map<String, Stack<AdjFunction<Integer, Integer>>> result = new HashMap<>();
+		if (codes.length == 0) {
+			return  result;
+		}
+		String codesPara = "";
+		for (int i = codes.length - 1; i > 0; i-- ) {
+			codesPara = ", '"+codes[i]+"'"+codesPara;
+			result.put(codes[i], new Stack<>());
+		}
+		codesPara = "'"+codes[0]+"'" + codesPara;
+		result.put(codes[0], new Stack<>());
+		SqlRowSet rsAdj = jdbcTemplate.queryForRowSet(
+				"SELECT payment_date, adj_factor, code, amount, bonus, split " +
+						"FROM dividend, stock " +
+						"WHERE stock_id = stock.id " +
+						"AND code IN ("+codesPara+") " +
+						"AND (payment_date BETWEEN ? AND ?) " +
+						"ORDER BY payment_date DESC", start.toDate(), end.toDate());
+		while (rsAdj.next()) {
+
+			// Currently this only handles dividends not bonus and split
+			// 已经改为后复权,已经能够处理送转股
+			// Two types of adjustments: 1. always re-invest dividend; 2. always take away dividend cash
+			// This can only do type 2, not type 1, because type 1 requires spot price at the time of dividend
+
+			// must evaluate sql query result first before putting the result into a function
+			// - late evaluation doesn't work after the sql query is closed;
+			int i = (int) (rsAdj.getFloat("amount") * 1000);
+			float bonus = rsAdj.getFloat("bonus");
+			float split = rsAdj.getFloat("split");
+			Function<Integer, Integer> adjFunc;
+			if (bonus == 0 && split == 0) {
+				adjFunc = pri -> pri + i;
+			} else {
+				adjFunc = pri -> (int)(pri*(1+bonus+split)) + i;
+			}
+			result.get(rsAdj.getString("code")).push(new AdjFunction<>(rsAdj.getDate("payment_date"), adjFunc));
+//			System.out.print("Adj: ");
+//			System.out.print(rsAdj.getString("code")+"\t");
+//			System.out.print(rsAdj.getDate("payment_date") + "\t");
+//			System.out.println(i);
+		}
+		return result;
+	}
+
+	public Map<String, Stack<AdjFunction<Integer, Integer>>> getAdjFunctions(LocalDate start, LocalDate end, String [] codes) {
+		return getAdjFunctions(start, end, codes, getJdbcTemplate());
 	}
 }

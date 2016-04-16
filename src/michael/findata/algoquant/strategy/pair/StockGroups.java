@@ -17,13 +17,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 
-/**
- * Created by nicky on 2015/11/21.
- */
 public class StockGroups {
 	public static void main (String [] args) throws Exception {
 		// set up the list of products
@@ -92,9 +87,40 @@ public class StockGroups {
 		System.out.println(new AugmentedDickeyFuller(year4.stream().mapToDouble(b->Math.log(b)).toArray()).pValue() + "\t");
 	}
 
-	public static Stock[] ETF = new Stock[]{
+	public static Stock[] ETFBlueChips = new Stock[]{
 			new SimpleStock("510050.SS", "50ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510060.SS", "央企ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("510180.SS", "180ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("510230.SS", "金融ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("510300.SS", "300ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("160706.SZ", "嘉实300", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("510310.SS", "HS300ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("510330.SS", "华夏300", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("159919.SZ", "300ETF", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("510630.SS", "消费行业", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("510650.SS", "金融行业", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("512610.SS", "医药卫生", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("159929.SZ", "医药ETF", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("510660.SS", "医药行业", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("159923.SZ", "100ETF", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("160416.SZ", "石油基金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("162411.SZ", "华宝油气", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("512990.SS", "MSCIA股", Currencies.CNY, Exchange.SHSE),
+	};
+
+	public static Stock[] ETFSmallCaps = new Stock[]{
+			new SimpleStock("159923.SZ", "100ETF", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("159939.SZ", "信息技术", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("159943.SZ", "深证ETF", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("510500.SS", "500ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("510510.SS", "广发500", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("159901.SZ", "深100ETF", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("159902.SZ", "中小板", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("159903.SZ", "深成ETF", Currencies.CNY, Exchange.SZSE),
+	};
+
+	public static Stock[] ETFShortable = new Stock[]{
+			new SimpleStock("510050.SS", "50ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510180.SS", "180ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510230.SS", "金融ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510300.SS", "300ETF", Currencies.CNY, Exchange.SHSE),
@@ -102,38 +128,33 @@ public class StockGroups {
 			new SimpleStock("510330.SS", "华夏300", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510500.SS", "500ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510510.SS", "广发500", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510630.SS", "消费行业", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510650.SS", "金融行业", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510660.SS", "医药行业", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510880.SS", "红利ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510900.SS", "H股ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("512990.SS", "MSCIA股", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("512070.SS", "非银ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("512610.SS", "医药卫生", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("159901.SZ", "深100ETF", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("159902.SZ", "中 小 板", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("159903.SZ", "深成ETF", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("159915.SZ", "创业板", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("159919.SZ", "300ETF", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("159920.SZ", "恒生ETF", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("159923.SZ", "100ETF", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("159929.SZ", "医药ETF", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("159939.SZ", "信息技术", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("159943.SZ", "深证ETF", Currencies.CNY, Exchange.SZSE),
-	};
-
-	public static Stock[] ETFShortable = new Stock[]{
-			new SimpleStock("510050.SS", "50ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510180.SS", "180ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510300.SS", "300ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510330.SS", "华夏300", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510500.SS", "500ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510510.SS", "广发500", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510880.SS", "红利ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510900.SS", "H股ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("159901.SZ", "深100ETF", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("159902.SZ", "中小板", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("159903.SZ", "深成ETF", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("159919.SZ", "300ETF", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("518880.SS", "黄金ETF", Currencies.CNY, Exchange.SHSE),
+	};
+
+	public static Stock[] TPlus0Funds = new Stock[]{
+			new SimpleStock("159920.SZ", "恒生ETF", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("160125.SZ", "南方香港", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("160416.SZ", "石油基金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("160717.SZ", "恒生H股", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("161210.SZ", "国投新兴", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("161714.SZ", "招商金砖", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("161815.SZ", "银华通胀", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("162411.SZ", "华宝油气", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("164701.SZ", "添富贵金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("164815.SZ", "工银资源", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("165510.SZ", "信诚四国", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("165513.SZ", "信诚商品", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("510900.SS", "H股ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("513030.SS", "德国30", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("513100.SS", "纳指ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("513500.SS", "标普500", Currencies.CNY, Exchange.SHSE),
 	};
 
 	public static Stock[] GoldETF = new Stock[]{
@@ -144,8 +165,21 @@ public class StockGroups {
 	};
 
 	public static Stock[] GoldETFShortable = new Stock[]{
-			new SimpleStock("518880", "黄金ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("518880.SS", "黄金ETF", Currencies.CNY, Exchange.SHSE),
 	};
+
+	public static Stock[] TPlus0Gold = new Stock[] {
+			new SimpleStock("160719.SZ", "嘉实黄金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("161116.SZ", "易基黄金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("164701.SZ", "添富贵金", Currencies.CNY, Exchange.SZSE),
+	};
+
+	public static Set<String> TPlus0 = new HashSet<>();
+
+	static {
+		Arrays.stream(TPlus0Funds).forEachOrdered(stock -> TPlus0.add(stock.symbol().substring(0, 6)));
+		Arrays.stream(TPlus0Gold).forEachOrdered(stock -> TPlus0.add(stock.symbol().substring(0, 6)));
+	}
 
 	public static Stock[] Highway = new Stock[] {
 			new SimpleStock("000429.SZ", "粤高速Ａ", Currencies.CNY, Exchange.SZSE),
@@ -191,6 +225,40 @@ public class StockGroups {
 			new SimpleStock("601628.SS", "中国人寿", Currencies.CNY, Exchange.SHSE)
 	};
 
+	public static Stock[] LargeMarketCap = new Stock [] {
+			new SimpleStock("601857.SS", "中国石油", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601398.SS", "工商银行", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601288.SS", "农业银行", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601988.SS", "中国银行", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601628.SS", "中国人寿", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600028.SS", "中国石化", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601318.SS", "中国平安", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600000.SS", "浦发银行", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600036.SS", "招商银行", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600519.SS", "贵州茅台", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601166.SS", "兴业银行", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600016.SS", "民生银行", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601766.SS", "中国中车", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601088.SS", "中国神华", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600104.SS", "上汽集团", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601328.SS", "交通银行", Currencies.CNY, Exchange.SHSE),
+//			new SimpleStock("601998.SS", "中信银行", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601668.SS", "中国建筑", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601601.SS", "中国太保", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601818.SS", "光大银行", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601800.SS", "中国交建", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601390.SS", "中国中铁", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601989.SS", "中国重工", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601169.SS", "北京银行", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("000001.SZ", "平安银行", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("600018.SS", "上港集团", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600900.SS", "长江电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601186.SS", "中国铁建", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600837.SS", "海通证券", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("000858.SZ", "五粮液", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("601006.SS", "大秦铁路", Currencies.CNY, Exchange.SHSE)
+	};
+
 	public static Stock[] Electricity = new Stock[]{
 			new SimpleStock("000027.SZ", "深圳能源", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("000037.SZ", "深南电Ａ", Currencies.CNY, Exchange.SZSE),
@@ -217,44 +285,44 @@ public class StockGroups {
 			new SimpleStock("000993.SZ", "闽东电力", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("001896.SZ", "豫能控股", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("002039.SZ", "黔源电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600011.SS", "华能国际", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600021.SS", "上海电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600023.SS", "浙能电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600027.SS", "华电国际", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600098.SS", "广州发展", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600101.SS", "明星电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600116.SS", "三峡水利", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600131.SS", "岷江水电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600167.SS", "联美控股", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600236.SS", "桂冠电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600310.SS", "桂东电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600396.SS", "金山股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600452.SS", "涪陵电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600483.SS", "福能股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600505.SS", "西昌电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600509.SS", "天富能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600578.SS", "京能电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600642.SS", "申能股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600644.SS", "*ST乐电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600674.SS", "川投能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600719.SS", "大连热电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600726.SS", "华电能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600744.SS", "华银电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600758.SS", "红阳能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600780.SS", "通宝能源", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600795.SS", "国电电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600863.SS", "内蒙华电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600864.SS", "哈投股份", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600868.SS", "梅雁吉祥", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600886.SS", "国投电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600900.SS", "长江电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600969.SS", "郴电国际", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600979.SS", "广安爱众", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600982.SS", "宁波热电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("600995.SS", "文山电力", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("601016.SS", "节能风电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("601985.SS", "中国核电", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("601991.SS", "大唐发电", Currencies.CNY, Exchange.SZSE)
+			new SimpleStock("600011.SS", "华能国际", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600021.SS", "上海电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600023.SS", "浙能电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600027.SS", "华电国际", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600098.SS", "广州发展", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600101.SS", "明星电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600116.SS", "三峡水利", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600131.SS", "岷江水电", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600167.SS", "联美控股", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600236.SS", "桂冠电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600310.SS", "桂东电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600396.SS", "金山股份", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600452.SS", "涪陵电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600483.SS", "福能股份", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600505.SS", "西昌电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600509.SS", "天富能源", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600578.SS", "京能电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600642.SS", "申能股份", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600644.SS", "*ST乐电", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600674.SS", "川投能源", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600719.SS", "大连热电", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600726.SS", "华电能源", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600744.SS", "华银电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600758.SS", "红阳能源", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600780.SS", "通宝能源", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600795.SS", "国电电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600863.SS", "内蒙华电", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600864.SS", "哈投股份", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600868.SS", "梅雁吉祥", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600886.SS", "国投电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600900.SS", "长江电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600969.SS", "郴电国际", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600979.SS", "广安爱众", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600982.SS", "宁波热电", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("600995.SS", "文山电力", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601016.SS", "节能风电", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601985.SS", "中国核电", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("601991.SS", "大唐发电", Currencies.CNY, Exchange.SHSE)
 	};
 
 	public static Stock[] Coal = new Stock[]{
@@ -331,9 +399,9 @@ public class StockGroups {
 			new SimpleStock("000729.SZ", "燕京啤酒", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("000752.SZ", "西藏发展", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("000799.SZ", "*ST酒鬼", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000858.SZ", "五 粮 液", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("000858.SZ", "五粮液", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("000860.SZ", "顺鑫农业", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("000869.SZ", "张  裕Ａ", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("000869.SZ", "张裕Ａ", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("000929.SZ", "兰州黄河", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("000995.SZ", "*ST皇台", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("002304.SZ", "洋河股份", Currencies.CNY, Exchange.SZSE),

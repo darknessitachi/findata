@@ -11,18 +11,15 @@ import java.util.ArrayList;
 
 import static michael.findata.util.FinDataConstants.yyyyMMdd;
 
-/**
- * Created by nicky on 2015/11/15.
- */
 public class TDXMinuteLineTest {
 	public static void main (String [] args) throws ParseException {
 		ArrayList<Double> stats = new ArrayList<>();
-		String codeA = "510180";
-		String codeB = "512990";
+		String codeA = "510300";
+		String codeB = "510050";
 		TDXMinuteLine seriesA = new TDXMinuteLine(codeA);
 		TDXMinuteLine seriesB = new TDXMinuteLine(codeB);
 		SecurityTimeSeriesDatum quoteA, quoteB;
-		DateTime start = new DateTime(new SimpleDateFormat(yyyyMMdd).parse("20151122"));
+		DateTime start = new DateTime(new SimpleDateFormat(yyyyMMdd).parse("20160408"));
 		// Now calculate baseline moving average ratio
 		// 4 Day ma to calculate ratio, 5 days operating window
 		int maLimit = 15 * 240, opLimit = 10 * 240, tCounter = 0;
@@ -30,8 +27,8 @@ public class TDXMinuteLineTest {
 		int totalA = 0, totalB = 0;
 		double ratio = 0;
 		while (seriesA.hasNext() && seriesB.hasNext()) {
-			quoteA = seriesA.next();
-			quoteB = seriesB.next();
+			quoteA = seriesA.popNext();
+			quoteB = seriesB.popNext();
 			tCounter ++;
 			if (quoteA.getDateTime().isBefore(start)) {
 				maCounter++;
@@ -69,8 +66,8 @@ public class TDXMinuteLineTest {
 		int oEnd = tCounter - maLimit;
 		System.out.println("tCounter " + tCounter);
 		while (seriesA.hasNext() && seriesB.hasNext()) {
-			quoteA = seriesA.next();
-			quoteB = seriesB.next();
+			quoteA = seriesA.popNext();
+			quoteB = seriesB.popNext();
 			if (oc + 2 > oStart) {
 				double current = ((double) quoteA.getClose()) / quoteB.getClose();
 //				if (current < perct1 || current > perct99) {

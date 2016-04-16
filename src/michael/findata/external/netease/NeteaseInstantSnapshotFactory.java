@@ -13,9 +13,6 @@ import java.util.*;
 
 import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
 
-/**
- * Created by nicky on 2015/8/23.
- */
 public class NeteaseInstantSnapshotFactory {
 
 	private static final Logger LOGGER = getClassLogger();

@@ -157,14 +157,14 @@ public class FinDataService extends JdbcDaoSupport {
 			for (String s : stockCodesToUpdateFindata) {
 				temp += "'" + s + "', ";
 			}
-			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial, name FROM stock WHERE code IN (" + temp + "' ')"+(includeIgnored? "": " AND NOT is_ignored")+" ORDER BY code "+(ascendingOrder ? "ASC" : "DESC"));
+			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial, name FROM stock WHERE code IN (" + temp + "' ')"+(includeIgnored? "": " AND (NOT is_fund) AND (NOT is_ignored)")+" ORDER BY code "+(ascendingOrder ? "ASC" : "DESC"));
 		} else if (style == EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE) {
 			// Fill recent according to report_pub_dates
 			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial, name FROM stock s, (SELECT max(fin_year*10+fin_season) d, " +
-					"stock_id FROM report_pub_dates GROUP BY stock_id ORDER BY stock_id) rpd WHERE rpd.stock_id = s.id AND latest_year * 10 + latest_season < rpd.d"+(includeIgnored? "": " AND NOT is_ignored")+" ORDER BY code "+(ascendingOrder ? "ASC" : "DESC"));
+					"stock_id FROM report_pub_dates GROUP BY stock_id ORDER BY stock_id) rpd WHERE rpd.stock_id = s.id AND latest_year * 10 + latest_season < rpd.d"+(includeIgnored? "": " AND (NOT is_fund) AND (NOT is_ignored)")+" ORDER BY code "+(ascendingOrder ? "ASC" : "DESC"));
 		} else if (style == EnumStyleRefreshFinData.FiLL_ALL_RECENT) {
 			// Fill all recent
-			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial, name FROM stock"+(includeIgnored? "": " WHERE NOT is_ignored")+" ORDER BY code "+(ascendingOrder ? "ASC" : "DESC"));
+			rs = getJdbcTemplate().queryForRowSet("SELECT id, code, latest_year, latest_season, is_financial, name FROM stock"+(includeIgnored? "": " WHERE (NOT is_fund) AND (NOT is_ignored)")+" ORDER BY code "+(ascendingOrder ? "ASC" : "DESC"));
 		} else {
 			// todo Fill Missing
 			System.err.println("Fill_Missing hasn't been implemented yet.");

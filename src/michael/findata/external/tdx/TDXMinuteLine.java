@@ -8,9 +8,6 @@ import java.sql.Date;
 
 import static michael.findata.util.FinDataConstants.TDX_BASE_DIR;
 
-/**
- * Created by nicky on 2015/11/15.
- */
 public class TDXMinuteLine extends PriceHistory implements SecurityTimeSeriesData {
 
 	public TDXMinuteLine (String code) {
@@ -50,19 +47,19 @@ public class TDXMinuteLine extends PriceHistory implements SecurityTimeSeriesDat
 	}
 
 	protected int calOpen () {
-		return ((int) (floatRec[1]*100))*10;
+		return (int) (floatRec[1]*1000);
 	}
 
 	protected int calHigh () {
-		return ((int) (floatRec[2]*100))*10;
+		return (int) (floatRec[2]*1000);
 	}
 
 	protected int calLow () {
-		return ((int) (floatRec[3]*100))*10;
+		return (int) (floatRec[3]*1000);
 	}
 
 	protected int calClose () {
-		return ((int) (floatRec[4]*100))*10;
+		return (int) (floatRec[4]*1000);
 	}
 
 	@Override

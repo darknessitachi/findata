@@ -4,12 +4,8 @@ import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 
-import static michael.findata.algoquant.strategy.Pair.PairStatus.NEW;
-import static michael.findata.algoquant.strategy.Pair.PairStatus.OPENED;
+import static michael.findata.algoquant.strategy.Pair.PairStatus.*;
 
-/**
- * Created by nicky on 2015/11/29.
- */
 public abstract class Pair implements Comparable {
 
 	public int id;
@@ -23,24 +19,34 @@ public abstract class Pair implements Comparable {
 
 	public Product toShort;
 	public Product toLong;
+
+	public double slope;
+	public double stdev;
+	public double correlco; // correlation coefficient obtained during training pass
+	public double adf_p; // p value in adf test obtained during training pass
+
 	public double shortOpen;
 	public double longOpen;
 	public double thresholdOpen;
 	public double maxAmountPossibleOpen;
+
 	public double shortClose;
 	public double longClose;
 	public double thresholdClose;
 	public double maxAmountPossibleClose;
+
 	public DateTime dateOpened;
 	public DateTime dateClosed;
-	public double slope;
-	public double stdev;
-	public PairStatus status; //True means "short & long " position already taken, next thing to do is to settle it when price converges.
+
+	public PairStatus status;
 	public long shortPositionHeld;
 	public long longPositionHeld;
 	public double minResidual;
+	public double maxResidual;
+	public DateTime minResDate;
+	public DateTime maxResDate;
 
-	public Pair (int id, Product toShort, Product toLong, double slope, double stdev) {
+	public Pair (int id, Product toShort, Product toLong, double slope, double stdev, double correlco, double adf_p) {
 		this.id = id;
 		this.toShort = toShort;
 		this.toLong = toLong;
@@ -49,18 +55,23 @@ public abstract class Pair implements Comparable {
 		this.status = PairStatus.NEW;
 		this.shortPositionHeld = 0;
 		this.longPositionHeld = 0;
+		this.correlco = correlco;
+		this.adf_p = adf_p;
 	}
 
 	public Pair (int id, Product toShort, Product toLong,
-				 double slope, double stdev,
+				 double slope, double stdev, double correlco, double adf_p,
 				 double shortOpen, double longOpen,
 				 long shortPositionHeld, long longPositionHeld,
-				 DateTime dateOpened, double thresholdOpen, double maxAmountPossibleOpen) {
+				 DateTime dateOpened, double thresholdOpen, double maxAmountPossibleOpen,
+				 double minResidual, double maxResidual, DateTime minResDate, DateTime maxResDate) {
 		this.id = id;
 		this.toShort = toShort;
 		this.toLong = toLong;
 		this.slope = slope;
 		this.stdev = stdev;
+		this.correlco = correlco;
+		this.adf_p = adf_p;
 		this.status = PairStatus.OPENED;
 		this.shortPositionHeld = shortPositionHeld;
 		this.longPositionHeld = longPositionHeld;
@@ -69,21 +80,27 @@ public abstract class Pair implements Comparable {
 		this.longOpen = longOpen;
 		this.thresholdOpen = thresholdOpen;
 		this.maxAmountPossibleOpen = maxAmountPossibleOpen;
+		this.minResidual = minResidual;
+		this.maxResidual = maxResidual;
+		this.minResDate = minResDate;
+		this.maxResDate = maxResDate;
 	}
 
 	public Pair (int id, Product toShort, Product toLong,
-				 double slope, double stdev,
+				 double slope, double stdev, double correlco, double adf_p,
 				 double shortOpen, double longOpen,
 				 long shortPositionHeld, long longPositionHeld,
 				 DateTime dateOpened, double thresholdOpen, double maxAmountPossibleOpen,
 				 double shortClose, double longClose,
 				 DateTime dateClosed, double thresholdClose, double maxAmountPossibleClose,
-				 PairStatus status, double minResidual) {
+				 PairStatus status, double minResidual, double maxResidual, DateTime minResDate, DateTime maxResDate) {
 		this.id = id;
 		this.toShort = toShort;
 		this.toLong = toLong;
 		this.slope = slope;
 		this.stdev = stdev;
+		this.correlco = correlco;
+		this.adf_p = adf_p;
 		this.status = PairStatus.CLOSED;
 		this.shortPositionHeld = shortPositionHeld;
 		this.longPositionHeld = longPositionHeld;
@@ -99,6 +116,9 @@ public abstract class Pair implements Comparable {
 		this.maxAmountPossibleClose = maxAmountPossibleClose;
 		this.status = status;
 		this.minResidual = minResidual;
+		this.maxResidual = maxResidual;
+		this.minResDate = minResDate;
+		this.maxResDate = maxResDate;
 	}
 
 	public double profitPercentageEstimate () {
@@ -110,7 +130,14 @@ public abstract class Pair implements Comparable {
 	}
 
 	public int age (DateTime now) {
-		return Days.daysBetween(dateOpened.toLocalDate(), now.toLocalDate()).getDays();
+		switch (status) {
+			case OPENED:
+			case CLOSED:
+			case FORCED:
+				return Days.daysBetween(dateOpened.toLocalDate(), now.toLocalDate()).getDays();
+			default:
+				return 0;
+		}
 	}
 
 	public void reset () {
@@ -123,7 +150,8 @@ public abstract class Pair implements Comparable {
 		this.longClose = -1d;
 		this.dateOpened = null;
 		this.dateClosed = null;
-		this.minResidual = -1000000d;
+		this.minResidual = -1000d;
+		this.maxResidual = 1000d;
 	}
 
 	/**
@@ -174,7 +202,22 @@ public abstract class Pair implements Comparable {
 		return thisDate.compareTo(anotherDate);
 	}
 
-	public abstract double feeEstimate();
+	public double feeEstimate() {
+		int age = closureAge();
+		double taxShort;
+		double taxLong;
+		if (toLong.symbol().startsWith("15") || toLong.symbol().startsWith("5")) {
+			taxLong = 0d;
+		} else {
+			taxLong = 0.001d;
+		}
+		if (toShort.symbol().startsWith("15") || toShort.symbol().startsWith("5")) {
+			taxShort = 0d;
+		} else {
+			taxShort = 0.001d;
+		}
+		return taxLong + taxShort + 4 * 0.0004 + (age==0?1:age) * 0.0835 / 360;
+	}
 
 	public abstract Pair copy ();
 }
