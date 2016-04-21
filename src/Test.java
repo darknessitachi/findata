@@ -71,7 +71,6 @@ public class Test {
 //		spds.fillLatestPublicationDateAccordingToLatestFinData();
 
 
-
 //		spds.updateFindataWithDates(91);
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);

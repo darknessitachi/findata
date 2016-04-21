@@ -1,7 +1,6 @@
 package michael.findata.service;
 
 import michael.findata.algoquant.strategy.pair.StockGroups;
-import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.netease.NeteaseInstantSnapshot;
 import michael.findata.model.AdjFunction;
 import michael.findata.util.CalendarUtil;
@@ -42,9 +41,10 @@ public class NeteaseInstantSnapshotService extends JdbcDaoSupport {
 				.map(stock -> stock.symbol().substring(0, 6)).collect(Collectors.toSet());
 		String [] codes = collect.toArray(new String[collect.size()]);
 
-		LocalDate start = formatter.parseLocalDate("20160411");
+		LocalDate start = formatter.parseLocalDate("20160410");
+		LocalDate end = formatter.parseLocalDate("20160417");
 
-		niss.walk(start, start, start, codes, false, (tick, snapshot, adjFun)->{
+		niss.walk(start, start, end, codes, false, (tick, snapshot, adjFun)->{
 			System.out.println(tick+" "+snapshot);
 		});
 	}
@@ -56,10 +56,8 @@ public class NeteaseInstantSnapshotService extends JdbcDaoSupport {
 					 boolean log,
 					 Consumer3<DateTime,
 							NeteaseInstantSnapshot,
-							HashMap<String, Function<Integer, Integer>>> doStuff) throws IOException {
+							HashMap<String, Function<Integer, Integer>>> doStuff) {
 		DateTimeFormatter formatter = DateTimeFormat.forPattern(FinDataConstants.yyyyMMDDHHmmss);
-		BufferedReader br = new BufferedReader(new FileReader(getStorageFileName(start)));
-		String line;
 
 		Map<String, Stack<AdjFunction<Integer, Integer>>> adjFctTemp;
 		try {
@@ -74,20 +72,38 @@ public class NeteaseInstantSnapshotService extends JdbcDaoSupport {
 		HashMap<String, Function<Integer, Integer>> currentAdjFun = new HashMap<>();
 		Arrays.stream(codes).forEach(code -> currentAdjFun.put(code, pri -> pri));
 
-		while ((line = br.readLine()) != null) {
-			final DateTime tick = formatter.parseDateTime(line.substring(0, line.indexOf('|')));
-			final NeteaseInstantSnapshot snapshot = new NeteaseInstantSnapshot(line.substring(line.indexOf('|')+1));
-			Arrays.stream(codes).forEach(code -> {
-				Stack<AdjFunction<Integer, Integer>> adjFctA = adjFunctions.get(code);
-				//后复权
-				while (adjFctA != null && (!adjFctA.isEmpty()) && CalendarUtil.daysBetween(adjFctA.peek().paymentDate, tick) >= 0) {
-					currentAdjFun.put(code, currentAdjFun.get(code).andThen(adjFctA.pop()));
-					System.out.println(code + " adjusted, starting " + tick);
+		LocalDate day = start;
+		long endMillis = end.toDate().getTime();
+		while (day.toDate().getTime() <= endMillis) {
+			BufferedReader br = null;
+			try {
+				br = new BufferedReader(new FileReader(getStorageFileName(day)));
+			} catch (FileNotFoundException e) {
+				continue;
+			} finally {
+				day = day.plusDays(1);
+			}
+			String line;
+
+			try {
+				while ((line = br.readLine()) != null) {
+					final DateTime tick = formatter.parseDateTime(line.substring(0, line.indexOf('|')));
+					final NeteaseInstantSnapshot snapshot = new NeteaseInstantSnapshot(line.substring(line.indexOf('|')+1));
+					Arrays.stream(codes).forEach(code -> {
+						Stack<AdjFunction<Integer, Integer>> adjFctA = adjFunctions.get(code);
+						//后复权
+						while (adjFctA != null && (!adjFctA.isEmpty()) && CalendarUtil.daysBetween(adjFctA.peek().paymentDate, tick) >= 0) {
+							currentAdjFun.put(code, currentAdjFun.get(code).andThen(adjFctA.pop()));
+							System.out.println(code + " adjusted, starting " + tick);
+						}
+					});
+					doStuff.apply(tick, snapshot, currentAdjFun);
+					if (log) {
+						System.out.println(tick+" "+snapshot);
+					}
 				}
-			});
-			doStuff.apply(tick, snapshot, currentAdjFun);
-			if (log) {
-				System.out.println(tick+" "+snapshot);
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 	}

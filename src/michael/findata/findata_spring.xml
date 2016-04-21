@@ -40,7 +40,9 @@
 		<property name="dataSource" ref="ds"/>
 	</bean>
 
-	<bean class="michael.findata.service.NeteaseInstantSnapshotService" id="neteaseInstantSnapshotService"/>
+	<bean class="michael.findata.service.NeteaseInstantSnapshotService" id="neteaseInstantSnapshotService">
+		<property name="dataSource" ref="ds"/>
+	</bean>
 
 	<bean id="ds" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
 		<property name="driverClassName" value="${jdbc.driverClassName}"/>

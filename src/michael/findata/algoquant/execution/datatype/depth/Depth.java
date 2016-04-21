@@ -6,7 +6,7 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 	/**
 	 * @param product
 	 * @param traded
-	 * @param prices  bids then asks in ascending order, e.g., bid3, bid2, bid1, ask1, ask2, ask3
+	 * @param prices bids then asks in ascending order, e.g., ... bid3, bid2, bid1, ask1, ask2, ask3 ...
 	 */
 	public Depth(double spotPrice, Product product, boolean traded, double... prices) {
 		super(product, prices);
@@ -56,5 +56,70 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 
 	public boolean isTraded() {
 		return traded;
+	}
+
+
+	/**
+	 * The best bid price one can get if one wants to sell at least amountThreshold amount of money
+	 * @param amountThreshold
+	 * @return meaningful amount of above zero, meaningless otherwise
+	 */
+	public double bestBid(double amountThreshold) {
+		double amountAccumulated = 0d;
+		for (int i = 1; i <= 5; i++) {
+			amountAccumulated += bid(i) * bidVol(i);
+			if (amountAccumulated >= amountThreshold) {
+				return bid(i);
+			}
+		}
+		return -1000d; // meaning total exposed bid order cannot provide such an amount for one to sell
+	}
+
+	/**
+	 * The best ask price one can get if one wants to buy at least amountThreshold amount of money
+	 * @param amountThreshold
+	 * @return meaningful amount of above zero, meaningless otherwise
+	 */
+	public double bestAsk(double amountThreshold) {
+		double amountAccumulated = 0d;
+		for (int i = 1; i <= 5; i++) {
+			amountAccumulated += ask(i) * askVol(i);
+			if (amountAccumulated >= amountThreshold) {
+				return ask(i);
+			}
+		}
+		return -1000d; // meaning total exposed ask offer cannot provide such an amount for one to buy
+	}
+
+	/**
+	 * Total volume one can sell at or above the priceThreshold bid price
+	 * @param priceThreshold
+	 * @return
+	 */
+	public int totalBidAtOrAbove(double priceThreshold) {
+		int volumeAccumulated = 0;
+		for (int i = 1; i<= 5; i++) {
+			if (bid(i) < priceThreshold) {
+				break;
+			}
+			volumeAccumulated += bidVol(i);
+		}
+		return volumeAccumulated;
+	}
+
+	/**
+	 * Total volume one can buy at or below the priceThreshold ask price
+	 * @param priceThreshold
+	 * @return
+	 */
+	public int totalAskAtOrBelow(double priceThreshold) {
+		int volumeAccumulated = 0;
+		for (int i = 1; i<= 5; i++) {
+			if (ask(i) > priceThreshold) {
+				break;
+			}
+			volumeAccumulated += askVol(i);
+		}
+		return volumeAccumulated;
 	}
 }

@@ -27,9 +27,6 @@ import java.util.concurrent.Executors;
 import static com.numericalmethod.algoquant.execution.datatype.order.BasicOrderDescription.*;
 import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
 
-/**
- * Created by nicky on 2015/8/17.
- */
 public class HexinBroker implements Broker{
 
 	private static final Logger LOGGER = getClassLogger();
