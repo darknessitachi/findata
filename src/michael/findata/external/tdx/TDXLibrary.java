@@ -3,7 +3,7 @@ package michael.findata.external.tdx;
 import com.sun.jna.Library;
 import com.sun.jna.ptr.ShortByReference;
 
-public interface TDXHqLibrary extends Library {
+public interface TDXLibrary extends Library {
 
 	//连接券商行情服务器
 	/// <summary>

@@ -1,6 +1,6 @@
 import com.sun.jna.Native;
 import com.sun.jna.ptr.ShortByReference;
-import michael.findata.external.tdx.TDXHqLibrary;
+import michael.findata.external.tdx.TDXLibrary;
 
 public class TdxHqApiTest {
 
@@ -10,12 +10,12 @@ public class TdxHqApiTest {
 			//必须把TdxHqApi.dll复制到java工程目录下;
 			//java工程必须添加引用 jna.jar, 在 https://github.com/twall/jna 下载 jna.jar
 			//无论用什么语言编程，都必须仔细阅读VC版内的关于DLL导出函数的功能和参数含义说明，不仔细阅读完就提出问题者因时间精力所限，恕不解答。
-			TDXHqLibrary[] TdxHqLibrary = new TDXHqLibrary[5];
-			TdxHqLibrary[0] = (TDXHqLibrary) Native.loadLibrary("TdxHqApi", TDXHqLibrary.class);
-			TdxHqLibrary[1] = (TDXHqLibrary) Native.loadLibrary("TdxHqApi", TDXHqLibrary.class);
-			TdxHqLibrary[2] = (TDXHqLibrary) Native.loadLibrary("TdxHqApi", TDXHqLibrary.class);
-			TdxHqLibrary[3] = (TDXHqLibrary) Native.loadLibrary("TdxHqApi", TDXHqLibrary.class);
-			TdxHqLibrary[4] = (TDXHqLibrary) Native.loadLibrary("TdxHqApi", TDXHqLibrary.class);
+			TDXLibrary[] TdxHqLibrary = new TDXLibrary[5];
+			TdxHqLibrary[0] = (TDXLibrary) Native.loadLibrary("TdxHqApi", TDXLibrary.class);
+			TdxHqLibrary[1] = (TDXLibrary) Native.loadLibrary("TdxHqApi", TDXLibrary.class);
+			TdxHqLibrary[2] = (TDXLibrary) Native.loadLibrary("TdxHqApi", TDXLibrary.class);
+			TdxHqLibrary[3] = (TDXLibrary) Native.loadLibrary("TdxHqApi", TDXLibrary.class);
+			TdxHqLibrary[4] = (TDXLibrary) Native.loadLibrary("TdxHqApi", TDXLibrary.class);
 
 			byte[] Result = new byte[65535];
 			byte[] ErrInfo = new byte[256];
