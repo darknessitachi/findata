@@ -8,9 +8,6 @@ import java.util.Map;
 
 import static com.numericalmethod.nmutils.collection.CollectionUtils.newHashMap;
 
-/**
- * Created by nicky on 2015/8/10.
- */
 public class SHSEStock extends SimpleStock {
 
 	private static final Map<String, SHSEStock> map = newHashMap();
@@ -43,15 +40,13 @@ public class SHSEStock extends SimpleStock {
 		return stock;
 	}
 
-	@Deprecated
 	public SHSEStock(String symbol, String companyName) {
-		super(symbol.length() == 6? symbol+".SH" : symbol,
+		super(symbol.length() == 6? symbol+".SS" : symbol,
 				companyName,
 				Currencies.CNY,
 				Exchange.SHSE);
 	}
 
-	@Deprecated
 	public SHSEStock(String symbol) {
 		this(symbol,
 				COMPANY_NAME_NA);

@@ -5,9 +5,6 @@ import org.joda.time.DateTime;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-/**
- * Created by nicky on 2015/12/5.
- */
 public class StockPriceServiceTest {
 	public static void main (String [] args) {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/findata_spring.xml");

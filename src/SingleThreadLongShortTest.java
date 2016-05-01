@@ -1,6 +1,4 @@
-/**
- * Created by nicky on 2015/12/28.
- */
+
 public class SingleThreadLongShortTest {
 	public static void main(String args[]) throws InterruptedException {
 		int port = args.length < 1 ? 10001 : Integer.parseInt(args[0]);

@@ -4,16 +4,7 @@ import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Collection;
 
-/**
- * Created with IntelliJ IDEA.
- * User: Administrator
- * Date: 13-4-7
- * Time: обнГ5:01
- * To change this template use File | Settings | File Templates.
- */
 @Entity
 @NamedQuery(name = "Stock.findAll", query = "SELECT s FROM Stock s ORDER BY s.code")
 public class Stock {

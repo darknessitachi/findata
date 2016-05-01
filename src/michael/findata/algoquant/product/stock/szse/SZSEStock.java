@@ -43,7 +43,6 @@ public class SZSEStock extends SimpleStock {
 		return stock;
 	}
 
-	@Deprecated
 	public SZSEStock(String symbol, String companyName) {
 		// symbol is according to yahoo finance
 		super(symbol.length() == 6? symbol+".SZ" : symbol,
@@ -52,7 +51,6 @@ public class SZSEStock extends SimpleStock {
 				Exchange.SZSE);
 	}
 
-	@Deprecated
 	public SZSEStock(String symbol) {
 		this(symbol,
 				COMPANY_NAME_NA);

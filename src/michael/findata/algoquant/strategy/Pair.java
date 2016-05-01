@@ -3,6 +3,7 @@ package michael.findata.algoquant.strategy;
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
+import org.joda.time.LocalDate;
 
 import static michael.findata.algoquant.strategy.Pair.PairStatus.*;
 
@@ -20,6 +21,8 @@ public abstract class Pair implements Comparable {
 	public Product toShort;
 	public Product toLong;
 
+	public LocalDate trainingStart;
+	public LocalDate trainingEnd;
 	public double slope;
 	public double stdev;
 	public double correlco; // correlation coefficient obtained during training pass

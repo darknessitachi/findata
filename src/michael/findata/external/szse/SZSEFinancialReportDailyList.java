@@ -23,6 +23,7 @@ public class SZSEFinancialReportDailyList implements ReportPublicationList {
 
 	Pattern p1 = Pattern.compile("、\\(([0|2|3][\\d]{5})\\).+：([\\d]{4})([^快预]+度)[^快预]*主要.+");
 	Pattern p2 = Pattern.compile("、\\(([0|1|2|3][\\d]{5})、.*([0|1|2|3][\\d]{5}).*\\).+：([\\d]{4})(.+度).*主要.+");
+	Pattern p3 = Pattern.compile("、\\(([0|1|2|3][\\d]{5})\\)(.+)：([\\d]{4})(.+度)报告.+\\2现发布\\3\\4");
 	ArrayList<ReportPublication> pbs;
 	public SZSEFinancialReportDailyList(Date date) throws IOException, ParseException {
 		pbs = new ArrayList<>();
@@ -62,7 +63,14 @@ public class SZSEFinancialReportDailyList implements ReportPublicationList {
 					fin_year = matcher.group(3);
 					fin_season = matcher.group(4);
 				} else {
-					continue;
+					matcher = p3.matcher(sLine);
+					if (matcher.find()) {
+						code1 = matcher.group(1);
+						fin_year = matcher.group(3);
+						fin_season = matcher.group(4);
+					} else {
+						continue;
+					}
 				}
 			}
 //			if (fin_season.contains(s1Report)) {

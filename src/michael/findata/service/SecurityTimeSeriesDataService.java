@@ -4,16 +4,12 @@ import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.tdx.TDXMinuteLine;
 import michael.findata.external.tdx.TDXPriceHistory;
-import michael.findata.model.AdjFactor;
 import michael.findata.model.AdjFunction;
 import michael.findata.util.CalendarUtil;
 import michael.findata.util.Consumer3;
-import michael.findata.util.Consumer4;
 import michael.findata.util.Consumer5;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeFieldType;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
-import org.springframework.util.Assert;
 
 import java.util.*;
 import java.util.function.Function;

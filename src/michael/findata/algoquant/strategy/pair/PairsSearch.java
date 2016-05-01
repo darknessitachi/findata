@@ -8,6 +8,8 @@ import michael.findata.algoquant.strategy.Pair;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.hexun2008.Hexun2008Constants;
 import michael.findata.external.netease.NeteaseInstantSnapshot;
+import michael.findata.external.shse.SHSEShortableStockList;
+import michael.findata.external.szse.SZSEShortableStockList;
 import michael.findata.service.*;
 import michael.findata.util.Consumer2;
 import michael.findata.util.Consumer3;
@@ -97,7 +99,7 @@ public class PairsSearch {
 		int maxShortsPerTickPerStock = 200;
 		int maxNetPositionPerStock = 2000;
 
-		DateTime simulationStart = new DateTime(sdf.parse("20160410"));
+		DateTime simulationStart = new DateTime(sdf.parse("20151008"));
 		// Training window: 61 days
 		DateTime trainingEnd = simulationStart.minusDays(1);
 		DateTime trainingStart = trainingEnd.minusDays(60);
@@ -109,14 +111,14 @@ public class PairsSearch {
 		// *** When Group Switches, switch the following
 
 		// for stocks
-//		Set<String> shortables = new SHSEShortableStockList().getShortables();
-//		shortables.addAll(new SZSEShortableStockList().getShortables());
+		Set<String> shortables = new SHSEShortableStockList().getShortables();
+		shortables.addAll(new SZSEShortableStockList().getShortables());
 
 		// for ETF
-		Set<String> shortables = Arrays
-				.stream(StockGroups.ETFShortable)
-				.map(stock -> stock.symbol().substring(0, 6))
-				.collect(Collectors.toSet());
+//		Set<String> shortables = Arrays
+//				.stream(StockGroups.ETFShortable)
+//				.map(stock -> stock.symbol().substring(0, 6))
+//				.collect(Collectors.toSet());
 
 
 		ArrayList<Stock[]> stocks = new ArrayList<>();
@@ -161,7 +163,7 @@ public class PairsSearch {
 		ArrayList<Pair> pairs = new ArrayList<>();
 		stocks.forEach(sts -> {
 			try {
-				pairs.addAll(filter(trainingStart, trainingEnd, 100000, sts, shortables, correlThreshold, cointThreshold, sps, stsds));
+				pairs.addAll(filter(trainingStart, trainingEnd, sts, shortables, correlThreshold, cointThreshold, sps, stsds));
 			} catch (ParseException | IOException e) {
 				e.printStackTrace();
 			}
@@ -241,7 +243,7 @@ public class PairsSearch {
 	// use sz and sh shortable list to create pairs, with correlation and cointegration calculated
 	private Collection<Pair> filter (DateTime startTraining,
 								  DateTime endTraining,
-								  int maxSteps,
+//								  int maxSteps,
 								  Stock[] stocks,
 								  Set<String> shortables,
 								  double correlThreshold,
@@ -279,8 +281,9 @@ public class PairsSearch {
 						if (shortables.contains(codeA)) {
 							System.out.print(codeA+"\t"+codeB+"\t");
 							// Use file data to do minutes test
-							double [] result = cointcorrel(startTraining, endTraining, codeA, codeB, maxSteps, correlThreshold, cointThreshold, stsds, sps, true);
-							if (null != result) {
+							double [] result = cointcorrel(startTraining, endTraining, codeA, codeB, 100000, stsds, sps, true);
+							if (result[2] >= correlThreshold && result[3] <= cointThreshold) {
+								System.out.print("\tselected");
 								pairs.add(new ETFPair(running++, stocks[i], stocks[j], result[0], result[1], result[2], result[3]));
 							}
 							System.out.print("\t");
@@ -289,8 +292,9 @@ public class PairsSearch {
 						if (shortables.contains(codeB)) {
 							System.out.print(codeB+"\t"+codeA+"\t");
 							// Use file data to do minutes test
-							double [] result = cointcorrel(startTraining, endTraining, codeB, codeA, maxSteps, correlThreshold, cointThreshold, stsds, sps, true);
-							if (null != result) {
+							double [] result = cointcorrel(startTraining, endTraining, codeB, codeA, 100000, stsds, sps, true);
+							if (result[2] >= correlThreshold && result[3] <= cointThreshold) {
+								System.out.print("\tselected");
 								pairs.add(new ETFPair(running++, stocks[j], stocks[i], result[0], result[1], result[2], result[3]));
 							}
 							System.out.print("\t");
@@ -508,7 +512,7 @@ public class PairsSearch {
 		List<Pair> executions = new ArrayList<>();
 		DateTime startOfEndSim = endSim.withMillisOfDay(1);
 
-		Consumer3<DateTime, NeteaseInstantSnapshot, HashMap<String, Function<Integer, Integer>>>
+		Consumer3<DateTime, Map<String, Depth>, HashMap<String, Function<Integer, Integer>>>
 				tickOp = (dateTime, snapshot, adjFuns) -> {
 			String codeShort;
 			String codeLong;
@@ -524,14 +528,14 @@ public class PairsSearch {
 
 				// if a is not traded, skip
 				codeShort = pair.toShort.symbol().substring(0, 6);
-				datumShort = snapshot.getDepth(codeShort);
+				datumShort = snapshot.get(codeShort);
 				if (!datumShort.isTraded()) {
 					continue;
 				}
 
 				// if b is not traded, skip
 				codeLong = pair.toLong.symbol().substring(0, 6);
-				datumLong = snapshot.getDepth(codeLong);
+				datumLong = snapshot.get(codeLong);
 				if (!datumLong.isTraded()) {
 					continue;
 				}
@@ -647,16 +651,14 @@ public class PairsSearch {
 	 *	Return value: if fail test - null
 	 *				  if pass test - [slope, stdev]
 	 */
-	private double[] cointcorrel (DateTime startTraining,
-										 DateTime endTraining,
-										 String codeA,
-										 String codeB,
-										 int maxSteps,
-										 double correlThreshold,
-										 double cointThreshold,
-										 SecurityTimeSeriesDataService stsds,
-										 StockPriceService sps,
-										 boolean minutesOrDays) {
+	public static double[] cointcorrel (DateTime startTraining,
+										DateTime endTraining,
+										String codeA,
+										String codeB,
+										int maxSteps,
+										SecurityTimeSeriesDataService stsds,
+										StockPriceService sps,
+										boolean minutesOrDays) {
 		SimpleRegression regression = new SimpleRegression (false);
 		PearsonsCorrelation pearsonsCorrelation = new PearsonsCorrelation();
 
@@ -724,12 +726,7 @@ public class PairsSearch {
 		System.out.print("\t"+std);
 		System.out.print("\t"+priceListB[0]);
 
-		if (correl >= correlThreshold && adf_p <= cointThreshold) {
-			System.out.print("\tselected");
-			return new double[] {slope, std, correl, adf_p};
-		} else {
-			return null;
-		}
+		return new double[] {slope, std, correl, adf_p};
 	}
 
 	// Simulate real world orders for a pair of stocks and produce a list of executions

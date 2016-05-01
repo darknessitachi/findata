@@ -105,7 +105,9 @@ public class HolidayCalendarFromYahoo implements HolidayCalendar {
 				Arrays.<Stock>asList(
 						new SimpleStock("600651.SS", Currencies.CNY, Exchange.SHSE),
 						new SimpleStock("600689.SS", Currencies.CNY, Exchange.SHSE),
-						new SimpleStock("600654.SS", Currencies.CNY, Exchange.SHSE)),
+						new SimpleStock("600654.SS", Currencies.CNY, Exchange.SHSE)
+//						new SimpleStock("000001.SS", Currencies.CNY, Exchange.SHSE)
+				),
 				new LocalDate(1991, 1, 1)
 		),
 		/**
@@ -116,7 +118,9 @@ public class HolidayCalendarFromYahoo implements HolidayCalendar {
 				Arrays.<Stock>asList(
 						new SimpleStock("000001.SZ", Currencies.CNY, Exchange.SZSE),
 						new SimpleStock("000002.SZ", Currencies.CNY, Exchange.SZSE),
-						new SimpleStock("000022.SZ", Currencies.CNY, Exchange.SZSE)),
+						new SimpleStock("000022.SZ", Currencies.CNY, Exchange.SZSE)
+//						new SimpleStock("399106.SZ", Currencies.CNY, Exchange.SZSE)
+		),
 				new LocalDate(1991, 1, 1)
 		);
 

@@ -5,9 +5,6 @@ import com.numericalmethod.algoquant.execution.component.tradeblotter.TradeBlott
 import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
 import org.joda.time.DateTime;
 
-/**
- * Created by nicky on 2015/10/1.
- */
 public interface MarketConditionHandler extends StrategyHandler{
 	/**
 	 * Called upon execution of a strategy order.
@@ -17,7 +14,7 @@ public interface MarketConditionHandler extends StrategyHandler{
 	 * @param blotter   the current trade blotter
 	 * @param broker    a broker service
 	 */
-	public void onExecution(DateTime now,
+	public void onMarketConditionUpdate(DateTime now,
 							MarketCondition mc,
 							TradeBlotter blotter,
 							Broker broker);

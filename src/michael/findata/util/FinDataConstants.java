@@ -4,14 +4,14 @@ import michael.findata.service.EnumTypeCodeListFile;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
 public final class FinDataConstants {
+
+	public static final long SHORTABLES_UPDATE_THRESHOLD_MILLIS = 6L * 60L * 60L * 1000L; // 6 hours
 
 	public static final String BASE_NAME = "/michael/findata/init.properties";
 
@@ -40,7 +40,6 @@ public final class FinDataConstants {
 	// Some early dates to assume for date range lower bound in database
 	// See more explanation from actual usages
 	public static final Date EARLIEST = new Date(3, 3, 3);
-
 
 	public static final Map<String, String> ABShareCodeRef = new HashMap<>();
 

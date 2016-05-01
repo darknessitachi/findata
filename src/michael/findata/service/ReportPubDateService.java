@@ -102,7 +102,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 	}
 
 	// This is used to quickly update publication dates after 2 or more seasons of report publication dates was missed.
-    // However, this doesn't guarantee that the latest report publication dates will be update to date.
+    // However, this doesn't guarantee that the latest report publication dates will be updated to date.
     // The reason is that this only fills the gaps as identified from the data within the report_pub_dates table.
     // In other words, for example, if the most recent report publication dates are missing from a stock, since there
     // is no gap visible from report_pub_dates's data, nothing will be done to update these two publication dates.

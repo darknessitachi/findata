@@ -4,13 +4,6 @@ import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 
-/**
- * Created with IntelliJ IDEA.
- * User: Administrator
- * Date: 13-4-7
- * Time: обнГ4:57
- * To change this template use File | Settings | File Templates.
- */
 @javax.persistence.Table(name = "balance_sheet_nf", schema = "", catalog = "findata")
 @Entity
 public class BalanceSheetNf {

@@ -87,6 +87,18 @@ public class StockGroups {
 		System.out.println(new AugmentedDickeyFuller(year4.stream().mapToDouble(b->Math.log(b)).toArray()).pValue() + "\t");
 	}
 
+	public static final String[] ETFBlueChipsCodes = new String [] {
+			"510050", "510060", "510180", "510230", "510300", "510310", "510330",
+			"510360", "510420", "510450", "510710", "510650", "510660", "510680",
+			"512610", "512990", "159919", "159923", "159929", "162411", "160706",
+			"160716", "165309"};
+
+	public static final String [] ETFSmallCapCodes = new String [] {
+			"510500","510510","512330","512500","512510","159901","159902",
+			"159903","159907","159912","159922","159923","159939","159943",
+			"160416","162411","162711"
+	};
+
 	public static Stock[] ETFBlueChips = new Stock[]{
 			new SimpleStock("510050.SS", "50ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510060.SS", "央企ETF", Currencies.CNY, Exchange.SHSE),
@@ -98,18 +110,16 @@ public class StockGroups {
 			new SimpleStock("510360.SS", "广发300", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510420.SS", "180EWETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510450.SS", "180高ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510710.SS", "上50ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510630.SS", "消费行业", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510650.SS", "金融行业", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510660.SS", "医药行业", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510680.SS", "万家50", Currencies.CNY, Exchange.SHSE),
+//			new SimpleStock("510680.SS", "万家50", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("510710.SS", "上50ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("512610.SS", "医药卫生", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("512990.SS", "MSCIA股", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("159919.SZ", "300ETF", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("159923.SZ", "100ETF", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("159929.SZ", "医药ETF", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("162411.SZ", "华宝油气", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("160416.SZ", "石油基金", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("160706.SZ", "嘉实300", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("160716.SZ", "嘉实50", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("165309.SZ", "建信300", Currencies.CNY, Exchange.SZSE),
@@ -130,6 +140,8 @@ public class StockGroups {
 			new SimpleStock("159923.SZ", "100ETF", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("159939.SZ", "信息技术", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("159943.SZ", "深证ETF", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("160416.SZ", "石油基金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("162411.SZ", "华宝油气", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("162711.SZ", "广发500L", Currencies.CNY, Exchange.SZSE),
 	};
 
@@ -185,6 +197,9 @@ public class StockGroups {
 			new SimpleStock("159937.SZ", "博时黄金", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("518800.SS", "黄金基金", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("518880.SS", "黄金ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("160719.SZ", "嘉实黄金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("161116.SZ", "易基黄金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("164701.SZ", "添富贵金", Currencies.CNY, Exchange.SZSE),
 	};
 
 	public static Stock[] GoldETFShortable = new Stock[]{

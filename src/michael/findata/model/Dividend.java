@@ -5,13 +5,7 @@ import org.hibernate.annotations.GenericGenerator;
 import javax.persistence.*;
 import java.sql.Date;
 
-/**
- * Created with IntelliJ IDEA.
- * User: Administrator
- * Date: 13-4-7
- * Time: ÏÂÎç4:58
- * To change this template use File | Settings | File Templates.
- */
+
 @Entity
 public class Dividend {
 	private int id;
@@ -123,8 +117,8 @@ public class Dividend {
 
 	private Stock stock;
 
-	@javax.persistence.JoinColumn(name = "stock_id", nullable = false, insertable = true, updatable = false)
 	@ManyToOne
+	@javax.persistence.JoinColumn(name = "stock_id", nullable = false, insertable = true, updatable = false)
 	public Stock getStock() {
 		return stock;
 	}

@@ -22,9 +22,6 @@ import java.util.Collections;
 
 import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
 
-/**
- * Created by nicky on 2015/8/12.
- */
 public class GridStrategy implements Strategy, DepthHandler, StockEODHandler {
 
 	private static class Slot {

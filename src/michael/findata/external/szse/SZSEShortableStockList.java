@@ -9,9 +9,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Created by nicky on 2015/11/24.
- */
 public class SZSEShortableStockList {
 	public static String url = "http://www.szse.cn/szseWeb/ShowReport.szse?SHOWTYPE=EXCEL&CATALOGID=1834_xxpl&tab1PAGENUM=1&ENCODE=1&TABKEY=tab1";
 	private Set<String> shortables;

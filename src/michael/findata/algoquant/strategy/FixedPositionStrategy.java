@@ -18,7 +18,6 @@ import java.util.Collections;
 
 /**
  * This strategy tries to re-balanced cash/equity ration of 50/50 whenever the imbalance is over the thresholds
- * Created by nicky on 2015/8/16.
  */
 public class FixedPositionStrategy implements Strategy, DepthHandler, StockEODHandler {
 

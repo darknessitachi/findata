@@ -87,5 +87,4 @@ public class Test {
 
 		System.out.println("Time taken: " + (System.currentTimeMillis() - stamp) / 1000d + " seconds.");
 	}
-
 }

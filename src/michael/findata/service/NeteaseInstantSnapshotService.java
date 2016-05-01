@@ -1,5 +1,7 @@
 package michael.findata.service;
 
+import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
+import michael.findata.algoquant.execution.datatype.depth.Depth;
 import michael.findata.algoquant.strategy.pair.StockGroups;
 import michael.findata.external.netease.NeteaseInstantSnapshot;
 import michael.findata.model.AdjFunction;
@@ -23,39 +25,36 @@ public class NeteaseInstantSnapshotService extends JdbcDaoSupport {
 
 	private static final String storageFileNameFormat = "yyyy_MM_dd";
 
-	public static void main (String [] args) throws IOException {
-		DateTimeFormatter formatter = DateTimeFormat.forPattern(FinDataConstants.yyyyMMdd);
-		NeteaseInstantSnapshotService niss = new NeteaseInstantSnapshotService();
-
-		Set<String> collect = Stream.concat(Stream.concat(Stream.concat(Stream.concat(Stream.concat(Stream.concat(Stream.concat(Stream.concat(Stream.concat(
-				Arrays.stream(StockGroups.Securities),
-				Arrays.stream(StockGroups.Banking)),
-				Arrays.stream(StockGroups.Insurance)),
-				Arrays.stream(StockGroups.ETFBlueChips)),
-				Arrays.stream(StockGroups.ETFSmallCaps)),
-				Arrays.stream(StockGroups.LargeMarketCap)),
-				Arrays.stream(StockGroups.Highway)),
-				Arrays.stream(StockGroups.Alcohol)),
-				Arrays.stream(StockGroups.TPlus0Funds)),
-				Arrays.stream(StockGroups.TPlus0Gold))
-				.map(stock -> stock.symbol().substring(0, 6)).collect(Collectors.toSet());
-		String [] codes = collect.toArray(new String[collect.size()]);
-
-		LocalDate start = formatter.parseLocalDate("20160410");
-		LocalDate end = formatter.parseLocalDate("20160417");
-
-		niss.walk(start, start, end, codes, false, (tick, snapshot, adjFun)->{
-			System.out.println(tick+" "+snapshot);
-		});
+	public List<MarketCondition> getDailyData (LocalDate date) throws FileNotFoundException {
+		DateTimeFormatter formatter = DateTimeFormat.forPattern(FinDataConstants.yyyyMMDDHHmmss);
+		BufferedReader br;
+		br = new BufferedReader(new FileReader(getStorageFileName(date)));
+		String line;
+		DateTime tick;
+		NeteaseInstantSnapshot snapshot;
+		List<MarketCondition> result = new ArrayList<>();
+		try {
+			while ((line = br.readLine()) != null) {
+				tick = formatter.parseDateTime(line.substring(0, line.indexOf('|')));
+				snapshot = new NeteaseInstantSnapshot(line.substring(line.indexOf('|') + 1));
+				snapshot.setTick(tick);
+				snapshot.purgeData();
+				result.add(snapshot);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return result;
 	}
 
+	// todo: simplify this with getDailyData(date) call
 	public void walk(LocalDate adjStart,
 					 LocalDate start,
 					 LocalDate end,
 					 String[] codes,
 					 boolean log,
 					 Consumer3<DateTime,
-							NeteaseInstantSnapshot,
+							Map<String, Depth>,
 							HashMap<String, Function<Integer, Integer>>> doStuff) {
 		DateTimeFormatter formatter = DateTimeFormat.forPattern(FinDataConstants.yyyyMMDDHHmmss);
 
@@ -97,7 +96,7 @@ public class NeteaseInstantSnapshotService extends JdbcDaoSupport {
 							System.out.println(code + " adjusted, starting " + tick);
 						}
 					});
-					doStuff.apply(tick, snapshot, currentAdjFun);
+					doStuff.apply(tick, snapshot.getDepthMap(), currentAdjFun);
 					if (log) {
 						System.out.println(tick+" "+snapshot);
 					}
