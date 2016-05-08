@@ -1,14 +1,21 @@
 package michael.findata.model;
 
+import com.numericalmethod.algoquant.execution.datatype.product.fx.Currencies;
+import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
+import com.numericalmethod.algoquant.execution.datatype.product.stock.SimpleStock;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
+import java.util.Currency;
 
 @Entity
 @NamedQuery(name = "Stock.findAll", query = "SELECT s FROM Stock s ORDER BY s.code")
-public class Stock {
+public class Stock implements com.numericalmethod.algoquant.execution.datatype.product.stock.Stock {
 	private int id;
+
+	public Stock() {
+	}
 
 	@GeneratedValue(generator="increment")
 	@GenericGenerator(name="increment", strategy = "increment")
@@ -31,7 +38,28 @@ public class Stock {
 	}
 
 	public void setCode(String code) {
-		this.code = code;
+		this.code = code.substring(0, 6);
+		switch (code.charAt(0)) {
+			case '5':
+			case '6':
+			case '9':
+				symbol = code+".SS";
+				exchange = Exchange.SHSE;
+				if (code.startsWith("900")) {
+					currency = Currencies.USD;
+				} else {
+					currency = Currencies.CNY;
+				}
+				break;
+			default:
+				symbol = code+".SZ";
+				exchange = Exchange.SZSE;
+				if (code.startsWith("200")) {
+					currency = Currencies.HKD;
+				} else {
+					currency = Currencies.CNY;
+				}
+		}
 	}
 
 	private String name;
@@ -166,6 +194,18 @@ public class Stock {
 		this.subindustry = subindustry;
 	}
 
+	private Double spread;
+
+	@Basic
+	@Column(name = "spread", columnDefinition = "float")
+	public Double getSpread() {
+		return spread;
+	}
+
+	public void setSpread(Double spread) {
+		this.spread = spread;
+	}
+
 //	private Collection<StockPrice> stockPrices;
 //
 //	@OneToMany(mappedBy = "stock")
@@ -195,5 +235,39 @@ public class Stock {
 	public int hashCode() {
 		int result= (code != null ? code.hashCode() : 0);
 		return result;
+	}
+
+	public Stock (String code) {
+		setCode(code);
+	}
+
+	public Stock (String code, String name) {
+		setCode(code);
+		this.name = name;
+	}
+
+	private String symbol;
+
+	private Exchange exchange;
+
+	private Currency currency = Currencies.CNY;
+
+	public String symbol () {
+		return symbol;
+	}
+
+	@Override
+	public Currency currency() {
+		return currency;
+	}
+
+	@Override
+	public String companyName() {
+		return getName();
+	}
+
+	@Override
+	public Exchange exchange() {
+		return exchange;
 	}
 }

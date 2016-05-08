@@ -4,8 +4,6 @@ import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.Ma
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import com.numericalmethod.algoquant.execution.datatype.product.stock.Stock;
 import michael.findata.algoquant.execution.datatype.depth.Depth;
-import michael.findata.algoquant.product.stock.shse.SHSEStock;
-import michael.findata.algoquant.product.stock.szse.SZSEStock;
 import org.joda.time.DateTime;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -67,12 +65,18 @@ public class NeteaseInstantSnapshot implements MarketCondition{
 		for (Map stockSnapshot : (Collection<Map>) data.values()) {
 			code = (String) stockSnapshot.get("symbol");
 			if (code.startsWith("6") || code.startsWith("9") || code.startsWith("5")) {
-				stock = new SHSEStock(code);
+				stock = new michael.findata.model.Stock(code);
 			} else {
-				stock = new SZSEStock(code);
+				stock = new michael.findata.model.Stock(code);
 			}
 			depths[i] = new Depth(
 					(double)stockSnapshot.get("price"),
+					/**
+					 * How to know whether the stock is even traded in the first place from NeteaseSnapshot?
+					 * status:0 交易中
+					 * status:4 停牌
+					 * status:1 退市
+					 */
 					stock, zero.equals(stockSnapshot.get("status")),
 					(double)stockSnapshot.get("bid5"),
 					(double)stockSnapshot.get("bid4"),

@@ -2,7 +2,6 @@ package michael.findata.service;
 
 import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
 import michael.findata.algoquant.execution.datatype.depth.Depth;
-import michael.findata.algoquant.strategy.pair.StockGroups;
 import michael.findata.external.netease.NeteaseInstantSnapshot;
 import michael.findata.model.AdjFunction;
 import michael.findata.util.CalendarUtil;
@@ -18,8 +17,6 @@ import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class NeteaseInstantSnapshotService extends JdbcDaoSupport {
 
@@ -92,7 +89,7 @@ public class NeteaseInstantSnapshotService extends JdbcDaoSupport {
 						Stack<AdjFunction<Integer, Integer>> adjFctA = adjFunctions.get(code);
 						//ºó¸´È¨
 						while (adjFctA != null && (!adjFctA.isEmpty()) && CalendarUtil.daysBetween(adjFctA.peek().paymentDate, tick) >= 0) {
-							currentAdjFun.put(code, currentAdjFun.get(code).andThen(adjFctA.pop()));
+							currentAdjFun.put(code, currentAdjFun.get(code).compose(adjFctA.pop()));
 							System.out.println(code + " adjusted, starting " + tick);
 						}
 					});

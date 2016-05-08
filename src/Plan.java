@@ -1,19 +1,27 @@
-import com.numericalmethod.algoquant.data.calendar.HolidayCalendarFromYahoo;
-import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
-import michael.findata.algoquant.product.stock.shse.SHSEStock;
-import michael.findata.algoquant.product.stock.szse.SZSEStock;
-import org.joda.time.DateTime;
-import org.joda.time.LocalDate;
+import michael.findata.model.PairInstance;
+import michael.findata.spring.data.repository.PairInstanceRepository;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Plan {
 	public static void main (String args []) {
-//		DateTime date = LocalDate.parse("2015-10-08").plusDays(1).toDateTimeAtStartOfDay().plusHours(2);
-//		System.out.println(date);
-//		System.out.println(HolidayCalendarFromYahoo.forExchange(Exchange.SZSE).isHoliday(date));
-//		System.out.println(HolidayCalendarFromYahoo.forExchange(Exchange.SHSE).isHoliday(date));
-		System.out.println(new SHSEStock("600000").equals(new SHSEStock("600000", "浦发银行")));
-		System.out.println(new SHSEStock("600000").symbol());
-		System.out.println(new SZSEStock("000001").symbol());
+		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
+		PairInstanceRepository pir = (PairInstanceRepository) context.getBean("pairInstanceRepository");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd G 'at' hh:mm:ss z");
+		PairInstance pi = pir.findOne(1);
+		System.out.println(sdf.format(pi.getOpenableDate()));
+		Date testDate = new Date();
+		System.out.println(sdf.format(testDate));
+		pi.setOpenableDate(new Timestamp(testDate.getTime()));
+		System.out.println(sdf.format(pi.getOpenableDate()));
+		pir.save(pi);
+
+		pi = pir.findOne(1);
+		System.out.println(sdf.format(pi.getOpenableDate()));
 	}
 }
 /**
@@ -41,40 +49,24 @@ public class Plan {
  3. 以H为基准进行融券卖出
  4. 以H为基准进行融资买入
 
- 0. How to know whether the stock is even traded in the first place from Netease Snapshot? need to take care of this when doing real trading.
- status:0 交易中
- status:4 停牌
- status:1 退市
 
- 0. 紧急：一对100%相关的ETF应该允许100仓位，所以对此类票对，应该有多少吃多少，只要超过threshold.因此，需要a）注明此类票对，b）修改算法
- 0. 紧急，需要搜集etf基金分拆数据方便还权。虽然现在涉及到的基金还没有在近期分拆.
+ 紧急: 开始用TDXClient驱动PairStrategy
+ 第一步记录开平仓机会
+ 第二步自动下单
+ 第三步动态仓位管理
+ 一对100%整协的ETF应该允许100仓位, 所以对此类票对, 只要超过threshold, 应该有多少吃多少. 因此需要 a)注明此类票对; b)修改算法
+ 动态分析ETF Spread，计算每天平均，精准筛选小spreadETF
  0. 相关性条件降低后，要把相应的开仓条件升高（收紧），平仓条件升高（放松），也就是根据相关性系数，动态调整开平仓条件。
- 0. order execution: dynamic amount setting, adjust target amount according to liquidity (1k-3k)
  0. 紧急：需要对ETF失败交易进行彻底分析，经简单分析：失败交易包含的股票应该比较集中。
- 0. 紧急：基金筛选，交易策略需要考虑还权价格。哪怕是只是在training中有拆分和分红，交易价格都需要考虑还权。
- 2. 深圳可卖空的股票名单inputstream encoding
  5. 尝试股票交易自动策略下单。
- 6. 完善 adjustment function，完全取消 adjustment factor？
  7. 尝试使用Kalman Filter
- 8. 有时间再解决：已经从和讯搜集etf基金分红派现数据，以便对基金价格进行还权处理。但是数据质量堪忧。幸好牵涉到的26个普通ETF的分红数据都是准确的。牵涉到的4个黄金ETF中有一个博时黄金159937分红有问题，但是由于分红在2015年上半年（比较久远），所以不会受到影响到统计套利的计算。
- 8. 有时间再解决：现在只有网易实时成交，需要增加新浪雪球和讯实时成交，以便DR
- 8. 做一个spread计算器，方便计算任意时间，每个etf的spread，用来筛选etfpair
 
- ETF对冲策略
- 手工维护项目：
- 1. 分红数据
- 2. 分拆数据
- 3. 可融券标的券
- 4. 行情服务器可用性
+ 测试 java.sql.Timestamp, java.sql.Date 和 java.util.Date 在存储后，提取后的值有无变化
+ 测试结果：由于各处（包括数据库）的缺省时区是东八区，所以各时间格式可以互换。
 
- 159903+
- 159919
- 510050-
- 510180
- 510300
- 510330+
- 510510-
- 510880+
+ ETF对冲策略手工维护项目：
+ 1. 可融券标的券
+ 2. 行情服务器可用性
 
  0.3 2
 
@@ -84,4 +76,65 @@ public class Plan {
 
  策略4：
  利用融券ETF，对广泛ETF进行 隔日统计配对
+
+ 大 冷Ｂ：2016年第一季度报告正文（英文版）    (119k)[2016-04-22]
+ 大 冷Ｂ：2015年年度报告（英文版）    (3172k)[2016-03-30]
+
+ select * from dividend where amount = 0 and split = 0 and bonus = 0;
+
+ mysql> select * from stock where is_fund = false and is_ignored = false and latest_year = 2015 and latest_season = 4;
+ +-------+--------+----------+---------------+-------------+---------------+------------------+--------------+------------+---------------------+----------------+----------+-------------+---------+
+ | id    | code   | name     | current_price | latest_year | latest_season | number_of_shares | is_financial | is_ignored | last_updated        | is_interesting | industry | subindustry | is_fund |
+ +-------+--------+----------+---------------+-------------+---------------+------------------+--------------+------------+---------------------+----------------+----------+-------------+---------+
+ |   949 | 002008 | 大族激光 |         21.75 |        2015 |             4 |       1055580800 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |   960 | 002019 | 亿帆鑫富 |         42.13 |        2015 |             4 |        440319200 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1046 | 002105 | 信隆实业 |          10.3 |        2015 |             4 |        335000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1054 | 002113 | 天润控股 |          27.7 |        2015 |             4 |        188620000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | 化工     |             | 0       |
+ |  1119 | 002178 | 延华智能 |         10.05 |        2015 |             4 |        730103000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1241 | 002301 | 齐心集团 |         18.84 |        2015 |             4 |        379329300 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1261 | 002321 | 华英农业 |         10.04 |        2015 |             4 |        534291100 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1303 | 002362 | 汉王科技 |         23.88 |        2015 |             4 |        214102800 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1390 | 002449 | 国星光电 |         12.39 |        2015 |             4 |        475751700 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1440 | 002499 | 科林环保 |         20.86 |        2015 |             4 |        189000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1487 | 002547 | 春兴精工 |          9.43 |        2015 |             4 |       1011978200 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1488 | 002548 | 金新农   |         16.45 |        2015 |             4 |        383173700 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1499 | 002559 | 亚威股份 |         14.49 |        2015 |             4 |        352000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1525 | 000006 | 深振业Ａ |          7.93 |        2015 |             4 |       1349995000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1644 | 000530 | 大冷股份 |         14.98 |        2015 |             4 |        360165000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  1748 | 000673 | 当代东方 |         15.17 |        2015 |             4 |        786160000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  2027 | 300056 | 三维丝   |         14.91 |        2015 |             4 |        374197400 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  2062 | 300092 | 科新机电 |         11.88 |        2015 |             4 |        227500000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  2087 | 300117 | 嘉寓股份 |          7.96 |        2015 |             4 |        716760000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  2092 | 300122 | 智飞生物 |         26.88 |        2015 |             4 |        800000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  2177 | 300207 | 欣旺达   |         24.94 |        2015 |             4 |        645427000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  2179 | 300209 | 天泽信息 |         24.43 |        2015 |             4 |        244930300 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ |  2231 | 200530 | 大  冷Ｂ |          9.07 |        2015 |             4 |        360165000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ | 19869 | 002597 | 金禾实业 |         14.39 |        2015 |             4 |        564598400 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ | 26594 | 000757 | 浩物股份 |         10.56 |        2015 |             4 |        451621200 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ | 29157 | 002644 | 佛慈制药 |         11.39 |        2015 |             4 |        510657000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ | 36375 | 002661 | 克明面业 |         18.45 |        2015 |             4 |        336575899 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ | 47463 | 300319 | 麦捷科技 |         24.08 |        2015 |             4 |        215386600 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
+ | 47493 | 300334 | 津膜科技 |         16.35 |        2015 |             4 |        276037700 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
+ | 47520 | 300347 | 泰格医药 |         29.65 |        2015 |             4 |        470741000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
+ | 47526 | 002700 | 新疆浩源 |         14.12 |        2015 |             4 |        422426900 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
+ | 47549 | 002709 | 天赐材料 |        111.59 |        2015 |             4 |        130143799 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
+ | 47591 | 300380 | 安硕信息 |         44.89 |        2015 |             4 |        137440000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
+ | 47630 | 300392 | 腾信股份 |         28.36 |        2015 |             4 |        384000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
+ | 47764 | 300449 | 汉邦高科 |        100.48 |        2015 |             4 |         70700000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
+ | 47807 | 300466 | 赛摩电气 |         30.16 |        2015 |             4 |        240000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
+ | 47829 | 002769 | 普路通   |         75.32 |        2015 |             4 |        150659000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
+ | 47864 | 300488 | 恒锋工具 |         72.32 |        2015 |             4 |         62510000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
+ +-------+--------+----------+---------------+-------------+---------------+------------------+--------------+------------+---------------------+----------------+----------+-------------+---------+
+ 38 rows in set
+
+ mysql> select count(*), latest_year, latest_season from stock where is_fund = false and is_ignored = false group by latest_year, latest_season;
+ +----------+-------------+---------------+
+ | count(*) | latest_year | latest_season |
+ +----------+-------------+---------------+
+ |       17 |        2013 |             0 |
+ |       38 |        2015 |             4 |
+ |     2872 |        2016 |             1 |
+ +----------+-------------+---------------+
+ 3 rows in set
+
  **/

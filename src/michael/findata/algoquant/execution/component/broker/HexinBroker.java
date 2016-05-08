@@ -10,11 +10,6 @@ import com.lmax.disruptor.dsl.Disruptor;
 import com.numericalmethod.algoquant.execution.component.broker.Broker;
 import com.numericalmethod.algoquant.execution.datatype.order.LimitOrder;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
-import com.numericalmethod.algoquant.execution.datatype.product.stock.Stock;
-import michael.findata.algoquant.product.stock.shse.SHSEStock;
-import michael.findata.algoquant.product.stock.szse.SZSEStock;
-import michael.findata.algoquant.strategy.GridStrategy;
-import michael.findata.external.netease.NeteaseInstantSnapshot;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -152,7 +147,7 @@ public class HexinBroker implements Broker{
 		} else if (o.type(o.price()) != Order.OrderExecutionType.LIMIT_ORDER) {
 			LOGGER.error("Market order handling is not yet implemented.");
 			LOGGER.error("Order: {} discarded.", o);
-		} else if (! (o.product() instanceof SHSEStock || o.product() instanceof SZSEStock) ) {
+		} else if (! (o.product() instanceof michael.findata.model.Stock) ) {
 			LOGGER.error("This broker doesn't handle orders for products outside China.");
 			LOGGER.error("Order: {} discarded.", o);
 		} else {

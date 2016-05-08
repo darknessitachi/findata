@@ -60,6 +60,38 @@ public class Pair {
 		this.codeToLong = codeToLong;
 	}
 
+	@Transient
+	private String nameToShort = null;
+
+	@Access(AccessType.PROPERTY)
+	@Column(name = "name_to_short", columnDefinition = "char(14)")
+	public String getNameToShort() {
+		if (nameToShort == null) {
+			nameToShort = stockToShort.getName();
+		}
+		return nameToShort;
+	}
+
+	public void setNameToShort(String nameToShort) {
+		this.nameToShort = nameToShort;
+	}
+
+	@Transient
+	private String nameToLong = null;
+
+	@Access(AccessType.PROPERTY)
+	@Column(name = "name_to_long", columnDefinition = "char(14)")
+	public String getNameToLong() {
+		if (nameToLong == null) {
+			nameToLong = stockToLong.getName();
+		}
+		return nameToLong;
+	}
+
+	public void setNameToLong(String nameToLong) {
+		this.nameToLong = nameToLong;
+	}
+
 	@Override
 	public boolean equals (Object another) {
 		if (another == null) {

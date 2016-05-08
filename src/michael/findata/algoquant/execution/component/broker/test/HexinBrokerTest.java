@@ -3,8 +3,6 @@ package michael.findata.algoquant.execution.component.broker.test;
 import com.numericalmethod.algoquant.execution.datatype.order.LimitOrder;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import michael.findata.algoquant.execution.component.broker.HexinBroker;
-import michael.findata.algoquant.product.stock.shse.SHSEStock;
-import michael.findata.algoquant.product.stock.szse.SZSEStock;
 import org.slf4j.Logger;
 
 import java.util.Collections;

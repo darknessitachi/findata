@@ -104,10 +104,6 @@ public class StockGroups {
 			new SimpleStock("510060.SS", "央企ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510180.SS", "180ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510230.SS", "金融ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510300.SS", "300ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510310.SS", "HS300ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510330.SS", "华夏300", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("510360.SS", "广发300", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510420.SS", "180EWETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510450.SS", "180高ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510650.SS", "金融行业", Currencies.CNY, Exchange.SHSE),
@@ -120,8 +116,13 @@ public class StockGroups {
 			new SimpleStock("159923.SZ", "100ETF", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("159929.SZ", "医药ETF", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("162411.SZ", "华宝油气", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("160706.SZ", "嘉实300", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("160716.SZ", "嘉实50", Currencies.CNY, Exchange.SZSE),
+
+			new SimpleStock("510300.SS", "300ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("510310.SS", "HS300ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("510330.SS", "华夏300", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("510360.SS", "广发300", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("160706.SZ", "嘉实300", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("165309.SZ", "建信300", Currencies.CNY, Exchange.SZSE),
 	};
 
@@ -145,6 +146,30 @@ public class StockGroups {
 			new SimpleStock("162711.SZ", "广发500L", Currencies.CNY, Exchange.SZSE),
 	};
 
+	// Group 3
+	public static Stock[] HKETF = new Stock[] {
+			new SimpleStock("159920.SZ", "恒生ETF", Currencies.CNY, Exchange.SZSE), //人民币/港币汇率*恒生指数的指数收益率
+			new SimpleStock("160125.SZ", "南方香港", Currencies.CNY, Exchange.SZSE), //经人民币汇率调整的恒生指数收益率*95%＋人民币同期活期存款利率*5%
+			new SimpleStock("160717.SZ", "恒生H股", Currencies.CNY, Exchange.SZSE), //人民币/港币汇率*恒生中国企业指数
+			new SimpleStock("161831.SZ", "H股分级", Currencies.CNY, Exchange.SZSE), //人民币/港币汇率*恒生中国企业指数收益率*95%+人民币活期存款收益率*5%（税后）
+			new SimpleStock("164705.SZ", "添富恒生", Currencies.CNY, Exchange.SZSE), //经人民币汇率调整的恒生指数收益率*95％＋商业银行活期存款利率（税后）*5%
+			new SimpleStock("510900.SS", "H股ETF", Currencies.CNY, Exchange.SHSE), //恒生中国企业指数(使用估值汇率折算)
+			new SimpleStock("513600.SS", "恒指ETF", Currencies.CNY, Exchange.SHSE), //恒生指数
+			new SimpleStock("513660.SS", "恒生通", Currencies.CNY, Exchange.SHSE) //经估值汇率调整的恒生指数收益率
+	};
+
+	// Group 4
+	public static Stock[] GoldETF = new Stock[]{
+			new SimpleStock("159934.SZ", "黄金ETF", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("159937.SZ", "博时黄金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("518800.SS", "黄金基金", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("518880.SS", "黄金ETF", Currencies.CNY, Exchange.SHSE),
+			new SimpleStock("160719.SZ", "嘉实黄金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("161116.SZ", "易基黄金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("161226.SZ", "白银基金", Currencies.CNY, Exchange.SZSE),
+			new SimpleStock("164701.SZ", "添富贵金", Currencies.CNY, Exchange.SZSE),
+	};
+
 	public static Stock[] ETFShortable = new Stock[]{
 			new SimpleStock("510050.SS", "50ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510180.SS", "180ETF", Currencies.CNY, Exchange.SHSE),
@@ -164,15 +189,6 @@ public class StockGroups {
 			new SimpleStock("159919.SZ", "300ETF", Currencies.CNY, Exchange.SZSE),
 	};
 
-	public static Stock[] HKETF = new Stock[] {
-			new SimpleStock("159920.SZ", "恒生ETF", Currencies.CNY, Exchange.SZSE), //人民币/港币汇率*恒生指数的指数收益率
-			new SimpleStock("160717.SZ", "恒生H股", Currencies.CNY, Exchange.SZSE), //人民币/港币汇率*恒生中国企业指数
-			new SimpleStock("164705.SZ", "添富恒生", Currencies.CNY, Exchange.SZSE), //经人民币汇率调整的恒生指数收益率*95％＋商业银行活期存款利率（税后）*5%
-			new SimpleStock("510900.SS", "H股ETF", Currencies.CNY, Exchange.SHSE), //恒生中国企业指数(使用估值汇率折算)
-			new SimpleStock("513600.SS", "恒指ETF", Currencies.CNY, Exchange.SHSE), //恒生指数
-			new SimpleStock("513660.SS", "恒生通", Currencies.CNY, Exchange.SHSE) //经估值汇率调整的恒生指数收益率
-	};
-
 	public static Stock[] TPlus0Funds = new Stock[]{
 			new SimpleStock("159920.SZ", "恒生ETF", Currencies.CNY, Exchange.SZSE),
 			new SimpleStock("160125.SZ", "南方香港", Currencies.CNY, Exchange.SZSE),
@@ -190,16 +206,6 @@ public class StockGroups {
 			new SimpleStock("513030.SS", "德国30", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("513100.SS", "纳指ETF", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("513500.SS", "标普500", Currencies.CNY, Exchange.SHSE),
-	};
-
-	public static Stock[] GoldETF = new Stock[]{
-			new SimpleStock("159934.SZ", "黄金ETF", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("159937.SZ", "博时黄金", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("518800.SS", "黄金基金", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("518880.SS", "黄金ETF", Currencies.CNY, Exchange.SHSE),
-			new SimpleStock("160719.SZ", "嘉实黄金", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("161116.SZ", "易基黄金", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("164701.SZ", "添富贵金", Currencies.CNY, Exchange.SZSE),
 	};
 
 	public static Stock[] GoldETFShortable = new Stock[]{

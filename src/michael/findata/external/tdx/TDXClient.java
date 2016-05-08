@@ -4,8 +4,7 @@ import com.sun.jna.Native;
 import com.sun.jna.ptr.ShortByReference;
 import michael.findata.algoquant.execution.datatype.depth.Depth;
 
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 public class TDXClient {
 	TDXLibrary[] hqLib;
@@ -13,6 +12,7 @@ public class TDXClient {
 	int [] port;
 	byte[] result = new byte[65535];
 	byte[] errInfo = new byte[256];
+//	boolean updated = false;
 	// serverConfig is in the format of "ip:port", eg. "182.131.3.245:7709"
 	public TDXClient(String ... serverConfig) {
 		hqLib = new TDXLibrary[serverConfig.length];
@@ -47,7 +47,14 @@ public class TDXClient {
 		}
 	}
 
-	public void pollQuotes (long gapMillis, String ... codes) {
+	String [] bulkTemp = null;
+	String raw;
+
+	// Repetitively poll quotes up to a preset number of times, until count is up or until any update is detected.
+	// this is a much resource-intensive way of polling quotes, given SH and SZ exchanges are only publishing snapshots
+	// every 5/3 seconds respectively. In other words, there is no point polling from SH for another 4.5/2.5 seconds if
+	// SH/SZ has just published a snapshot.
+	public boolean pollQuotes (int pollTimes, String ... codes) {
 		int count = 0;
 		long start;
 		boolean success;
@@ -59,28 +66,42 @@ public class TDXClient {
 		ShortByReference resultCount = new ShortByReference();
 		resultCount.setValue((short) codes.length);
 
-		String [] bulkTemp = new String[codes.length+1];
+		if (bulkTemp == null || bulkTemp.length != codes.length + 1) {
+			bulkTemp = new String[codes.length+1];
+			for (int i = bulkTemp.length - 1; i > -1; i--) {
+				bulkTemp[i] = "";
+			}
+			raw = "";
+		}
+
+		String rawTemp;
 		String [] bulkLastTemp;
 		String [] stockTemp;
 
-		for (int i = bulkTemp.length - 1; i > -1; i--) {
-			bulkTemp[i] = "";
-		}
-
-		while (count < 40) {
-			start = System.currentTimeMillis();
-			success = hqLib[count%hqLib.length].TdxHq_GetSecurityQuotes(market, codes, resultCount, result, errInfo);
-			System.out.println("Time taken(ms) for "+(count%hqLib.length)+": "+(System.currentTimeMillis() - start));
+		int index;
+		boolean updated = false;
+		start = System.currentTimeMillis();
+		while (!updated && count < pollTimes) {
+			index = count%hqLib.length;
+			success = hqLib[index].TdxHq_GetSecurityQuotes(market, codes, resultCount, result, errInfo);
+//			System.out.println("Time taken(ms) for this round: "+(System.currentTimeMillis() - start));
 			count ++;
-			start = System.currentTimeMillis();
 			if (!success) {
-				System.out.println(ip[count%hqLib.length]+":"+port[count%hqLib.length]+" is not working.");
+				System.out.println(ip[index]+":"+port[index]+" is not working.");
 				System.out.println(Native.toString(errInfo, "GBK"));
 			} else {
 				modifiedStocks.clear();
-				String a = Native.toString(result, "GBK");
+				rawTemp = raw;
+				raw = Native.toString(result, "GBK");
+				if (raw.equals(rawTemp)) {
+//					System.out.println("not updated!");
+					continue;
+				} else {
+					updated = true;
+					System.out.println("updated!");
+				}
 				bulkLastTemp = bulkTemp;
-				bulkTemp = a.split("\n");
+				bulkTemp = raw.split("\n");
 				for (int i = bulkTemp.length - 1; i > 0; i--) {
 					// Change check 1
 					if (bulkLastTemp[i].equals(bulkTemp[i])) {
@@ -116,16 +137,11 @@ public class TDXClient {
 					depthMap.put(stockTemp[1], stockDepth);
 					modifiedStocks.add(stockTemp[1]);
 				}
-				// do stuff
-				System.out.println("Time taken(ms) for this round: "+(System.currentTimeMillis() - start));
-//				System.out.println(a);
-				try {
-					Thread.sleep(gapMillis);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
 			}
 		}
+		// todo do stuff
+		System.out.println("Time taken(ms) for this round: "+(System.currentTimeMillis() - start));
+		return updated;
 	}
 
 	private byte[] calcMarkets(String[] codes) {
@@ -156,17 +172,27 @@ public class TDXClient {
 		}
 	}
 
-	public void getXDXRInfo (String ... codes) {
+	public Stack<String[]> getXDXRInfo (String ... codes) {
 		byte [] market = calcMarkets(codes);
 		boolean success;
+		Stack<String[]> res = new Stack<>();
 		for (int i = codes.length - 1; i > -1; i --) {
 			success = hqLib[i%hqLib.length].TdxHq_GetXDXRInfo(market[i], codes[i], result, errInfo);
 			if (!success) {
 				System.out.println(ip[i%hqLib.length]+":"+port[i%hqLib.length]+" is not working.");
 				System.out.println(Native.toString(errInfo, "GBK"));
+				return null;
 			} else {
-				System.out.println(Native.toString(result, "GBK"));
+				String [] lines = Native.toString(result, "GBK").split("\n");
+				String [] data;
+				for (int j = 1; j < lines.length; j++ ) {
+					data = lines[j].split("\t");
+					if (data[3].equals("1") || data[3].equals("11")) {
+						res.push(data);
+					}
+				}
 			}
 		}
+		return res;
 	}
 }

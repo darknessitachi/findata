@@ -21,8 +21,6 @@ import com.numericalmethod.algoquant.execution.simulation.template.SimTemplateYa
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.model.util.returns.ReturnCalculators;
 import com.numericalmethod.suanshu.misc.datastructure.time.JodaTimeUtils;
-import michael.findata.algoquant.product.stock.shse.SHSEStock;
-import michael.findata.algoquant.product.stock.szse.SZSEStock;
 import michael.findata.algoquant.strategy.FixedPositionStrategy;
 import michael.findata.algoquant.strategy.GridStrategy;
 import michael.findata.external.netease.NeteaseInstantSnapshotFactory;
@@ -51,7 +49,7 @@ public class AlgoQuantTest {
 	public void run() throws Exception {
 		// set up the product
 //		final Stock stock = HSI.getInstance();
-		final Stock stock = new SHSEStock("600875.SS"); //** Customization
+		final Stock stock = new michael.findata.model.Stock("600875.SS"); //** Customization
 //		final Stock stock = new SHSEStock("600036.SS"); //** Customization
 
 		// specify the simulation period

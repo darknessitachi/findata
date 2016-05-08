@@ -712,7 +712,7 @@ public class FinDataExtractor {
 			temp = ts.next();
 //			priceYear = temp.getDate().getYear()+1900;
 
-			if (temp.getDate().after(latest)) {
+			if (temp.getDateTime().after(latest)) {
 				System.out.println((temp.getDate().getYear()+1900) + " " + (temp.getDate().getMonth() + 1) + " " + temp.getDate().getDate());
 			} else {
 				break;

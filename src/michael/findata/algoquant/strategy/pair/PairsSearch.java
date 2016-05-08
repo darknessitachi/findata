@@ -28,6 +28,7 @@ import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -147,10 +148,7 @@ public class PairsSearch {
 					   DateTime stopOpen,
 					   DateTime simulationEnd,
 					   Consumer2<Pair, Integer> closeThresholdRelaxer) throws ParseException, IOException {
-		SimpleDateFormat sdfDisplay = new SimpleDateFormat(yyyyMMDDHHmmss);
-		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
 		DateTimeFormatter format = DateTimeFormat.forPattern("E yyyyMMdd");
-		SortedMap<String, Counts> counts = new TreeMap<>();
 
 		System.out.println("Training Start: "+ format.print(trainingStart));
 		System.out.println("Training End: "+format.print(trainingEnd));
@@ -158,7 +156,6 @@ public class PairsSearch {
 		System.out.println("Open Stop: "+format.print(stopOpen));
 		System.out.println("Simulation End: "+format.print(simulationEnd));
 
-		DecimalFormat df = new DecimalFormat(Hexun2008Constants.ACCURATE_DECIMAL_FORMAT);
 
 		ArrayList<Pair> pairs = new ArrayList<>();
 		stocks.forEach(sts -> {
@@ -173,31 +170,7 @@ public class PairsSearch {
 				amountPerSlot,
 				openThresholdCoefficient, allowSameDayClosure, maxShortsPerTickPerStock, maxNetPositionPerStock,
 				closeThresholdRelaxer).stream()
-				.sorted().forEach(pair1 -> {
-			int age;
-			System.out.print(pair1.toShort.symbol().substring(0, 6) + "->" + pair1.toLong.symbol().substring(0, 6) + "\tslope: " + df.format(pair1.slope) + " stdev: " + df.format(pair1.stdev) + " correl: " + df.format(pair1.correlco) + " adf_p: " + df.format(pair1.adf_p));
-			switch (pair1.status) {
-				case OPENED:
-					System.out.print("\tOpen: Short->Long\t\t\t\t");
-					System.out.println(sdfDisplay.format(pair1.dateOpened.toDate()) + "\t" + pair1.shortOpen + "\t" + pair1.longOpen + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev + "\t\t\t\t\t\t" + pair1.maxAmountPossibleOpen);
-					updateCount(counts, sdf.format(pair1.dateOpened.toDate()), CountType.OPEN);
-					break;
-				case CLOSED:
-					age = pair1.closureAge();
-					System.out.print((age == 0 ? "\tSame-day closure\t" : "\tClosure\t") + pair1.thresholdClose / pair1.stdev + "\tfee\t" + pair1.feeEstimate() + "\t");
-					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev +"\t"+ sdfDisplay.format(pair1.minResDate.toDate())+"\t"+ sdfDisplay.format(pair1.maxResDate.toDate())+"\t" + (age == 0 ? 1 : age));
-					System.out.println("\tProfit:\t" + pair1.profitPercentageEstimate() + "\t" + pair1.maxAmountPossibleClose);
-					updateCount(counts, sdf.format(pair1.dateClosed.toDate()), (age == 0 ? CountType.SAME_DAY_CLOSE : CountType.CLOSE));
-					break;
-				case FORCED:
-					age = pair1.closureAge();
-					System.out.print("\tForce closure\t"+pair1.thresholdClose / pair1.stdev + "\tfee\t" + pair1.feeEstimate() + "\t");
-					System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev +"\t"+ sdfDisplay.format(pair1.minResDate.toDate())+"\t"+ sdfDisplay.format(pair1.maxResDate.toDate())+"\t" + (age == 0 ? 1 : age));
-					System.out.println("\tProfit/Loss:\t" + pair1.profitPercentageEstimate() + "\t" + pair1.maxAmountPossibleClose);
-					updateCount(counts, sdf.format(pair1.dateClosed.toDate()), (age == 0 ? CountType.SAME_DAY_CLOSE : CountType.CLOSE));
-					break;
-			}
-		});
+				.sorted().forEach(pairConsumer);
 		System.out.println("Date\tOpen#\tClose#\tSame Day Close#");
 		counts.entrySet().stream().forEach(entry -> System.out.println(
 						entry.getKey() + "\t" +
@@ -206,6 +179,35 @@ public class PairsSearch {
 						entry.getValue().sameDayClose)
 		);
 	}
+	public static SortedMap<String, Counts> counts = new TreeMap<>();
+	public static Consumer<Pair> pairConsumer = pair1 -> {
+		int age;
+		SimpleDateFormat sdfDisplay = new SimpleDateFormat(yyyyMMDDHHmmss);
+		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
+		DecimalFormat df = new DecimalFormat(Hexun2008Constants.ACCURATE_DECIMAL_FORMAT);
+		System.out.print(pair1.toShort.symbol().substring(0, 6) + "->" + pair1.toLong.symbol().substring(0, 6) + "\tslope: " + df.format(pair1.slope) + " stdev: " + df.format(pair1.stdev) + " correl: " + df.format(pair1.correlco) + " adf_p: " + df.format(pair1.adf_p));
+		switch (pair1.status) {
+			case OPENED:
+				System.out.print("\tOpen: Short->Long\t\t\t\t");
+				System.out.println(sdfDisplay.format(pair1.dateOpened.toDate()) + "\t" + pair1.shortOpen + "\t" + pair1.longOpen + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev + "\t\t\t\t\t\t" + pair1.maxAmountPossibleOpen);
+				updateCount(counts, sdf.format(pair1.dateOpened.toDate()), CountType.OPEN);
+				break;
+			case CLOSED:
+				age = pair1.closureAge();
+				System.out.print((age == 0 ? "\tSame-day closure\t" : "\tClosure\t") + pair1.thresholdClose / pair1.stdev + "\tfee\t" + pair1.feeEstimate() + "\t");
+				System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev + "\t" + sdfDisplay.format(pair1.minResDate.toDate()) + "\t" + sdfDisplay.format(pair1.maxResDate.toDate()) + "\t" + (age == 0 ? 1 : age));
+				System.out.println("\tProfit:\t" + pair1.profitPercentageEstimate() + "\t" + pair1.maxAmountPossibleClose);
+				updateCount(counts, sdf.format(pair1.dateClosed.toDate()), (age == 0 ? CountType.SAME_DAY_CLOSE : CountType.CLOSE));
+				break;
+			case FORCED:
+				age = pair1.closureAge();
+				System.out.print("\tForce closure\t" + pair1.thresholdClose / pair1.stdev + "\tfee\t" + pair1.feeEstimate() + "\t");
+				System.out.print(sdfDisplay.format(pair1.dateClosed.toDate()) + "\t" + pair1.shortClose + "\t" + pair1.longClose + "\t" + pair1.minResidual / pair1.stdev + "\t" + pair1.maxResidual / pair1.stdev + "\t" + sdfDisplay.format(pair1.minResDate.toDate()) + "\t" + sdfDisplay.format(pair1.maxResDate.toDate()) + "\t" + (age == 0 ? 1 : age));
+				System.out.println("\tProfit/Loss:\t" + pair1.profitPercentageEstimate() + "\t" + pair1.maxAmountPossibleClose);
+				updateCount(counts, sdf.format(pair1.dateClosed.toDate()), (age == 0 ? CountType.SAME_DAY_CLOSE : CountType.CLOSE));
+				break;
+		}
+	};
 
 	private enum CountType {
 		OPEN,

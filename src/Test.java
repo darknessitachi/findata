@@ -54,11 +54,11 @@ public class Test {
 
 		long stamp = System.currentTimeMillis();
 		// The following are used regularly throughout the year
-		ss.refreshStockCodes();
-		sps.refreshStockPriceHistories();
-		ss.refreshLatestPriceAndName();
+//		ss.refreshStockCodes();
+//		sps.refreshStockPriceHistories();
+//		ss.refreshLatestPriceAndName();
 		ds.refreshDividendData();
-		sncs.refreshNumberOfShares();
+//		sncs.refreshNumberOfShares();
 //		ss.calculateAdjustmentFactor(10);
 
 		// The following are used mainly during and immediately after earnings report seasons

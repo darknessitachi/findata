@@ -6,6 +6,8 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,7 +16,7 @@ public class SZSEShortableStockList {
 	private Set<String> shortables;
 
 	public SZSEShortableStockList() throws IOException {
-		FileInputStream is = new FileInputStream("szseShortables.xls");
+		InputStream is = new URL(url).openStream();
 		POIFSFileSystem fs = new POIFSFileSystem(is);
 		Workbook wb = new HSSFWorkbook(fs);
 		shortables = new HashSet<>();

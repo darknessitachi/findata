@@ -4,22 +4,87 @@ import michael.findata.external.SecurityDividendData;
 import michael.findata.external.SecurityDividendRecord;
 import michael.findata.external.hexun2008.Hexun2008DividendData;
 import michael.findata.external.hexun2008.Hexun2008FundDividendData;
+import michael.findata.external.tdx.TDXClient;
 import michael.findata.model.AdjFactor;
 import michael.findata.model.AdjFunction;
+import michael.findata.model.Dividend;
 import michael.findata.model.Stock;
+import michael.findata.spring.data.repository.DividendRepository;
+import michael.findata.spring.data.repository.StockRepository;
+import michael.findata.util.CalendarUtil;
+import michael.findata.util.FinDataConstants;
 import org.joda.time.DateTime;
+import org.joda.time.Days;
 import org.joda.time.LocalDate;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.springframework.beans.factory.ListableBeanFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cglib.core.Local;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.InvalidParameterException;
 import java.sql.*;
 import java.sql.Date;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Function;
 
 public class DividendService extends JdbcDaoSupport {
+
+	@Autowired
+	DividendRepository dividendRepo;
+	@Autowired
+	StockRepository stockRepo;
+
+	public void refreshDividendDataForFund(String code, TDXClient client) {
+		Stock stock = stockRepo.findOneByCode(code);
+		Set<Dividend> existing = dividendRepo.findByStock_Code(code);
+		SimpleDateFormat sdf = new SimpleDateFormat(FinDataConstants.yyyyMMdd);
+		Stack<String[]> info = client.getXDXRInfo(code);
+		String [] data;
+		while (!info.empty()) {
+			data = info.pop();
+			Dividend dividend = new Dividend();
+			float amount = Float.parseFloat(data[4])/10;
+			float split = Float.parseFloat(data[6])/10;
+			if (amount == 0 && split == 0) {
+//				System.out.println("Skipped: ");
+//				for (String field : data) {
+//					System.out.print(field);
+//					System.out.print("\t");
+//				}
+//				System.out.println();
+				continue;
+			}
+			dividend.setStock(stock);
+			try {
+				dividend.setPaymentDate(sdf.parse(data[2]));
+			} catch (ParseException e) {
+				e.printStackTrace();
+				continue;
+			}
+			if (existing.contains(dividend)) {
+//				System.out.println("Already existing!");
+				break;
+			}
+			dividend.setAmount(amount);
+			dividend.setSplit(split);
+			dividendRepo.save(dividend);
+			System.out.print("Dividend saved:\t");
+			System.out.print(dividend.getStock().getCode());
+			System.out.print("\t");
+			System.out.print(dividend.getPaymentDate());
+			System.out.print("\t");
+			System.out.print(dividend.getAmount());
+			System.out.print("\t");
+			System.out.println(split);
+		}
+	}
 
 	/**
 	 * Refresh dividend payout from website (Hexun)
@@ -27,6 +92,7 @@ public class DividendService extends JdbcDaoSupport {
 	public void refreshDividendData() throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
 		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE (NOT is_fund) AND NOT is_ignored ORDER BY code");
+//		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE id IN (select * from temp)");
 		List<Stock> stocks = new ArrayList<>();
 		while (rs.next()) {
 			Stock s = new Stock();
@@ -73,7 +139,7 @@ public class DividendService extends JdbcDaoSupport {
 	}
 
 	@Transactional
-	private void refreshDividendDataForStock(String code, int id, String name) throws SQLException {
+	public void refreshDividendDataForStock(String code, int id, String name) throws SQLException {
 		Date announcementDate;
 		Date paymentDate;
 		float amount;
@@ -96,20 +162,22 @@ public class DividendService extends JdbcDaoSupport {
 			amount = e.getValue().getAmount();
 			bonus = e.getValue().getBonus();
 			split = e.getValue().getSplit();
-			totalAmount = e.getValue().getTotal_amount();
-			System.out.println(announcementDate+"\t"+amount+"\t"+paymentDate);
-			try {
-				getJdbcTemplate().update("INSERT INTO dividend (stock_id, announcement_date, amount, bonus, split, payment_date, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)",
-						id, announcementDate, amount, bonus, split, paymentDate, totalAmount);
-			} catch (Exception ex) {
-				if (ex.getMessage().contains("Duplicate")) {
-					getJdbcTemplate().update("UPDATE dividend SET amount = ?, bonus = ?, split = ?, payment_date = ?, total_amount = ? WHERE stock_id = ? AND announcement_date = ?",
-							amount, bonus, split, paymentDate, totalAmount, id, announcementDate);
-				} else {
-					//forcing rollback
-					throw ex;
+			if (amount != 0 || bonus != 0 || split != 0) {
+				totalAmount = e.getValue().getTotal_amount();
+				System.out.println(announcementDate+"\t"+amount+"\t"+paymentDate);
+				try {
+					getJdbcTemplate().update("INSERT INTO dividend (stock_id, announcement_date, amount, bonus, split, payment_date, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)",
+							id, announcementDate, amount, bonus, split, paymentDate, totalAmount);
+				} catch (Exception ex) {
+					if (ex.getMessage().contains("Duplicate")) {
+						getJdbcTemplate().update("UPDATE dividend SET amount = ?, bonus = ?, split = ?, payment_date = ?, total_amount = ? WHERE stock_id = ? AND announcement_date = ?",
+								amount, bonus, split, paymentDate, totalAmount, id, announcementDate);
+					} else {
+						//forcing rollback
+						throw ex;
+					}
+					break;
 				}
-				break;
 			}
 			e = sdd.getDividendRecords().pollLastEntry();
 		}
@@ -149,7 +217,9 @@ public class DividendService extends JdbcDaoSupport {
 	}
 
 	// Currently this only handles dividends not bonus and split
-	public static void getAdjFunctions (DateTime start, DateTime end, String codeA, String codeB, Stack<AdjFunction<Integer, Integer>> divA, Stack<AdjFunction<Integer, Integer>> divB, JdbcTemplate jdbcTemplate) {
+	public static void getAdjFunctions (DateTime start, DateTime end, String codeA, String codeB,
+										Stack<AdjFunction<Integer, Integer>> divA,
+										Stack<AdjFunction<Integer, Integer>> divB, JdbcTemplate jdbcTemplate) {
 		SqlRowSet rsAdj = jdbcTemplate.queryForRowSet(
 				"SELECT payment_date, adj_factor, code, amount, bonus, split " +
 						"FROM dividend, stock " +
@@ -168,7 +238,15 @@ public class DividendService extends JdbcDaoSupport {
 			// must evaluate sql query result first before putting the result into a function
 			// - late evaluation doesn't work after the sql query is closed;
 			int i = (int) (rsAdj.getFloat("amount") * 1000);
-			Function<Integer, Integer> adjFunc = pri -> pri + i;
+			float bonus = rsAdj.getFloat("bonus");
+			float split = rsAdj.getFloat("split");
+			Function<Integer, Integer> adjFunc;
+//			adjFunc = pri -> pri + i;
+			if (bonus == 0 && split == 0) {
+				adjFunc = pri -> pri + i;
+			} else {
+				adjFunc = pri -> (int)(pri*(1+bonus+split)) + i;
+			}
 
 			if (rsAdj.getString("code").equals(codeA)) {
 				divA.push(new AdjFunction<>(rsAdj.getDate("payment_date"), adjFunc));
@@ -182,12 +260,16 @@ public class DividendService extends JdbcDaoSupport {
 		}
 	}
 
-	public void getAdjFunctions(DateTime start, DateTime end, String codeA, String codeB, Stack<AdjFunction<Integer, Integer>> divA, Stack<AdjFunction<Integer, Integer>> divB) {
+	public void getAdjFunctions(DateTime start, DateTime end, String codeA, String codeB,
+								Stack<AdjFunction<Integer, Integer>> divA,
+								Stack<AdjFunction<Integer, Integer>> divB) {
 		getAdjFunctions(start, end, codeA, codeB, divA, divB, getJdbcTemplate());
 	}
 
 	// Currently this only handles dividends not bonus and split
-	public static Map<String, Stack<AdjFunction<Integer, Integer>>> getAdjFunctions (LocalDate start, LocalDate end, String [] codes, JdbcTemplate jdbcTemplate) {
+	public static Map<String, Stack<AdjFunction<Integer, Integer>>> getAdjFunctions (LocalDate start, LocalDate end,
+																					 String [] codes,
+																					 JdbcTemplate jdbcTemplate) {
 		Map<String, Stack<AdjFunction<Integer, Integer>>> result = new HashMap<>();
 		if (codes.length == 0) {
 			return  result;
@@ -235,5 +317,94 @@ public class DividendService extends JdbcDaoSupport {
 
 	public Map<String, Stack<AdjFunction<Integer, Integer>>> getAdjFunctions(LocalDate start, LocalDate end, String [] codes) {
 		return getAdjFunctions(start, end, codes, getJdbcTemplate());
+	}
+
+	public PriceAdjuster newPriceAdjuster (LocalDate start, LocalDate end, String... codes) {
+		return new PriceAdjuster(start, end, Arrays.asList(codes));
+	}
+
+	// This can answer queries for prices between start date and end date.
+	public class PriceAdjuster {
+		// in a query, both reference date and query date must be within this range, inclusive.
+		private LocalDate scopeStart;
+		private LocalDate scopeEnd;
+		long startMillis, endMillis;
+		private HashMap<String, Dividend[]> divArrays = new HashMap<>();
+
+		public PriceAdjuster (LocalDate scopeStart, LocalDate scopeEnd, Collection<String> codes) {
+			startMillis = scopeStart.toDate().getTime();
+			endMillis = scopeEnd.toDate().getTime();
+			if (startMillis > endMillis) {
+				throw new InvalidParameterException("scopeEnd must be the same as or before scopeStart");
+			}
+			this.scopeStart = scopeStart;
+			this.scopeEnd = scopeEnd;
+			HashMap<String, List<Dividend>> divLists = new HashMap<>();
+			dividendRepo.findByPaymentDateBetweenAndStock_CodeInOrderByPaymentDateDesc
+					(scopeStart.toDate(), scopeEnd.toDate(), codes).forEach(dividend -> {
+				String code = dividend.getStock().getCode();
+				if (!divLists.containsKey(code)) {
+					divLists.put(code, new ArrayList<>());
+				}
+				divLists.get(dividend.getStock().getCode()).add(dividend);
+			});
+			divLists.entrySet().forEach(entry -> {
+				List<Dividend> divList;
+				divList = entry.getValue();
+				divArrays.put(entry.getKey(), divList.toArray(new Dividend[divList.size()]));
+			});
+		}
+
+		public double adjust (String stockCode, LocalDate referenceDate, LocalDate queryDate, double price) {
+			long indexInstant;
+			long referenceInstant = referenceDate.toDate().getTime();
+			long queryInstant = queryDate.toDate().getTime();
+			// Make sure scopeStart <= referenceDate <= queryDate <= scopeEnd;
+			if (startMillis > referenceInstant || referenceInstant > queryInstant || queryInstant > endMillis) {
+				throw new InvalidParameterException("Please make sure scopeStart <= referenceDate <= queryDate <= scopeEnd.");
+			}
+
+			Dividend[] divs = divArrays.get(stockCode);
+			if (divs == null) {
+				return price;
+			} else {
+				for (Dividend div : divs) {
+					indexInstant = div.getPaymentDate().getTime();
+					if (indexInstant > queryInstant) {
+					} else if (indexInstant >= referenceInstant) {
+						price = price*(1+div.getBonus()+div.getSplit())+div.getAmount();
+					} else {
+						break;
+					}
+				}
+				return price;
+			}
+		}
+
+		public int adjust (String stockCode, LocalDate referenceDate, LocalDate queryDate, int price) {
+			long indexInstant;
+			long referenceInstant = referenceDate.toDate().getTime();
+			long queryInstant = queryDate.toDate().getTime();
+			// Make sure scopeStart <= referenceDate <= queryDate <= scopeEnd;
+			if (startMillis > referenceInstant || referenceInstant > queryInstant || queryInstant > endMillis) {
+				throw new InvalidParameterException("Please make sure scopeStart <= referenceDate <= queryDate <= scopeEnd.");
+			}
+
+			Dividend[] divs = divArrays.get(stockCode);
+			if (divs == null) {
+				return price;
+			} else {
+				for (Dividend div : divs) {
+					indexInstant = div.getPaymentDate().getTime();
+					if (indexInstant > queryInstant) {
+					} else if (indexInstant >= referenceInstant) {
+						price = (int)(price*(1+div.getBonus()+div.getSplit()))+(int)(div.getAmount()*1000);
+					} else {
+						break;
+					}
+				}
+				return price;
+			}
+		}
 	}
 }

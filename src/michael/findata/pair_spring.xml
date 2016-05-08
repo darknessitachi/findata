@@ -11,16 +11,27 @@
         http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
 
 	<context:property-placeholder location="/michael/findata/jdbc.properties"/>
-	<context:component-scan base-package="michael.findata.spring.data.repository"/>
+	<context:component-scan base-package="michael.findata.service"/>
 
-	<bean class="michael.findata.service.PairStrategyService" id="pairStrategyService">
-	</bean>
+	<bean class="michael.findata.service.PairStrategyService" id="pairStrategyService"/>
 
 	<bean class="michael.findata.service.SecurityTimeSeriesDataService" id="securityTimeSeriesDataService">
 		<property name="dataSource" ref="ds"/>
 	</bean>
 
 	<bean class="michael.findata.service.StockPriceService" id="stockPriceService">
+		<property name="dataSource" ref="ds"/>
+	</bean>
+
+	<bean class="michael.findata.service.StockService" id="stockService">
+		<property name="dataSource" ref="ds"/>
+	</bean>
+
+	<bean class="michael.findata.service.NeteaseInstantSnapshotService" id="neteaseInstantSnapshotService">
+		<property name="dataSource" ref="ds"/>
+	</bean>
+
+	<bean class="michael.findata.service.DividendService" id="dividendService">
 		<property name="dataSource" ref="ds"/>
 	</bean>
 

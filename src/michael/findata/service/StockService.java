@@ -1,8 +1,12 @@
 package michael.findata.service;
 
+import michael.findata.algoquant.execution.datatype.depth.Depth;
+import michael.findata.external.netease.NeteaseInstantSnapshot;
 import michael.findata.external.netease.NeteaseTradingDatum;
+import michael.findata.spring.data.repository.StockRepository;
 import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.transaction.annotation.Propagation;
@@ -20,6 +24,9 @@ import java.util.*;
 import static michael.findata.util.FinDataConstants.STOCK_LIST_FILE;
 
 public class StockService extends JdbcDaoSupport {
+
+	@Autowired
+	StockRepository stockRepo;
 
 	/**
 	 * Refresh stock code table from stock data software (Tong Da Xin or Tong Hua Shun)
@@ -248,5 +255,47 @@ public class StockService extends JdbcDaoSupport {
 					"UPDATE stock_price SET adjustment_factor = ? WHERE stock_id = ? AND date >= ? AND date < ?",
 					factor, stockId, start, end);
 		}
+	}
+
+	public void updateSpreadForStocks (double spreadTreshold, double amountThreshold) throws IOException {
+		Set<String> codes = getStockGroup("michael/findata/algoquant/strategy/pair/scope.csv");
+		NeteaseInstantSnapshot snapshot = new NeteaseInstantSnapshot(codes.toArray(new String [codes.size()]));
+		stockRepo.findByCodeIn(codes.toArray(new String [codes.size()])).forEach(stock -> {
+			Depth d = snapshot.getDepth(stock.getCode());
+			double bestAsk, bestBid, spread;
+			bestAsk = d.bestAsk(amountThreshold);
+			bestBid = d.bestBid(amountThreshold);
+			if (bestAsk < 0 || bestBid < 0) {
+				spread = 100;
+			} else {
+				spread = bestAsk / bestBid - 1;
+			}
+			stock.setSpread(spread);
+			stockRepo.save(stock);
+			if (spread < spreadTreshold) {
+				System.out.println(stock.getCode()+"\t"+stock.getName()+"\t"+spread);
+			}
+		});
+	}
+
+	public Set<String> getStockGroup(String ... resourceNames) throws IOException {
+		HashSet<String> codes = new HashSet<>();
+		for (String rName : resourceNames) {
+			codes.addAll(getStockGroup(rName));
+		}
+		return codes;
+	}
+
+	public Set<String> getStockGroup(String resourceName) throws IOException {
+		HashSet<String> codes = new HashSet<>();
+		BufferedReader br = new BufferedReader(new InputStreamReader(getClass().getClassLoader().getResourceAsStream(resourceName)));
+		String line;
+		while (null != (line = br.readLine())) {
+			if (line.length() < 6) {
+				continue;
+			}
+			codes.add(line.substring(0,6));
+		}
+		return codes;
 	}
 }

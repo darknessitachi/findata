@@ -46,7 +46,7 @@ public class PairStats {
 
 	@Basic
 	@Column(name = "adf_p")
-	private double adf_p;
+	private double adfp; // the p value in ADF test
 
 	@Transient
 	private String codeToShort = null;
@@ -80,6 +80,38 @@ public class PairStats {
 
 	public void setCodeToLong(String codeToLong) {
 		this.codeToLong = codeToLong;
+	}
+
+	@Transient
+	private String nameToShort = null;
+
+	@Access(AccessType.PROPERTY)
+	@Column(name = "name_to_short", columnDefinition = "char(14)")
+	public String getNameToShort() {
+		if (nameToShort == null) {
+			nameToShort = pair.getStockToShort().getName();
+		}
+		return nameToShort;
+	}
+
+	public void setNameToShort(String nameToShort) {
+		this.nameToShort = nameToShort;
+	}
+
+	@Transient
+	private String nameToLong = null;
+
+	@Access(AccessType.PROPERTY)
+	@Column(name = "name_to_long", columnDefinition = "char(14)")
+	public String getNameToLong() {
+		if (nameToLong == null) {
+			nameToLong = pair.getStockToLong().getName();
+		}
+		return nameToLong;
+	}
+
+	public void setNameToLong(String nameToLong) {
+		this.nameToLong = nameToLong;
 	}
 
 	public int getId() {
@@ -138,12 +170,12 @@ public class PairStats {
 		this.correlco = correlco;
 	}
 
-	public double getAdf_p() {
-		return adf_p;
+	public double getAdfp() {
+		return adfp;
 	}
 
-	public void setAdf_p(double adf_p) {
-		this.adf_p = adf_p;
+	public void setAdfp(double adf_p) {
+		this.adfp = adf_p;
 	}
 
 	public TimeSeriesType getTimeSeriesType() {

@@ -7,58 +7,87 @@ import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.Ma
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.execution.strategy.handler.MarketConditionHandler;
-import michael.findata.algoquant.strategy.pair.StockGroups;
-import michael.findata.model.AdjFunction;
+import michael.findata.model.PairInstance;
 import michael.findata.service.DividendService;
+import michael.findata.util.Consumer2;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
-import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.sql.Timestamp;
 import java.util.*;
-import java.util.function.Function;
 
-import static michael.findata.algoquant.strategy.Pair.PairStatus.CLOSED;
-import static michael.findata.algoquant.strategy.Pair.PairStatus.FORCED;
-import static michael.findata.algoquant.strategy.Pair.PairStatus.OPENED;
+import static michael.findata.model.PairInstance.PairStatus.CLOSED;
+import static michael.findata.model.PairInstance.PairStatus.OPENED;
 
 public class PairStrategy implements Strategy, MarketConditionHandler {
 
-	Map<Product, Depth> depthMap = new HashMap<>();
-	Pair [] pairs;
-	double amountPerSlot;
-	boolean allowSameDayClosure;
-	Map<String, Function<Integer, Integer>> adjFuns;
+	/**
+	 * 510500<->159902: 3dev->1.5dev
+	 *
+	 * A.
+	 * 300ETF 1%+ -> 0.2%- unlimited position quota
+	 * 510300,510310,510330,510360,160706,165309,512990,159919
+	 ,
+	 *
+	 * B.
+	 * avg (adf_p) <= 0.01 also unlimited position quota
+	 *
+	 * Strategy parameters
+	 */
+	private double amountPerSlot = 12500;
+	private boolean allowSameDayClosure;
+	double correlThreshold = 0.7d;
+	double cointThreshold = 0.12d;
+	double openThresholdCoefficient = 2.0d;
 
-	public PairStrategy (LocalDate executionDate, JdbcTemplate jdbcTemplate, Pair...pairs) {
-		this.pairs = pairs;
-		Set<String> codes = new TreeSet<>();
-		for (Pair pair : pairs) {
-			codes.add(pair.toShort.symbol().substring(0, 6));
-			codes.add(pair.toLong.symbol().substring(0, 6));
+	Consumer2<Pair, Integer> relaxer = (pair, age) -> {
+		// *** When Group Switches, switch the following
+		// etf relaxing algo
+		if (age <= 7) {
+			pair.thresholdClose = pair.stdev * 1.0d;
+		} else if (age <= 13) {
+			pair.thresholdClose = pair.stdev * 1.0d;
+		} else {
+			pair.thresholdClose = pair.stdev * 1.5d;
 		}
-		adjFuns = getAdjFunctions(pairs[0].trainingStart, executionDate, codes.toArray(new String[codes.size()]), jdbcTemplate);
+
+		// banking relaxing algo
+//			if (age < 8) {
+//				pair.thresholdClose = pair.stdev * 2.6;
+//			} else if (age < 14) {
+//				pair.thresholdClose = pair.stdev * 2.6;
+//			} else {
+//				pair.thresholdClose = pair.stdev * 2.8;
+//			}
+	};
+
+	int maxShortsPerTickPerStock = 200;
+	int maxNetPositionPerStock = 2000;
+	/**
+	 *  Strategy parameters end
+	 */
+
+	private Map<Product, Depth> depthMap = new HashMap<>();
+	private PairInstance [] pairs;
+	private List<PairInstance> executions = new ArrayList<>();
+	private DividendService.PriceAdjuster adjuster;
+	private LocalDate executionDate;
+
+	public PairStrategy (LocalDate executionDate, DividendService.PriceAdjuster adjuster, Collection<PairInstance> pairs) {
+		 this(executionDate, adjuster, pairs.toArray(new PairInstance[pairs.size()]));
 	}
 
-	public static Map<String, Function<Integer, Integer>> getAdjFunctions(LocalDate start, LocalDate end, String [] codes, JdbcTemplate jdbcTemplate) {
-		Map<String, Function<Integer, Integer>> adjFuns = new HashMap<>();
-		try {
-			DividendService.getAdjFunctions(start, end, codes, jdbcTemplate)
-					.entrySet().forEach(entry ->{
-				Stack<AdjFunction<Integer, Integer>> adjFunStack = entry.getValue();
-				Function<Integer, Integer> adjFunction = null;
-				while (!adjFunStack.isEmpty()) {
-					if (adjFunction == null) {
-						adjFunction = adjFunStack.pop();
-					} else {
-						adjFunction = adjFunction.andThen(adjFunStack.pop());
-					}
-				}
-				adjFuns.put(entry.getKey(), adjFunction);
-			});
-		} catch (Exception e) {
-			// no adj factor found
+	public PairStrategy (LocalDate executionDate, DividendService.PriceAdjuster adjuster, PairInstance...pairs) {
+		this.pairs = pairs;
+//		Set<String> codes = new TreeSet<>();
+		for (PairInstance pair : pairs) {
+//			codes.add(pair.toShort().symbol().substring(0, 6));
+//			codes.add(pair.toLong().symbol().substring(0, 6));
+			pair.setThresholdOpen(pair.stdev() * openThresholdCoefficient);
+			pair.setThresholdClose(pair.stdev() * 0.5);
 		}
-		return adjFuns;
+		this.adjuster = adjuster;
+		this.executionDate = executionDate;
 	}
 
 	/**
@@ -79,131 +108,99 @@ public class PairStrategy implements Strategy, MarketConditionHandler {
 		double actualPriceShort, adjustedPriceShort, actualPriceLong, adjustedPriceLong;
 		double residual;
 		int volumeShort, volumeLong;
-		Function<Integer, Integer> adjShort, adjLong;
-		for (Pair pair : pairs) {
-			if (dirtyPrd.contains(pair.toShort) || dirtyPrd.contains(pair.toLong)) {
-				depthShort = (michael.findata.algoquant.execution.datatype.depth.Depth) depthMap.get(pair.toShort);
-				if (!depthShort.isTraded()) {
+		for (PairInstance pair : pairs) {
+			if (dirtyPrd.contains(pair.toShort()) || dirtyPrd.contains(pair.toLong())) {
+				depthShort = (michael.findata.algoquant.execution.datatype.depth.Depth) depthMap.get(pair.toShort());
+				if (depthShort == null || !depthShort.isTraded()) {
 					continue;
 				}
-				depthLong = (michael.findata.algoquant.execution.datatype.depth.Depth) depthMap.get(pair.toLong);
-				if (!depthLong.isTraded()) {
+				depthLong = (michael.findata.algoquant.execution.datatype.depth.Depth) depthMap.get(pair.toLong());
+				if (depthLong == null || !depthLong.isTraded()) {
 					continue;
 				}
-				codeShort = pair.toShort.symbol().substring(0, 6);
-				codeLong = pair.toLong.symbol().substring(0, 6);
-				adjShort = adjFuns.get(codeShort);
-				adjLong = adjFuns.get(codeLong);
+				codeShort = pair.toShort().symbol().substring(0, 6);
+				codeLong = pair.toLong().symbol().substring(0, 6);
+//				adjShort = adjFuns.get(codeShort);
+//				adjLong = adjFuns.get(codeLong);
 				// todo: check if there is position left to open
-				if (true) {
-					// if spotPrice > bid(1), according to Chinese short sell regulation,
+				if (executionDate.toDate().getTime() == pair.getOpenableDate().getTime()) {
+//				if (true) {
+					// Note: if spotPrice > bid(1), according to Chinese short sell regulation,
 					// you cannot set the sell price = bid(1), thus there is no guarantee that your short leg order
-					// will be fulfilled. Therefore, in such case, we do not open any position
+					// will be fulfilled. Therefore, in such case, we do not open a position
 					if (depthShort.spotPrice() <= depthShort.bid(1)) {
 						actualPriceShort = depthShort.spotPrice();
-						adjustedPriceShort = adjShort.apply((int)(actualPriceShort*1000))/1000d;
+//						adjustedPriceShort = adjShort.apply((int)(actualPriceShort*1000))/1000d;
+						adjustedPriceShort = adjuster.adjust(codeShort, pair.trainingStart(), executionDate, (int)(actualPriceShort*1000))/1000d;
 						volumeShort = depthShort.totalBidAtOrAbove(actualPriceShort);
 
 						actualPriceLong = depthLong.bestAsk(amountPerSlot);
-						adjustedPriceLong = adjLong.apply((int)(actualPriceLong*1000))/1000d;
+//						adjustedPriceLong = adjLong.apply((int)(actualPriceLong*1000))/1000d;
+						adjustedPriceLong = adjuster.adjust(codeLong, pair.trainingStart(), executionDate, (int)(actualPriceLong*1000))/1000d;
 						volumeLong = depthLong.totalAskAtOrBelow(actualPriceLong);
 
-						residual = adjustedPriceShort * pair.slope - adjustedPriceLong;
+						residual = adjustedPriceShort * pair.slope() - adjustedPriceLong;
+						double possibleAmount = Math.min(actualPriceShort*volumeShort, actualPriceLong*volumeLong);
 						// todo: check pair status etc.
-						if (residual >= pair.thresholdOpen) {
-							System.out.println("Open"); // todo
+						if (residual >= pair.getThresholdOpen() && possibleAmount > amountPerSlot) {
+							// todo make it a method
+							pair.setStatus(OPENED);
+							pair.setDateOpened(new Timestamp(now.toDate().getTime()));
+							pair.setShortOpen(actualPriceShort);
+							pair.setLongOpen(actualPriceLong);
+							pair.setMaxAmountPossibleOpen(possibleAmount);
+							pair.setResidualOpen(residual);
+							pair.setMaxResidualDate(new Timestamp(now.toDate().getTime()));
+							pair.setMinResidualDate(new Timestamp(now.toDate().getTime()));
+							pair.setMaxResidual(residual);
+							pair.setMinResidual(residual);
+							executions.add(pair.copy());
 						}
 					}
 				}
 
 				// todo check: if there is position left to close
-				if (true) {
+				if (pair.getOpenableDate().getTime() < executionDate.toDate().getTime()) {
+//				if (true) {
 					long age = 0;
-					if (pair.status == OPENED || pair.status == CLOSED || pair.status == FORCED) {
+					if (pair.getStatus() == OPENED || pair.getStatus() == PairInstance.PairStatus.CLOSED || pair.getStatus() == PairInstance.PairStatus.FORCED) {
 						age = pair.age(now);
 					}
 
 					// buy back short
 					actualPriceShort = depthShort.bestAsk(amountPerSlot);
-					adjustedPriceShort = adjShort.apply((int)(actualPriceShort*1000))/1000d;
+//					adjustedPriceShort = adjShort.apply((int)(actualPriceShort*1000))/1000d;
+					adjustedPriceShort = adjuster.adjust(codeShort, pair.trainingStart(), executionDate, (int)(actualPriceShort*1000))/1000d;
 					volumeShort = depthShort.totalAskAtOrBelow(actualPriceShort);
 
 					// sell out toLong
 					actualPriceLong = depthLong.bestBid(amountPerSlot);
-					adjustedPriceLong = adjLong.apply((int)(actualPriceLong*1000))/1000d;
+//					adjustedPriceLong = adjLong.apply((int)(actualPriceLong*1000))/1000d;
+					adjustedPriceLong = adjuster.adjust(codeLong, pair.trainingStart(), executionDate, (int)(actualPriceLong*1000))/1000d;
 					volumeLong = depthLong.totalBidAtOrAbove(actualPriceLong);
 
-					residual = adjustedPriceShort * pair.slope - adjustedPriceLong;
-					// todo: check pair status etc.
-					if (residual < pair.thresholdClose && (allowSameDayClosure || age > 0 || StockGroups.TPlus0.contains(codeLong))) {
-						System.out.println("Close"); // todo
+					residual = adjustedPriceShort * pair.slope() - adjustedPriceLong;
+					// todo: check pair status etc. && (allowSameDayClosure || age > 0 || StockGroups.TPlus0.contains(codeLong))
+					double possibleAmount = Math.min(actualPriceShort*volumeShort, actualPriceLong*volumeLong);
+					if (residual < pair.getThresholdClose() && possibleAmount > amountPerSlot) {
+						// todo make it a method
+						pair.setStatus(CLOSED);
+						pair.setDateClosed(new Timestamp(now.toDate().getTime()));
+						pair.setShortClose(actualPriceShort);
+						pair.setLongClose(actualPriceLong);
+						pair.setMaxAmountPossibleClose(possibleAmount);
+						pair.setResidualClose(residual);
+						pair.setMaxResidualDate(new Timestamp(now.toDate().getTime()));
+						pair.setMinResidualDate(new Timestamp(now.toDate().getTime()));
+						pair.setMaxResidual(residual);
+						pair.setMinResidual(residual);
+						executions.add(pair.copy());
 					}
 				}
 			}
 		}
 	}
-
-//	public static class Pair {
-//		private Product toShort;
-//		private Product toLong;
-//		private double normalizationRatio; // price ratio falls into this threshold and we settle the position
-//		private double positionThreshold; // price ratio rises over this threshold and we set position
-//		private double settleRelaxation; // relax the settling a little bit (1 means we don't want to relax it)
-//		private boolean positionHeld; //True means "short & long " position already taken, next thing to do is to settle it when price converges.
-//		private long shortPositionHeld;
-//		private long longPositionHeld;
-//
-//		public Pair(Product toShort, Product toLong, double normalizationRatio, double positionThreshold, double settleRelaxation, boolean positionHeld) {
-//			this.toShort = toShort;
-//			this.toLong = toLong;
-//			this.normalizationRatio = normalizationRatio;
-//			this.positionThreshold = positionThreshold;
-//			this.settleRelaxation = settleRelaxation;
-//			this.positionHeld = positionHeld;
-//		}
-//
-//		public Product getToShort() {
-//			return toShort;
-//		}
-//
-//		public Product getToLong() {
-//			return toLong;
-//		}
-//
-//		public double getNormalizationRatio() {
-//			return normalizationRatio;
-//		}
-//
-//		public double getPositionThreshold() {
-//			return positionThreshold;
-//		}
-//
-//		public double getSettleRelaxation() {
-//			return settleRelaxation;
-//		}
-//
-//		public boolean isPositionHeld() {
-//			return positionHeld;
-//		}
-//
-//		public void setPositionHeld(boolean positionHeld) {
-//			this.positionHeld = positionHeld;
-//		}
-//
-//		public long getShortPositionHeld() {
-//			return shortPositionHeld;
-//		}
-//
-//		public void setShortPositionHeld(long shortPositionHeld) {
-//			this.shortPositionHeld = shortPositionHeld;
-//		}
-//
-//		public long getLongPositionHeld() {
-//			return longPositionHeld;
-//		}
-//
-//		public void setLongPositionHeld(long longPositionHeld) {
-//			this.longPositionHeld = longPositionHeld;
-//		}
-//	}
+	public Collection<PairInstance> getExecutions () {
+		return executions;
+	}
 }

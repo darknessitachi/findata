@@ -88,28 +88,6 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 			if (seriesEnded) {
 				break;
 			}
-//			while (quoteA.getMinute() > quoteB.getMinute()) {
-//				if (seriesA.hasNext()) {
-//					quoteA = seriesA.next();
-//				} else {
-//					seriesEnded = true;
-//					break;
-//				}
-//			}
-//			if (seriesEnded) {
-//				break;
-//			}
-//			while (quoteB.getMinute() > quoteA.getMinute()) {
-//				if (seriesB.hasNext()) {
-//					quoteB = seriesB.next();
-//				} else {
-//					seriesEnded = true;
-//					break;
-//				}
-//			}
-//			if (seriesEnded) {
-//				break;
-//			}
 
 			if (CalendarUtil.daysBetween(quoteA.getDateTime(), end) >= 0) {
 				if (CalendarUtil.daysBetween(start, quoteA.getDateTime()) < 0) {
@@ -128,11 +106,11 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 			quoteA = quotesA.pop();
 			quoteB = quotesB.pop();
 			while ((!adjFctA.isEmpty()) && CalendarUtil.daysBetween(adjFctA.peek().paymentDate, quoteA.getDateTime()) >= 0) {
-				currentAdjFunA = currentAdjFunA.andThen(adjFctA.pop());
+				currentAdjFunA = currentAdjFunA.compose(adjFctA.pop());
 				System.out.println(codeA + " adjusted starting " + quoteA.getDateTime());
 			}
 			while ((!adjFctB.isEmpty()) && CalendarUtil.daysBetween(adjFctB.peek().paymentDate, quoteB.getDateTime()) >= 0) {
-				currentAdjFunB = currentAdjFunB.andThen(adjFctB.pop());
+				currentAdjFunB = currentAdjFunB.compose(adjFctB.pop());
 				System.out.println(codeB + " adjusted starting " + quoteA.getDateTime());
 			}
 			//前复权
@@ -262,7 +240,7 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 				SecurityTimeSeriesDatum quoteA = quotes.get(code).pop();
 				//后复权
 				while ((!adjFctA.isEmpty()) && CalendarUtil.daysBetween(adjFctA.peek().paymentDate, quoteA.getDateTime()) >= 0) {
-					currentAdjFun.put(code, currentAdjFun.get(code).andThen(adjFctA.pop()));
+					currentAdjFun.put(code, currentAdjFun.get(code).compose(adjFctA.pop()));
 					System.out.println(code + " adjusted, starting " + quoteA.getDateTime());
 				}
 				minuteSnapshot.put(code, quoteA);

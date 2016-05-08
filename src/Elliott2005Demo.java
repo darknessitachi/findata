@@ -31,7 +31,6 @@ import com.numericalmethod.suanshu.misc.datastructure.time.JodaTimeUtils;
 
 import java.util.*;
 
-import michael.findata.algoquant.product.stock.szse.SZSEStock;
 import michael.findata.algoquant.strategy.Elliott2005;
 import org.joda.time.*;
 import org.slf4j.Logger;

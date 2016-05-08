@@ -8,7 +8,6 @@ import com.numericalmethod.algoquant.execution.datatype.order.LimitOrder;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import michael.findata.algoquant.execution.component.broker.HexinBroker;
-import michael.findata.algoquant.product.stock.szse.SZSEStock;
 import michael.findata.algoquant.strategy.Pair;
 import michael.findata.external.netease.NeteaseInstantSnapshotFactory;
 import org.slf4j.Logger;

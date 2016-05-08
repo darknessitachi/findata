@@ -1,12 +1,12 @@
 package michael.findata.service;
 
+import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
 import com.numericalmethod.suanshu.stats.test.timeseries.adf.AugmentedDickeyFuller;
+import michael.findata.algoquant.strategy.PairStrategy;
+import michael.findata.external.netease.NeteaseInstantSnapshot;
 import michael.findata.external.shse.SHSEShortableStockList;
 import michael.findata.external.szse.SZSEShortableStockList;
-import michael.findata.model.Cache;
-import michael.findata.model.Pair;
-import michael.findata.model.PairStats;
-import michael.findata.model.Stock;
+import michael.findata.model.*;
 import michael.findata.spring.data.repository.*;
 import michael.findata.util.Consumer5;
 import michael.findata.util.FinDataConstants;
@@ -14,11 +14,13 @@ import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.joda.time.DateTime;
+import org.joda.time.Days;
 import org.joda.time.LocalDate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.*;
@@ -44,7 +46,16 @@ public class PairStrategyService {
 	SecurityTimeSeriesDataService stsds;
 
 	@Autowired
+	NeteaseInstantSnapshotService niss;
+
+	@Autowired
 	StockPriceService sps;
+
+	@Autowired
+	DividendService ds;
+
+	@Autowired
+	StockService ss;
 
 	@Transactional(propagation = Propagation.REQUIRED)
 	public void updatePairs (String ... codes) throws IOException {
@@ -88,7 +99,11 @@ public class PairStrategyService {
 		Cache shortablesCache = cacheRepo.findOneByName(Cache.CACHE_NAME_SHORTABLES);
 		Set<String> result;
 		if (System.currentTimeMillis() - shortablesCache.getLastUpdated().getTime() > FinDataConstants.SHORTABLES_UPDATE_THRESHOLD_MILLIS) {
-			result = new SZSEShortableStockList().getShortables();
+			try {
+				result = new SZSEShortableStockList().getShortables();
+			} catch (Exception e) {
+				result = ss.getStockGroup("classification_shseshortables.csv");
+			}
 			result.addAll(new SHSEShortableStockList().getShortables());
 			shortablesCache.setLastUpdated(new Timestamp (System.currentTimeMillis()));
 			shortablesCache.setValue(String.join(",", result));
@@ -100,10 +115,14 @@ public class PairStrategyService {
 		return result;
 	}
 
+	// Step 1: calculate stats
 	@Transactional(propagation = Propagation.REQUIRED)
 	public void calculateStats (LocalDate trainingStart, LocalDate trainingEnd) {
 		long start = System.currentTimeMillis();
 		pairRepo.findByEnabled(true).forEach(pair -> {
+			if (pair.getId() <= 436) {
+				return;
+			}
 			double [] result = cointcorrel(
 					trainingStart.toDateTimeAtStartOfDay(),
 					trainingEnd.toDateTimeAtStartOfDay().plusHours(23),
@@ -118,10 +137,83 @@ public class PairStrategyService {
 			stats.setSlope(result[0]);
 			stats.setStdev(result[1]);
 			stats.setCorrelco(result[2]);
-			stats.setAdf_p(result[3]);
+			stats.setAdfp(result[3]);
 			pairStatsRepo.save(stats);
 		});
 		System.out.println("calculateStats total(s): "+(System.currentTimeMillis() - start)/1000d);
+	}
+
+	// Step 2: populate PairInstances after stats are calculated
+	@Transactional(propagation = Propagation.REQUIRED)
+	public void populatePairInstances (LocalDate openableDate) {
+		// todo: this is for open/close spotting. There will be another strategy to populate in real trading
+		// find all pairs
+		List<PairStats> stats = pairStatsRepo.findByTrainingEndAndCorrelcoGreaterThanAndAdfpLessThan(
+				openableDate.minusDays(1).toDate(), -2d, 0.9999d);
+		List<PairInstance> pairs = new ArrayList<>();
+		stats.forEach(stat -> {
+			PairInstance p = new PairInstance();
+			p.setStats(stat);
+			p.setOpenableDate(openableDate.toDate());
+			p.setForceClosureDate(openableDate.plusDays(20).toDate()); // todo parameter
+			p.setStatus(PairInstance.PairStatus.NEW);
+			pairs.add(p);
+		});
+		pairInstanceRepo.save(pairs);
+	}
+
+	public Collection<PairInstance> findSimpleOpenCloseOpportunities (LocalDate openStart, LocalDate openEnd, LocalDate startExe, LocalDate endExe, String[] codesToShort, String[] codesToLong) {
+//		DateTimeFormatter formatter = DateTimeFormat.forPattern(FinDataConstants.yyyyMMdd);
+//		LocalDate current = formatter.parseLocalDate("20160410");
+//		LocalDate end = formatter.parseLocalDate("20160410");
+		LocalDate current = startExe;
+		Collection<PairInstance> result = null;
+
+		while (Days.daysBetween(current, endExe).getDays() >= 0) {
+			if (result == null) {
+				result = findSimpleOpenCloseOpportunities(openStart, openEnd, current, codesToShort, codesToLong);
+			} else {
+				result.addAll(findSimpleOpenCloseOpportunities(openStart, openEnd, current, codesToShort, codesToLong));
+			}
+			current = current.plusDays(1);
+		}
+		return result;
+	}
+
+	public Collection<PairInstance> findSimpleOpenCloseOpportunities (LocalDate openStart, LocalDate openEnd, LocalDate dateExe, String[] codesToShort, String[] codesToLong) {
+		PairStrategy strategy = null;
+		try {
+			// find all pairs
+			List<PairInstance> pairs = pairInstanceRepo.findByOpenableDateBetweenAndStats_CorrelcoGreaterThanAndStats_AdfpLessThanAndCodeToShortInAndCodeToLongIn
+					(openStart.toDate(), openEnd.toDate(), 0.70d, 0.12d, codesToShort, codesToLong);
+			Set<String> codes = new TreeSet<>();
+			LocalDate earliest = dateExe;
+			for (PairInstance pair : pairs) {
+				codes.add(pair.getCodeToShort());
+				codes.add(pair.getCodeToLong());
+				if (pair.trainingStart().isBefore(earliest)) {
+					earliest = pair.trainingStart();
+				}
+			}
+
+			strategy = new PairStrategy(dateExe, ds.newPriceAdjuster(earliest, dateExe, codes.toArray(new String [codes.size()])), pairs);
+			List<MarketCondition> mcs = niss.getDailyData(dateExe);
+			if (mcs.size() > 0) {
+				if (mcs.get(0) instanceof NeteaseInstantSnapshot) {
+					for (MarketCondition mc : mcs) {
+						strategy.onMarketConditionUpdate(((NeteaseInstantSnapshot)mc).getTick(), mc, null, null);
+					}
+				} else {
+					DateTime tick = dateExe.toDateTimeAtStartOfDay().plusHours(1);
+					for (MarketCondition mc : mcs) {
+						strategy.onMarketConditionUpdate(tick, mc, null, null);
+					}
+				}
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		return strategy.getExecutions();
 	}
 
 	/**
@@ -183,12 +275,12 @@ public class PairStrategyService {
 		double slope = regression.getSlope();
 		System.out.print("\t"+slope);
 
-		// ADF test for regression residuals on previously collected end-of-day data
+		// ADF test for regression residuals on previously collected end-of-day / end-of-minute data
 		double [] residuals = new double[priceListA.length];
 		for (int i = 0; i <priceListA.length; i++) {
 			// Calculate residuals according to parameters obtains from linear regression
-			// ie. residual = quoteB - slope * quoteA
-			residuals[i] = priceListB[i] - priceListA[i] * slope;
+			// ie. residual = 1 - slope * quoteA / quoteB
+			residuals[i] = 1 - priceListA[i] * slope / priceListB[i];
 		}
 		double adf_p = new AugmentedDickeyFuller(residuals).pValue();
 		System.out.print("\t" + adf_p);
