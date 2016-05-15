@@ -19,29 +19,35 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Random;
 
 // This is a proxy that connects to localhost .net program via tcp/ip
 // The .net program then uses windows automation to drive broker accounts
 public class LocalBrokerProxy implements Broker {
 
-	int portNormalBuySell;
-	int portPairOpen;
-	int portPairClose;
-	int portMonitor;
+	private int portNormalBuySell = -1;
+	private int portPairOpen;
+	private int portPairClose;
+	private int portMonitor = - 1;
+	private Process closeUi;
+	private Process openUi;
 	private final DecimalFormat chinaStockPriceFormat = new DecimalFormat("#.###");
 	private final DecimalFormat chinaStockQuantityFormat = new DecimalFormat("#");
 	private final HashMap<Long, String> results = new HashMap<>();
 
-	public LocalBrokerProxy (int portNormalBuySell, int portPairOpen, int portPairClose, int portMonitor) {
-		this.portNormalBuySell = portNormalBuySell;
-		this.portPairOpen = portPairOpen;
-		this.portPairClose = portPairClose;
-		this.portMonitor = portMonitor;
+	public void stop () {
+		closeUi.destroy();
+		openUi.destroy();
+	}
+
+	public void test () {
+		boolean testPassed = true;
 		if (portNormalBuySell != -1) { // test
 			if (queryUiInfo(portNormalBuySell).contains("NormalBuySell")){
 				System.out.println("NormalBuySell port test passed!");
 			} else {
 				System.out.println("NormalBuySell port test failed!!!");
+				testPassed = false;
 			}
 		}
 
@@ -54,7 +60,6 @@ public class LocalBrokerProxy implements Broker {
 		HexinOrder closeShortBuyBack = new HexinOrder(s600000, 100, 1.55, HexinOrder.HexinType.PAIR_CLOSE_SHORT_BUY_BACK);
 		HexinOrder closeLongSellBack = new HexinOrder(s600031, 100, 666, HexinOrder.HexinType.PAIR_CLOSE_LONG_SELL_BACK);
 
-		boolean testPassed = true;
 		if (portPairClose != -1) { // test
 			if (queryUiInfo(portPairClose).contains("PairClose")){
 				System.out.println("PairClose port test passed!");
@@ -116,13 +121,20 @@ public class LocalBrokerProxy implements Broker {
 			}
 		}
 		if (!testPassed) {
-			System.out.println("LocalBrokerProxy or the .Net broker  ");
+			System.out.println("LocalBrokerProxy or the .Net broker is not setup properly. Terminating...");
+			stop();
 			System.exit(-1);
 		}
 	}
 
-	public LocalBrokerProxy (int portPairOpen, int portPairClose, int portMonitor) {
-		this(-1, portPairOpen, portPairClose, portMonitor);
+	public LocalBrokerProxy () throws IOException {
+		portPairClose = new Random (System.currentTimeMillis()).nextInt(9900)+10051;
+		portPairOpen = portPairClose + 1;
+		ProcessBuilder pbClose = new ProcessBuilder("E:/Projects/C#/Autobet/HexinBrokerTest/bin/Release/HexinBrokerTest", ""+portPairClose, "0", "PairClose", "huatai");
+		ProcessBuilder pbOpen = new ProcessBuilder("E:/Projects/C#/Autobet/HexinBrokerTest/bin/Release/HexinBrokerTest", ""+portPairOpen, "1", "PairOpen", "huatai");
+		closeUi = pbClose.start();
+		openUi = pbOpen.start();
+		test();
 	}
 
 	private static String queryUiInfo (int port) {
@@ -225,11 +237,10 @@ public class LocalBrokerProxy implements Broker {
 		// todo
 	}
 
-	public static void main (String [] args) throws InterruptedException {
+	public static void main (String [] args) throws InterruptedException, IOException {
 		long start = System.currentTimeMillis();
-		LocalBrokerProxy broker = new LocalBrokerProxy(-1, 19021, 19019, -1);
-//		Stock s600016 = new Stock("600016");
-//		Stock s000568 = new Stock("000568");
+		LocalBrokerProxy broker = new LocalBrokerProxy();
 		System.out.println(System.currentTimeMillis()-start);
+		broker.stop();
 	}
 }

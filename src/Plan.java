@@ -54,7 +54,6 @@ public class Plan {
  3. 以H为基准进行融券卖出
  4. 以H为基准进行融资买入
 
- 紧急: 证券账户窗口的排列是动态的，桌面上谁在最前面谁就在内存里拍第一，需要另一个方法识别窗口！！！！！
  紧急: 开始用TDXClient驱动PairStrategy
  第一步记录开平仓机会
  第二步自动下单： 测试同市场同时下单能否成功，测试不同市场下两单的时候，最小延迟要多久。
@@ -72,8 +71,8 @@ public class Plan {
  7. 尝试使用Kalman Filter
  8. Backup my tdx stock data mysql db data
  8. C#: When credit account is ready, need to customize HexinBroker for Zhongxin Credit account.
- 9. C#: HexinBroker SellAndBuy: todo: need to re-process result so it contains errors/successes in the correct order
  10. C# Need to monitor a) positions b) order executions
+
  测试 java.sql.Timestamp, java.sql.Date 和 java.util.Date 在存储后，提取后的值有无变化
  测试结果：由于各处（包括数据库）的缺省时区是东八区，所以各时间格式可以互换。
 
