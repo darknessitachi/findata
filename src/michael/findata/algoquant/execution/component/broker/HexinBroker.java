@@ -23,6 +23,10 @@ import static com.numericalmethod.algoquant.execution.datatype.order.BasicOrderD
 import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
 
 public class HexinBroker implements Broker{
+	@Override
+	public void cancelOrder(Collection<? extends Order> orders) {
+
+	}
 
 	private static final Logger LOGGER = getClassLogger();
 	private String winTitle;
@@ -144,7 +148,7 @@ public class HexinBroker implements Broker{
 		if (Side.UNKNOWN.equals(o.side())) {
 			LOGGER.info("This is neither a buy order nor a sell order, we treat it as a keep-alive empty action.");
 			issueKeepAlive();
-		} else if (o.type(o.price()) != Order.OrderExecutionType.LIMIT_ORDER) {
+		} else if (o.type() != Order.OrderExecutionType.LIMIT_ORDER) {
 			LOGGER.error("Market order handling is not yet implemented.");
 			LOGGER.error("Order: {} discarded.", o);
 		} else if (! (o.product() instanceof michael.findata.model.Stock) ) {
@@ -202,7 +206,7 @@ public class HexinBroker implements Broker{
 	private DecimalFormat chinaStockQuantityFormat = new DecimalFormat("#");
 
 	@Override
-	public void sendOrder(Collection<Order> orders) {
+	public void sendOrder(Collection<? extends Order> orders) {
 		orders.parallelStream().forEach(this::sendOrder);
 	}
 

@@ -5,12 +5,9 @@ import michael.findata.external.cninfo.CnInfoReportPublicationList;
 
 import java.io.IOException;
 
-/**
- * Created by Michael Tang on 2014/12/20.
- */
 public class CnInfoReportPublicationListTest {
 	public static void main (String [] args) throws IOException {
-		ReportPublicationList list = new CnInfoReportPublicationList("600775");
+		ReportPublicationList list = new CnInfoReportPublicationList("200530");
 		list.getReportPublications().forEach(System.out::println);
 	}
 }

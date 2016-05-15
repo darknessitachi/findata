@@ -1,5 +1,6 @@
 import michael.findata.model.PairInstance;
 import michael.findata.spring.data.repository.PairInstanceRepository;
+import org.joda.time.LocalDate;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
@@ -9,19 +10,23 @@ import java.util.Date;
 
 public class Plan {
 	public static void main (String args []) {
-		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
-		PairInstanceRepository pir = (PairInstanceRepository) context.getBean("pairInstanceRepository");
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd G 'at' hh:mm:ss z");
-		PairInstance pi = pir.findOne(1);
-		System.out.println(sdf.format(pi.getOpenableDate()));
-		Date testDate = new Date();
-		System.out.println(sdf.format(testDate));
-		pi.setOpenableDate(new Timestamp(testDate.getTime()));
-		System.out.println(sdf.format(pi.getOpenableDate()));
-		pir.save(pi);
-
-		pi = pir.findOne(1);
-		System.out.println(sdf.format(pi.getOpenableDate()));
+		LocalDate now = new LocalDate();
+		System.out.println(now.getYear());
+		System.out.println(now.getMonthOfYear());
+		System.out.println(now.getDayOfMonth());
+//		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
+//		PairInstanceRepository pir = (PairInstanceRepository) context.getBean("pairInstanceRepository");
+//		SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd G 'at' hh:mm:ss z");
+//		PairInstance pi = pir.findOne(1);
+//		System.out.println(sdf.format(pi.getOpenableDate()));
+//		Date testDate = new Date();
+//		System.out.println(sdf.format(testDate));
+//		pi.setOpenableDate(new Timestamp(testDate.getTime()));
+//		System.out.println(sdf.format(pi.getOpenableDate()));
+//		pir.save(pi);
+//
+//		pi = pir.findOne(1);
+//		System.out.println(sdf.format(pi.getOpenableDate()));
 	}
 }
 /**
@@ -49,92 +54,121 @@ public class Plan {
  3. 以H为基准进行融券卖出
  4. 以H为基准进行融资买入
 
-
+ 紧急: 证券账户窗口的排列是动态的，桌面上谁在最前面谁就在内存里拍第一，需要另一个方法识别窗口！！！！！
  紧急: 开始用TDXClient驱动PairStrategy
  第一步记录开平仓机会
- 第二步自动下单
+ 第二步自动下单： 测试同市场同时下单能否成功，测试不同市场下两单的时候，最小延迟要多久。
  第三步动态仓位管理
+ 交易时编程：
+ 检测交易所snapshots时间间隔。
+ 测试动态仓位控制
+ 1. Remove all adjFunction/adjFactor calls, replace with Adjuster calls
  一对100%整协的ETF应该允许100仓位, 所以对此类票对, 只要超过threshold, 应该有多少吃多少. 因此需要 a)注明此类票对; b)修改算法
+ 票对评级，并且将评级运用在开平仓的时候以便控制仓位
  动态分析ETF Spread，计算每天平均，精准筛选小spreadETF
+ 5. 尝试股票交易自动策略下单。
  0. 相关性条件降低后，要把相应的开仓条件升高（收紧），平仓条件升高（放松），也就是根据相关性系数，动态调整开平仓条件。
  0. 紧急：需要对ETF失败交易进行彻底分析，经简单分析：失败交易包含的股票应该比较集中。
- 5. 尝试股票交易自动策略下单。
  7. 尝试使用Kalman Filter
-
+ 8. Backup my tdx stock data mysql db data
+ 8. C#: When credit account is ready, need to customize HexinBroker for Zhongxin Credit account.
+ 9. C#: HexinBroker SellAndBuy: todo: need to re-process result so it contains errors/successes in the correct order
+ 10. C# Need to monitor a) positions b) order executions
  测试 java.sql.Timestamp, java.sql.Date 和 java.util.Date 在存储后，提取后的值有无变化
  测试结果：由于各处（包括数据库）的缺省时区是东八区，所以各时间格式可以互换。
 
- ETF对冲策略手工维护项目：
+ ETF对冲策略人工维护项目：
  1. 可融券标的券
  2. 行情服务器可用性
 
- 0.3 2
+ ETF对冲策略自动维护项目：
+ 1. 分红，分拆数据
 
-
- 策略1：可行,主要难点：1自持股比重分配以便达到最大利用率
- 自持H股ETF（510900）、恒生H股（160717）, 恒生ETF(159920)，对t+0 ETF 进行日内统计配对
-
- 策略4：
+ 策略1：
  利用融券ETF，对广泛ETF进行 隔日统计配对
 
- 大 冷Ｂ：2016年第一季度报告正文（英文版）    (119k)[2016-04-22]
- 大 冷Ｂ：2015年年度报告（英文版）    (3172k)[2016-03-30]
+ 策略2：可行,主要难点：1自持股比重分配以便达到最大利用率
+ 自持H股ETF（510900）、恒生H股（160717）, 恒生ETF(159920)，对t+0 ETF 进行日内统计配对
 
- select * from dividend where amount = 0 and split = 0 and bonus = 0;
+ 策略3：追涨停
+ T日带量涨停，并且最低价不是涨停价（即在低位有成交），则T+1日最高价超过T日涨停价2%以上的几率有多大？
+ 若T+1日最高价无法超过T日涨停价2%，则在T+1日尾平仓，平均亏损多少？
 
- mysql> select * from stock where is_fund = false and is_ignored = false and latest_year = 2015 and latest_season = 4;
- +-------+--------+----------+---------------+-------------+---------------+------------------+--------------+------------+---------------------+----------------+----------+-------------+---------+
- | id    | code   | name     | current_price | latest_year | latest_season | number_of_shares | is_financial | is_ignored | last_updated        | is_interesting | industry | subindustry | is_fund |
- +-------+--------+----------+---------------+-------------+---------------+------------------+--------------+------------+---------------------+----------------+----------+-------------+---------+
- |   949 | 002008 | 大族激光 |         21.75 |        2015 |             4 |       1055580800 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |   960 | 002019 | 亿帆鑫富 |         42.13 |        2015 |             4 |        440319200 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1046 | 002105 | 信隆实业 |          10.3 |        2015 |             4 |        335000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1054 | 002113 | 天润控股 |          27.7 |        2015 |             4 |        188620000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | 化工     |             | 0       |
- |  1119 | 002178 | 延华智能 |         10.05 |        2015 |             4 |        730103000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1241 | 002301 | 齐心集团 |         18.84 |        2015 |             4 |        379329300 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1261 | 002321 | 华英农业 |         10.04 |        2015 |             4 |        534291100 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1303 | 002362 | 汉王科技 |         23.88 |        2015 |             4 |        214102800 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1390 | 002449 | 国星光电 |         12.39 |        2015 |             4 |        475751700 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1440 | 002499 | 科林环保 |         20.86 |        2015 |             4 |        189000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1487 | 002547 | 春兴精工 |          9.43 |        2015 |             4 |       1011978200 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1488 | 002548 | 金新农   |         16.45 |        2015 |             4 |        383173700 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1499 | 002559 | 亚威股份 |         14.49 |        2015 |             4 |        352000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1525 | 000006 | 深振业Ａ |          7.93 |        2015 |             4 |       1349995000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1644 | 000530 | 大冷股份 |         14.98 |        2015 |             4 |        360165000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  1748 | 000673 | 当代东方 |         15.17 |        2015 |             4 |        786160000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  2027 | 300056 | 三维丝   |         14.91 |        2015 |             4 |        374197400 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  2062 | 300092 | 科新机电 |         11.88 |        2015 |             4 |        227500000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  2087 | 300117 | 嘉寓股份 |          7.96 |        2015 |             4 |        716760000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  2092 | 300122 | 智飞生物 |         26.88 |        2015 |             4 |        800000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  2177 | 300207 | 欣旺达   |         24.94 |        2015 |             4 |        645427000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  2179 | 300209 | 天泽信息 |         24.43 |        2015 |             4 |        244930300 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- |  2231 | 200530 | 大  冷Ｂ |          9.07 |        2015 |             4 |        360165000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- | 19869 | 002597 | 金禾实业 |         14.39 |        2015 |             4 |        564598400 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- | 26594 | 000757 | 浩物股份 |         10.56 |        2015 |             4 |        451621200 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- | 29157 | 002644 | 佛慈制药 |         11.39 |        2015 |             4 |        510657000 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- | 36375 | 002661 | 克明面业 |         18.45 |        2015 |             4 |        336575899 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- | 47463 | 300319 | 麦捷科技 |         24.08 |        2015 |             4 |        215386600 | 0            | 0          | 2016-04-30 00:00:00 | 0              |          |             | 0       |
- | 47493 | 300334 | 津膜科技 |         16.35 |        2015 |             4 |        276037700 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
- | 47520 | 300347 | 泰格医药 |         29.65 |        2015 |             4 |        470741000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
- | 47526 | 002700 | 新疆浩源 |         14.12 |        2015 |             4 |        422426900 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
- | 47549 | 002709 | 天赐材料 |        111.59 |        2015 |             4 |        130143799 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
- | 47591 | 300380 | 安硕信息 |         44.89 |        2015 |             4 |        137440000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
- | 47630 | 300392 | 腾信股份 |         28.36 |        2015 |             4 |        384000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
- | 47764 | 300449 | 汉邦高科 |        100.48 |        2015 |             4 |         70700000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
- | 47807 | 300466 | 赛摩电气 |         30.16 |        2015 |             4 |        240000000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
- | 47829 | 002769 | 普路通   |         75.32 |        2015 |             4 |        150659000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
- | 47864 | 300488 | 恒锋工具 |         72.32 |        2015 |             4 |         62510000 | 0            | 0          | 2016-04-30 00:00:00 | 0              | NULL     | NULL        | 0       |
- +-------+--------+----------+---------------+-------------+---------------+------------------+--------------+------------+---------------------+----------------+----------+-------------+---------+
- 38 rows in set
+ **/
 
- mysql> select count(*), latest_year, latest_season from stock where is_fund = false and is_ignored = false group by latest_year, latest_season;
- +----------+-------------+---------------+
- | count(*) | latest_year | latest_season |
- +----------+-------------+---------------+
- |       17 |        2013 |             0 |
- |       38 |        2015 |             4 |
- |     2872 |        2016 |             1 |
- +----------+-------------+---------------+
- 3 rows in set
+/**
+ * !! todo missing fin_data that can't be obtained from any source. please try harder!!
+ * 000939 凯迪电力 2005 1 balance_sheet_nf missing
+ * 000939 凯迪电力 2007 1 balance_sheet_nf missing
+ * 000939 凯迪电力 2005 1 cash_flow_nf missing
+ */
 
+/** todo missing report publication dates that can't be obtained from any source. please try harder!!
+ * Missing: 000620 新华联 2008 3
+
+ Missing: 000001 平安银行 1988 2
+ Missing: 000001 平安银行 1989 2
+ Missing: 000001 平安银行 1990 2
+ Missing: 000001 平安银行 1991 2
+ Missing: 000002 万  科Ａ 1990 2
+ Missing: 000002 万  科Ａ 1991 2
+ Missing: 000004 国农科技 1991 2
+ Missing: 000005 世纪星源 1991 2
+ Missing: 000005 世纪星源 1991 4
+ Missing: 000005 世纪星源 1992 2
+ Missing: 000005 世纪星源 1992 4
+ Missing: 000005 世纪星源 1993 2
+ Missing: 000006 深振业Ａ 1991 2
+ Missing: 000006 深振业Ａ 1991 4
+ Missing: 000007 零七股份 1991 2
+ Missing: 000007 零七股份 1991 4
+ Missing: 000008 宝利来 1991 2
+ Missing: 000008 宝利来 1991 4
+ Missing: 000036 华联控股 1998 2
+ Missing: 000419 通程控股 1996 2
+ Missing: 000421 南京中北 1996 2
+ Missing: 000422 湖北宜化 1996 2
+ Missing: 000425 徐工机械 1996 2
+ Missing: 000430 张家界 1996 2
+ Missing: 000629 攀钢钒钛 1998 2
+ Missing: 200002 万  科Ｂ 1990 2
+ Missing: 200002 万  科Ｂ 1991 2
+ Missing: 600601 方正科技 1991 2
+ Missing: 600601 方正科技 1992 2
+ Missing: 600602 仪电电子 1991 2
+ Missing: 600602 仪电电子 1992 2
+ Missing: 600630 龙头股份 1998 2
+ Missing: 600651 飞乐音响 1991 2
+ Missing: 600651 飞乐音响 1992 2
+ Missing: 600652 爱使股份 1991 2
+ Missing: 600652 爱使股份 1992 2
+ Missing: 600653 申华控股 1991 2
+ Missing: 600653 申华控股 1992 2
+ Missing: 600654 飞乐股份 1991 2
+ Missing: 600654 飞乐股份 1992 2
+ Missing: 600655 豫园商城 1991 2
+ Missing: 600655 豫园商城 1992 2
+ Missing: 600656 博元投资 1991 2
+ Missing: 600656 博元投资 1992 2
+ Missing: 600667 太极实业 1998 2
+ Missing: 600689 上海三毛 1998 2
+ Missing: 600720 祁连山 1996 2
+ Missing: 600724 宁波富达 1996 2
+ Missing: 600732 上海新梅 1996 2
+ Missing: 600736 苏州高新 1996 2
+ Missing: 600739 辽宁成大 1996 2
+ Missing: 600740 山西焦化 1996 2
+ Missing: 600746 江苏索普 1996 2
+ Missing: 600747 大连控股 1996 2
+ Missing: 600749 西藏旅游 1996 2
+ Missing: 600750 江中药业 1996 2
+ Missing: 600753 东方银星 1996 2
+ Missing: 600755 厦门国贸 1996 2
+ Missing: 600756 浪潮软件 1996 2
+ Missing: 600757 长江传媒 1996 2
+ Missing: 600758 红阳能源 1996 2
+ Missing: 601607 上海医药 1998 2
+ Missing: 900901 仪电Ｂ股 1991 2
+ Missing: 900901 仪电Ｂ股 1992 2
+ Missing: 900922 三毛Ｂ股 1998 2
  **/

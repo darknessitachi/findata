@@ -11,6 +11,7 @@ import michael.findata.external.szse.SZSEFinancialReportDailyList;
 import michael.findata.external.szse.SZSEFinancialReportListOfToday;
 import michael.findata.external.szse.SZSEReportPublication;
 import michael.findata.util.FinDataConstants;
+import org.joda.time.LocalDate;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
@@ -103,7 +104,7 @@ public class ReportPubDateService extends JdbcDaoSupport {
 
 	// This is used to quickly update publication dates after 2 or more seasons of report publication dates was missed.
     // However, this doesn't guarantee that the latest report publication dates will be updated to date.
-    // The reason is that this only fills the gaps as identified from the data within the report_pub_dates table.
+    // The reason is that this only fills the gaps/holes as identified from the data within the report_pub_dates table.
     // In other words, for example, if the most recent report publication dates are missing from a stock, since there
     // is no gap visible from report_pub_dates's data, nothing will be done to update these two publication dates.
 	public void scanForPublicationDateGaps (int earliestYear, boolean includeIgnored) {
@@ -201,6 +202,27 @@ public class ReportPubDateService extends JdbcDaoSupport {
 		getJdbcTemplate().update("DELETE FROM report_pub_dates WHERE fin_year < 1800");
 	}
 
+	// This is used to fill recent missing publication dates according to current date.
+	// It complements scanForPublicationDateGaps
+	public void fillMissingReportPublicationDatesAccordingToCurrentDate() {
+		LocalDate today = new LocalDate();
+		int index;
+		if (today.getMonthOfYear() < 4) {
+			index = (today.getYear() - 1)*10+4;
+		} else if (today.getMonthOfYear() < 7) {
+			index = today.getYear()*10+1;
+		} else if (today.getMonthOfYear() < 10) {
+			index = today.getYear()*10+2;
+		} else {
+			index = today.getYear()*10+3;
+		}
+		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
+				"select code from stock where is_fund = false and is_ignored = false and latest_year*10+latest_season < "+index);
+		while (rs.next()) {
+			fillMissingReportPublicationDatesWithCnInfo(rs.getString("code"));
+		}
+	}
+
 	private void fillMissingReportPublicationDates(String code, ReportPublicationList rpl) {
 		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		for (ReportPublication rp : rpl.getReportPublications()) {
@@ -238,72 +260,4 @@ public class ReportPubDateService extends JdbcDaoSupport {
 			e.printStackTrace();
 		}
 	}
-
-	/** todo missing report publication dates that can't be obtained from any source. please try harder!!
-	Missing: 000001 平安银行 1988 2
-	Missing: 000001 平安银行 1989 2
-	Missing: 000001 平安银行 1990 2
-	Missing: 000001 平安银行 1991 2
-	Missing: 000002 万  科Ａ 1990 2
-	Missing: 000002 万  科Ａ 1991 2
-	Missing: 000004 国农科技 1991 2
-	Missing: 000005 世纪星源 1991 2
-	Missing: 000005 世纪星源 1991 4
-	Missing: 000005 世纪星源 1992 2
-	Missing: 000005 世纪星源 1992 4
-	Missing: 000005 世纪星源 1993 2
-	Missing: 000006 深振业Ａ 1991 2
-	Missing: 000006 深振业Ａ 1991 4
-	Missing: 000007 零七股份 1991 2
-	Missing: 000007 零七股份 1991 4
-	Missing: 000008 宝利来 1991 2
-	Missing: 000008 宝利来 1991 4
-	Missing: 000036 华联控股 1998 2
-	Missing: 000419 通程控股 1996 2
-	Missing: 000421 南京中北 1996 2
-	Missing: 000422 湖北宜化 1996 2
-	Missing: 000425 徐工机械 1996 2
-	Missing: 000430 张家界 1996 2
-	Missing: 000629 攀钢钒钛 1998 2
-	Missing: 200002 万  科Ｂ 1990 2
-	Missing: 200002 万  科Ｂ 1991 2
-	Missing: 600601 方正科技 1991 2
-	Missing: 600601 方正科技 1992 2
-	Missing: 600602 仪电电子 1991 2
-	Missing: 600602 仪电电子 1992 2
-	Missing: 600630 龙头股份 1998 2
-	Missing: 600651 飞乐音响 1991 2
-	Missing: 600651 飞乐音响 1992 2
-	Missing: 600652 爱使股份 1991 2
-	Missing: 600652 爱使股份 1992 2
-	Missing: 600653 申华控股 1991 2
-	Missing: 600653 申华控股 1992 2
-	Missing: 600654 飞乐股份 1991 2
-	Missing: 600654 飞乐股份 1992 2
-	Missing: 600655 豫园商城 1991 2
-	Missing: 600655 豫园商城 1992 2
-	Missing: 600656 博元投资 1991 2
-	Missing: 600656 博元投资 1992 2
-	Missing: 600667 太极实业 1998 2
-	Missing: 600689 上海三毛 1998 2
-	Missing: 600720 祁连山 1996 2
-	Missing: 600724 宁波富达 1996 2
-	Missing: 600732 上海新梅 1996 2
-	Missing: 600736 苏州高新 1996 2
-	Missing: 600739 辽宁成大 1996 2
-	Missing: 600740 山西焦化 1996 2
-	Missing: 600746 江苏索普 1996 2
-	Missing: 600747 大连控股 1996 2
-	Missing: 600749 西藏旅游 1996 2
-	Missing: 600750 江中药业 1996 2
-	Missing: 600753 东方银星 1996 2
-	Missing: 600755 厦门国贸 1996 2
-	Missing: 600756 浪潮软件 1996 2
-	Missing: 600757 长江传媒 1996 2
-	Missing: 600758 红阳能源 1996 2
-	Missing: 601607 上海医药 1998 2
-	Missing: 900901 仪电Ｂ股 1991 2
-	Missing: 900901 仪电Ｂ股 1992 2
-	Missing: 900922 三毛Ｂ股 1998 2
-	**/
 }

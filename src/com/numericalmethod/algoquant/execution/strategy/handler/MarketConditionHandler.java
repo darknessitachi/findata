@@ -6,6 +6,7 @@ import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.Ma
 import org.joda.time.DateTime;
 
 public interface MarketConditionHandler extends StrategyHandler{
+
 	/**
 	 * Called upon execution of a strategy order.
 	 *

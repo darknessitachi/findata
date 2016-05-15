@@ -287,7 +287,7 @@ public class StockService extends JdbcDaoSupport {
 	}
 
 	public Set<String> getStockGroup(String resourceName) throws IOException {
-		HashSet<String> codes = new HashSet<>();
+		TreeSet<String> codes = new TreeSet<>();
 		BufferedReader br = new BufferedReader(new InputStreamReader(getClass().getClassLoader().getResourceAsStream(resourceName)));
 		String line;
 		while (null != (line = br.readLine())) {

@@ -64,7 +64,7 @@ public class PairStrategyService {
 		long start = allStart;
 		long end;
 		pairRepo.findAll().forEach(currentPairs::add);
-		List<Stock> stocks = stockRepo.findByCodeIn(codes);
+		Set<Stock> stocks = stockRepo.findByCodeIn(codes);
 		end = System.currentTimeMillis();
 		System.out.println("updatePairs step 1(s): "+(end - start)/1000d);
 		start = end;
@@ -102,7 +102,7 @@ public class PairStrategyService {
 			try {
 				result = new SZSEShortableStockList().getShortables();
 			} catch (Exception e) {
-				result = ss.getStockGroup("classification_shseshortables.csv");
+				result = ss.getStockGroup("classification_szseshortables.csv");
 			}
 			result.addAll(new SHSEShortableStockList().getShortables());
 			shortablesCache.setLastUpdated(new Timestamp (System.currentTimeMillis()));
@@ -120,9 +120,6 @@ public class PairStrategyService {
 	public void calculateStats (LocalDate trainingStart, LocalDate trainingEnd) {
 		long start = System.currentTimeMillis();
 		pairRepo.findByEnabled(true).forEach(pair -> {
-			if (pair.getId() <= 436) {
-				return;
-			}
 			double [] result = cointcorrel(
 					trainingStart.toDateTimeAtStartOfDay(),
 					trainingEnd.toDateTimeAtStartOfDay().plusHours(23),

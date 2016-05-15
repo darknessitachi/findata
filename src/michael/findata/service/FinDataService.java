@@ -358,10 +358,4 @@ public class FinDataService extends JdbcDaoSupport {
 		}
 		return !someSheetsAreEmpty;
 	}
-	/**
-	 * !! todo missing fin_data that can't be obtained from any source. please try harder!!
-	 * 000939 凯迪电力 2005 1 balance_sheet_nf missing
-	 * 000939 凯迪电力 2007 1 balance_sheet_nf missing
-	 * 000939 凯迪电力 2005 1 cash_flow_nf missing
-	 */
 }

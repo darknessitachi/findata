@@ -16,9 +16,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- * Created by Michael Tang on 2014/12/20.
- */
 public class CnInfoReportPublicationList implements ReportPublicationList{
 	// This is only useful if you have missed no more than 5 seasons of report publication dates.
 	public static Pattern p = Pattern.compile(".*([\\d,O]{4})\\s*Äê?(.*)±¨¸æ.*(\\d\\d\\d\\d-\\d\\d-\\d\\d)");

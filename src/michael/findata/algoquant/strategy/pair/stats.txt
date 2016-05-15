@@ -1,5 +1,4 @@
-mysql> select avg(adf_p),concat(code_to_short, '->', code_to_long) from pair_stats group by concat(code_to_short, '->', code_to_long) order by avg(adf_p)
-;
+mysql> select avg(adf_p),concat(code_to_short, '->', code_to_long) from pair_stats group by concat(code_to_short, '->', code_to_long) order by avg(adf_p);
 +------------------------+-------------------------------------------+
 | avg(adf_p)             | concat(code_to_short, '->', code_to_long) |
 +------------------------+-------------------------------------------+

@@ -26,8 +26,8 @@
 		<maven-war-plugin.version>2.5</maven-war-plugin.version>
 		<xercesImpl.version>2.11.0</xercesImpl.version>
 		<json-simple.version>1.1.1</json-simple.version>
-		<installed.algoquant.version>1.0.0</installed.algoquant.version>
-		<suanshu.version>3.3.0</suanshu.version>
+		<installed.algoquant.version>1.2.0</installed.algoquant.version>
+		<suanshu.version>3.4.0</suanshu.version>
 		<jacob.version>1.14.3</jacob.version>
 		<disruptor.version>3.3.2</disruptor.version>
 		<jaxen.version>1.1.6</jaxen.version>
@@ -103,7 +103,7 @@
 		<dependency>
 			<groupId>com.numericalmethod</groupId>
 			<artifactId>algoquant-demo</artifactId>
-			<version>${installed.algoquant.version}</version>
+			<version>1.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.numericalmethod</groupId>

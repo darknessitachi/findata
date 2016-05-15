@@ -57,12 +57,16 @@ public class Test {
 //		ss.refreshStockCodes();
 //		sps.refreshStockPriceHistories();
 //		ss.refreshLatestPriceAndName();
-		ds.refreshDividendData();
-//		sncs.refreshNumberOfShares();
+//		ds.refreshDividendData();
+		sncs.refreshNumberOfShares();
 //		ss.calculateAdjustmentFactor(10);
 
 		// The following are used mainly during and immediately after earnings report seasons
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
+//		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
+
+		// The following are used immediately after earning report seasons, especially when there are missing report pub dates from above
+//		spds.fillMissingReportPublicationDatesAccordingToCurrentDate();
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 
 		// The following is used to update findata forcefully when report dates of some stocks cannot be obtained from web
@@ -71,14 +75,15 @@ public class Test {
 //		spds.fillLatestPublicationDateAccordingToLatestFinData();
 
 
+		// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
+//		spds.scanForPublicationDateGaps(2000, false);
+
 //		spds.updateFindataWithDates(91);
 //		spds.updateFindataWithDates(FinDataConstants.DAYS_REPORT_PUB_DATES);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FILL_RECENT_ACCORDING_TO_REPORT_PUBLICATION_DATE, null, false, true);
 //		fds.refreshFinData(EnumStyleRefreshFinData.FiLL_ALL_RECENT, null, false, true);
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
 
-		// This is used to quickly update publication dates after 2 or more seasons of report publication was missed.
-//		spds.scanForPublicationDateGaps(2000, false);
 
 
 		// Statistics

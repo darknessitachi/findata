@@ -19,7 +19,7 @@ import com.numericalmethod.algoquant.execution.performance.measure.omega.OmegaBy
 import com.numericalmethod.algoquant.execution.performance.measure.omega.OmegaForPeriods;
 import com.numericalmethod.algoquant.execution.simulation.template.SimTemplateYahooEOD;
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
-import com.numericalmethod.algoquant.model.util.returns.ReturnCalculators;
+import com.numericalmethod.algoquant.model.util.returns.ReturnsCalculators;
 import com.numericalmethod.suanshu.misc.datastructure.time.JodaTimeUtils;
 import michael.findata.algoquant.strategy.GridStrategy;
 import org.joda.time.DateTime;
@@ -93,18 +93,18 @@ public class PairTest {
 		double initialCapital = dailyData.iterator().next().data().mid();
 		double benchmarkPeriodReturn = 0.0;
 		double ir = new InformationRatioForPeriods(initialCapital,
-				interval,
+//				interval,
 				Period.years(1),
-				ReturnCalculators.SIMPLE,
+				ReturnsCalculators.SIMPLE,
 				benchmarkPeriodReturn
 		).valueOf(executions, depthCaches, rates);
 
 		// compute the Omega
 		double lossThreshold = 0.0;
 		double omega0 = new OmegaForPeriods(initialCapital,
-				interval,
+//				interval,
 				Period.years(1),
-				ReturnCalculators.SIMPLE,
+				ReturnsCalculators.SIMPLE,
 				lossThreshold,
 				new OmegaBySummation()
 		).valueOf(executions, depthCaches, rates);
