@@ -270,11 +270,9 @@ public class StockService extends JdbcDaoSupport {
 			} else {
 				spread = bestAsk / bestBid - 1;
 			}
-			stock.setSpread(spread);
-			stockRepo.save(stock);
-			if (spread < spreadTreshold) {
-				System.out.println(stock.getCode()+"\t"+stock.getName()+"\t"+spread);
-			}
+//			stock.setSpread(spread);
+//			stockRepo.save(stock);
+			System.out.println(stock.getCode()+"\t"+stock.getName()+"\t"+stock.getSpread()+"\t->\t"+spread);
 		});
 	}
 

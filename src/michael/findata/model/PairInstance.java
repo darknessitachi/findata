@@ -595,4 +595,15 @@ public class PairInstance implements Comparable {
 			return null;
 		}
 	}
+
+	@Override
+	public String toString () {
+		return new StringBuilder().append(codeToShort).append(" ").append(nameToShort).append("->").append(codeToLong).append(" ")
+				.append(nameToLong).append("<").append(openableDate).append("==").append(forceClosureDate).append(">").toString();
+	}
+
+	@Override
+	public int hashCode () {
+		return stats.hashCode()+99;
+	}
 }

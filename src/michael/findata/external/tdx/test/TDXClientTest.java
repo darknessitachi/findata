@@ -63,11 +63,22 @@ public class TDXClientTest {
 				"182.131.7.146:7709",	// 华西E6
 				"182.131.7.147:7709",	// 华西E7
 				"182.131.7.148:7709",	// 华西E8
-				"182.131.3.245:7709"	// 上证云行情J330 - 9ms)
+				"182.131.3.245:7709",	// 上证云行情J330 - 9ms)
+				"221.237.158.106:7709",	// 西南证券金点子成都电信主站1
+				"221.237.158.107:7709",	// 西南证券金点子成都电信主站2
+				"221.237.158.108:7709",	// 西南证券金点子成都电信主站3
+				"183.230.9.136:7709",	// 西南证券金点子重庆移动主站1
+				"183.230.134.6:7709",	// 西南证券金点子重庆移动主站2
+				"219.153.1.115:7709",	// 西南证券金点子重庆电信主站1
+				"113.207.29.12:7709"	// 西南证券金点子重庆联通主站1
 		);
-		client1.connect();
-		client1.pollQuotes(20L, ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_sz.csv").toArray(new String[0]));
-		client1.disconnect();
+
+		client3.connect();
+//		client1.pollQuotes(20L, ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_sz.csv").toArray(new String[0]));
+//		client1.pollQuotes(3, "000568", "600026");
+//		client1.pollQuotes(3, "000568", "600026");
+//		client3.pollQuotes(1000, 20L, "000568", "600026");
+		client3.disconnect();
 //		TDXMetaClient mt = new TDXMetaClient(1000L, client1, client2, client3);
 //		mt.test(1);
 	}

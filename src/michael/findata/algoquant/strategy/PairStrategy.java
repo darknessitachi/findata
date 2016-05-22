@@ -200,6 +200,7 @@ public class PairStrategy implements Strategy, MarketConditionHandler {
 			}
 		}
 	}
+
 	public Collection<PairInstance> getExecutions () {
 		return executions;
 	}

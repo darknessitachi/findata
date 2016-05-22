@@ -111,6 +111,11 @@ public class Pair {
 		return getCodeToLong().hashCode()+getCodeToShort().hashCode();
 	}
 
+	@Override
+	public String toString () {
+		return stockToShort+"->"+stockToLong;
+	}
+
 	public int getId() {
 		return id;
 	}

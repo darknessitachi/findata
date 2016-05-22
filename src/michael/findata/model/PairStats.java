@@ -48,6 +48,10 @@ public class PairStats {
 	@Column(name = "adf_p")
 	private double adfp; // the p value in ADF test
 
+	@Basic
+	@Column(name = "adf_p_ma")
+	private double adfpma; // the adfp moving average
+
 	@Transient
 	private String codeToShort = null;
 
@@ -186,6 +190,14 @@ public class PairStats {
 		this.timeSeriesType = timeSeriesType;
 	}
 
+	public double getAdfpma() {
+		return adfpma;
+	}
+
+	public void setAdfpma(double adfpma) {
+		this.adfpma = adfpma;
+	}
+
 	public enum TimeSeriesType {
 
 		DAY ("DAY"), HOUR ("HOUR"), MINUTE ("MINUTE");
@@ -218,5 +230,11 @@ public class PairStats {
 	@Override
 	public int hashCode () {
 		return pair.hashCode() + trainingStart.hashCode() + trainingEnd.hashCode() + timeSeriesType.hashCode();
+	}
+
+	@Override
+	public String toString () {
+		return new StringBuilder().append(codeToShort).append(" ").append(nameToShort).append("->").append(codeToLong).append(" ")
+				.append(nameToLong).append("[").append(trainingStart).append("::").append(trainingEnd).append("]").toString();
 	}
 }

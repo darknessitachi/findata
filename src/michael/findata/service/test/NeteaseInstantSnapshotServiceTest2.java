@@ -34,7 +34,7 @@ public class NeteaseInstantSnapshotServiceTest2 {
 		LocalDate exeEnd = formatter.parseLocalDate("20160420");
 
 //		todo ... too many ... limit it
-		pss.findSimpleOpenCloseOpportunities(openStart, openEnd, exeStart, exeEnd, new String[] {"510310"}, new String[] {"510300"}).forEach(pairConsumer);
+		pss.findSimpleOpenCloseOpportunities(openStart, openEnd, exeStart, exeEnd, new String[] {"510310"}, new String[] {"510300"}).forEach(showResults);
 	}
 
 	private static class Counts {
@@ -48,7 +48,7 @@ public class NeteaseInstantSnapshotServiceTest2 {
 		SAME_DAY_CLOSE
 	}
 	public static SortedMap<String, Counts> counts = new TreeMap<>();
-	public static Consumer<PairInstance> pairConsumer = pair1 -> {
+	public static Consumer<PairInstance> showResults = pair1 -> {
 		int age;
 		SimpleDateFormat sdfDisplay = new SimpleDateFormat(yyyyMMDDHHmmss);
 		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);

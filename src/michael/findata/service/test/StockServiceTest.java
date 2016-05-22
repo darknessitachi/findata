@@ -8,8 +8,5 @@ import java.io.IOException;
 
 public class StockServiceTest {
 	public static void main (String [] args) throws IOException {
-		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
-		StockService ss = (StockService) context.getBean("stockService");
-		ss.updateSpreadForStocks(0.003d, 5000);
 	}
 }

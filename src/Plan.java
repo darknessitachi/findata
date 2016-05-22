@@ -1,76 +1,32 @@
-import michael.findata.model.PairInstance;
-import michael.findata.spring.data.repository.PairInstanceRepository;
-import org.joda.time.LocalDate;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import michael.findata.algoquant.strategy.pair.HoppingStrategy;
 
 public class Plan {
 	public static void main (String args []) {
-		LocalDate now = new LocalDate();
-		System.out.println(now.getYear());
-		System.out.println(now.getMonthOfYear());
-		System.out.println(now.getDayOfMonth());
-//		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
-//		PairInstanceRepository pir = (PairInstanceRepository) context.getBean("pairInstanceRepository");
-//		SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd G 'at' hh:mm:ss z");
-//		PairInstance pi = pir.findOne(1);
-//		System.out.println(sdf.format(pi.getOpenableDate()));
-//		Date testDate = new Date();
-//		System.out.println(sdf.format(testDate));
-//		pi.setOpenableDate(new Timestamp(testDate.getTime()));
-//		System.out.println(sdf.format(pi.getOpenableDate()));
-//		pir.save(pi);
-//
-//		pi = pir.findOne(1);
-//		System.out.println(sdf.format(pi.getOpenableDate()));
+//		System.out.println(System.currentTimeMillis());
+//		int [] result = HoppingStrategy.calVolumes (3.149, 11700, 3.194, 1900, HoppingStrategy.BalanceOption.CLOSEST_MATCH, 0.005, 0.01, 0.02, 0.05);
+//		System.out.println(System.currentTimeMillis());
+//		System.out.println("3.149 * "+result[0]+" = "+(3.149*result[0]));
+//		System.out.println("3.194 * "+result[1]+" = "+(3.194*result[1]));
 	}
 }
 /**
- 5相关性条件降低后，要把相应的平仓条件放松
- 注：把相关性过滤条件提高到0.95，测试etf套利，奇迹会发生。
+ 用TDXClient驱动PairStrategy
+ Completed: 第一步记录开平仓机会
 
- 交易算法：
- 1. 确认价格进入交易区间
+ Completed: 第二步自动下单：测试同市场同时下单能否成功，测试不同市场下两单的时候，最小延迟要多久。
+ 普通账户一个单子0.6-0.8s，
+ 信用账户一个单子1.1s
 
- 2. 如下 A - G 中选出最小值 H
-
- 一、融券卖出：
- 1. 确认可融券数量 A
- 2. 确认可买方数量 B
- 3. 确认融券上限足够 C
-
- 二、买入：
- 1. 确认资金 D
- 2. 确认卖方数量 E
-
- 三、资产杠杆上限 F
-
- 四、单只票对买入上限 G
-
- 3. 以H为基准进行融券卖出
- 4. 以H为基准进行融资买入
-
- 紧急: 开始用TDXClient驱动PairStrategy
- 第一步记录开平仓机会
- 第二步自动下单： 测试同市场同时下单能否成功，测试不同市场下两单的时候，最小延迟要多久。
- 第三步动态仓位管理
+ 紧急:  第三步动态仓位管理
  交易时编程：
  检测交易所snapshots时间间隔。
  测试动态仓位控制
+ 0. 优化Pair stats计算，达到每天每个文件只读取一次。
  1. Remove all adjFunction/adjFactor calls, replace with Adjuster calls
- 一对100%整协的ETF应该允许100仓位, 所以对此类票对, 只要超过threshold, 应该有多少吃多少. 因此需要 a)注明此类票对; b)修改算法
- 票对评级，并且将评级运用在开平仓的时候以便控制仓位
- 动态分析ETF Spread，计算每天平均，精准筛选小spreadETF
- 5. 尝试股票交易自动策略下单。
  0. 相关性条件降低后，要把相应的开仓条件升高（收紧），平仓条件升高（放松），也就是根据相关性系数，动态调整开平仓条件。
  0. 紧急：需要对ETF失败交易进行彻底分析，经简单分析：失败交易包含的股票应该比较集中。
  7. 尝试使用Kalman Filter
  8. Backup my tdx stock data mysql db data
- 8. C#: When credit account is ready, need to customize HexinBroker for Zhongxin Credit account.
  10. C# Need to monitor a) positions b) order executions
 
  测试 java.sql.Timestamp, java.sql.Date 和 java.util.Date 在存储后，提取后的值有无变化
@@ -86,12 +42,11 @@ public class Plan {
  策略1：
  利用融券ETF，对广泛ETF进行 隔日统计配对
 
- 策略2：可行,主要难点：1自持股比重分配以便达到最大利用率
+ 策略2：
  自持H股ETF（510900）、恒生H股（160717）, 恒生ETF(159920)，对t+0 ETF 进行日内统计配对
+ 可行,主要难点：1自持股比重分配以便达到最大利用率
 
- 策略3：追涨停
- T日带量涨停，并且最低价不是涨停价（即在低位有成交），则T+1日最高价超过T日涨停价2%以上的几率有多大？
- 若T+1日最高价无法超过T日涨停价2%，则在T+1日尾平仓，平均亏损多少？
+ select count(*), training_end from pair_stats group by training_end order by training_end
 
  **/
 

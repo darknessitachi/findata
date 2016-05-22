@@ -122,4 +122,20 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 		}
 		return volumeAccumulated;
 	}
+
+	public String toString () {
+		StringBuilder sb = new StringBuilder();
+		sb.append(product()).append("\n");
+		sb.append("ask5 ").append(ask(5)).append('\t').append(askVol(5)).append('\n');
+		sb.append("ask4 ").append(ask(4)).append('\t').append(askVol(4)).append('\n');
+		sb.append("ask3 ").append(ask(3)).append('\t').append(askVol(3)).append('\n');
+		sb.append("ask2 ").append(ask(2)).append('\t').append(askVol(2)).append('\n');
+		sb.append("ask1 ").append(ask(1)).append('\t').append(askVol(1)).append('\n');
+		sb.append("bid1 ").append(bid(1)).append('\t').append(bidVol(1)).append('\n');
+		sb.append("bid2 ").append(bid(2)).append('\t').append(bidVol(2)).append('\n');
+		sb.append("bid3 ").append(bid(3)).append('\t').append(bidVol(3)).append('\n');
+		sb.append("bid4 ").append(bid(4)).append('\t').append(bidVol(4)).append('\n');
+		sb.append("bid5 ").append(bid(5)).append('\t').append(bidVol(5)).append('\n');
+		return sb.toString();
+	}
 }

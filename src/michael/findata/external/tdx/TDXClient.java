@@ -1,9 +1,12 @@
 package michael.findata.external.tdx;
 
+import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import com.sun.jna.Native;
 import com.sun.jna.ptr.ShortByReference;
 import michael.findata.algoquant.execution.datatype.depth.Depth;
+import michael.findata.model.Stock;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 public class TDXClient {
@@ -15,6 +18,25 @@ public class TDXClient {
 	byte[] result = new byte[65535];
 	byte[] errInfo = new byte[256];
 	boolean connected;
+
+	String testdata [] = new String [] {
+	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
+	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
+	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999983\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1758\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n",
+
+	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
+	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
+	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999983\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1758\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n",
+
+	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
+	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
+	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999983\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1759\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n",
+
+	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
+	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
+	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999984\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1758\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n"
+	};
+
 	//	boolean updated = false;
 	// serverConfig is in the format of "ip:port", eg. "182.131.3.245:7709"
 	public TDXClient(String ... serverConfig) {
@@ -74,209 +96,138 @@ public class TDXClient {
 	}
 
 	String [] bulkTemp = null;
-	String raw;
+	String raw = null;
 
 	// Repetitively poll quotes up to a preset number of times, until count is up or until any update is detected.
 	// this is a much resource-intensive way of polling quotes, given SH and SZ exchanges are only publishing snapshots
 	// every 5/3 seconds respectively. In other words, there is no point polling from SH for another 4.5/2.5 seconds if
 	// SH/SZ has just published a snapshot.
-	public Map<String, Depth> pollQuotes (int pollTimes, String ... codes) {
-		int count = 0;
-		long start;
+	public Map<Product, com.numericalmethod.algoquant.execution.datatype.depth.Depth> pollQuotes (int pollTimes, long gapMillis, Map<String, Stock> stockMap, String... codes) {
+//		System.out.println("Polling ... @\t"+System.currentTimeMillis());
+		int count = -1;
+//		long start;
 		boolean success;
-		HashMap<String, Depth> depthMap = new HashMap<>();
-//		HashSet<String> modifiedStocks = new HashSet<>();
+		HashMap<Product, com.numericalmethod.algoquant.execution.datatype.depth.Depth> depthMap = new HashMap<>();
 
 		byte[] market = calcMarkets(codes);
 
 		ShortByReference resultCount = new ShortByReference();
 		resultCount.setValue((short) codes.length);
 
-//		if (bulkTemp == null || bulkTemp.length != codes.length + 1) {
-//			bulkTemp = new String[codes.length+1];
-//			for (int i = bulkTemp.length - 1; i > -1; i--) {
-//				bulkTemp[i] = "";
-//			}
-//			raw = "";
-//		}
-
-		String rawTemp = raw;
 		String [] bulkLastTemp = bulkTemp;
+		String rawTemp = raw;
 //		String [] stockTemp;
 
 		int index;
 		boolean updated = false; // marks whether data has been updated from server
-		start = System.currentTimeMillis();
-		while (!updated && count < pollTimes) {
+//		long start = System.currentTimeMillis();
+		while ((rawTemp == null || !updated) && count < pollTimes) {
+			if (gapMillis > 0) {
+				try {
+//					System.out.println("Heartbeat completed, sleeping ...");
+					Thread.sleep(gapMillis);
+				} catch (InterruptedException e) {
+					System.out.println("Interrupt.");
+				}
+			}
+			count ++;
 			index = count%hqLib.length;
 
 			if (fault[index]) continue;
 
+//			System.out.println(name[index]+" Starting @ "+(System.currentTimeMillis()));
 			success = hqLib[index].TdxHq_GetSecurityQuotes(market, codes, resultCount, result, errInfo);
 //			System.out.println("Time taken(ms) for this round: "+(System.currentTimeMillis() - start));
-			count ++;
 			if (!success) {
 				System.out.println(ip[index]+":"+port[index]+" is not working.");
 				System.out.println(Native.toString(errInfo, "GBK"));
 				fault[index] = true;
 			} else {
+//				System.out.println(count+"---------------");
+				rawTemp = raw;
 				raw = Native.toString(result, "GBK");
+//				raw = testdata[count]; // todo test only
 				if (raw.equals(rawTemp)) {
 //					System.out.println("not updated!");
 					continue;
 				}
-				bulkTemp = raw.split("[\n\t]");
-				for (int i = bulkTemp.length - 1; i > 0; i--) {
-					// todo: can we use timestamp as a flag for update?
-					if (bulkLastTemp != null && bulkLastTemp[i+8].equals(bulkTemp[i+8])) { // if the timestamps has changed, this line of data must have been updated.
-						updated = true;
-					} else { // if timestamp is not changed, does this mean there shouldn't be any change, since there is no update at all?
-
-					}
-					// change check 1
-					if (bulkLastTemp != null && bulkLastTemp[i+3].equals(bulkTemp[i+3])) { // if current price for this tick is the same as it was last tick.
-						boolean changed = false;
-						for (int j = 17; j <= 36; j++) {
-							if (!bulkLastTemp[i+3].equals(bulkTemp[i+3])) { // if any part of depth for this tick is not the same as it was last tick.
-								changed = true;
-								break;
-							}
-						}
-						if (!changed) {
-							continue;
-						}
-					}
-					Depth stockDepth = new Depth(
-							Double.parseDouble(bulkTemp[i+3]), null, true,
-							Double.parseDouble(bulkTemp[i+33]),
-							Double.parseDouble(bulkTemp[i+29]),
-							Double.parseDouble(bulkTemp[i+25]),
-							Double.parseDouble(bulkTemp[i+21]),
-							Double.parseDouble(bulkTemp[i+17]),
-							Double.parseDouble(bulkTemp[i+18]),
-							Double.parseDouble(bulkTemp[i+22]),
-							Double.parseDouble(bulkTemp[i+26]),
-							Double.parseDouble(bulkTemp[i+30]),
-							Double.parseDouble(bulkTemp[i+34])
-					);
-					stockDepth.setVols(
-							Integer.parseInt(bulkTemp[i+35]),
-							Integer.parseInt(bulkTemp[i+31]),
-							Integer.parseInt(bulkTemp[i+27]),
-							Integer.parseInt(bulkTemp[i+23]),
-							Integer.parseInt(bulkTemp[i+19]),
-							Integer.parseInt(bulkTemp[i+20]),
-							Integer.parseInt(bulkTemp[i+24]),
-							Integer.parseInt(bulkTemp[i+28]),
-							Integer.parseInt(bulkTemp[i+32]),
-							Integer.parseInt(bulkTemp[i+36])
-					);
-					depthMap.put(bulkTemp[i+1], stockDepth);
-					if (updated) {
-						System.out.println(raw+"\n"+name[index]+" updated@"+(new Date()));
-					}
-				}
-			}
-		}
-		System.out.println(codes[0]+": Time taken(ms) for this round: "+(System.currentTimeMillis() - start));
-		return depthMap;
-	}
-
-	public void pollQuotes (long gapMillis, String ... codes) {
-		int count = 0;
-		long start;
-		boolean success;
-		HashMap<String, Depth> depthMap = new HashMap<>();
-		HashSet<String> modifiedStocks = new HashSet<>();
-
-		byte[] market = calcMarkets(codes);
-
-		ShortByReference resultCount = new ShortByReference();
-		resultCount.setValue((short) codes.length);
-
-		String [] bulkTemp = null;
-		String [] bulkLastTemp;
-//		String [] stockTemp;
-
-//		for (int i = bulkTemp.length - 1; i > -1; i--) {
-//			bulkTemp[i] = "";
-//		}
-
-		while (count < 700) {
-			start = System.currentTimeMillis();
-			success = hqLib[count%hqLib.length].TdxHq_GetSecurityQuotes(market, codes, resultCount, result, errInfo);
-//			System.out.println("Time taken(ms) for "+(count%hqLib.length)+": "+(System.currentTimeMillis() - start));
-			count ++;
-//			start = System.currentTimeMillis();
-			if (!success) {
-				System.out.println(ip[count%hqLib.length]+":"+port[count%hqLib.length]+" is not working.");
-				System.out.println(Native.toString(errInfo, "GBK"));
-			} else {
-				modifiedStocks.clear();
-				String a = Native.toString(result, "GBK");
 				bulkLastTemp = bulkTemp;
-				bulkTemp = a.split("[\n\t]");
+				bulkTemp = raw.split("[\n\t]");
 				int end = bulkTemp.length - 43;
 				for (int i = 44; i < end; i += 44) {
-					// Change check 1
-					boolean changed = false;
-					boolean timeUpdated = (bulkLastTemp == null || !bulkLastTemp[i+8].equals(bulkTemp[i+8]));
-					if (bulkLastTemp != null && bulkLastTemp[i+3].equals(bulkTemp[i+3])) { // if current price for this tick is the same as it was last tick.
-						for (int j = 17; j <= 36; j++) {
-							if (!bulkLastTemp[i+3].equals(bulkTemp[i+3])) { // if any part of depth for this tick is not the same as it was last tick.
-								changed = true;
-								break;
+					// todo: can we use timestamp as a flag for update?
+					if (bulkLastTemp != null) {
+						// update check with timestamp
+						if (bulkLastTemp[i+8].equals(bulkTemp[i+8])) {// if timestamp is not changed, does this mean there shouldn't be any change, since there is no update at all?
+//							System.out.println("Timestamp no change for: "+bulkTemp[i+1]);
+						} else { // if the timestamps has changed, this line of data must have been updated.
+//							System.out.println("Timestamp change for: "+bulkTemp[i+1]+"\t"+bulkLastTemp[i+8]+"->"+bulkTemp[i+8]);
+							updated = true;
+						}
+						// change check 1
+						if (bulkLastTemp[i+3].equals(bulkTemp[i+3])) { // if current price for this tick is the same as it was last tick.
+							boolean changed = false;
+							for (int j = 17; j <= 36; j++) {
+								if (!bulkLastTemp[i+j].equals(bulkTemp[i+j])) {
+									// if any part of depth for this tick is not the same as it was last tick,
+									// this means the depth of this stock has indeed changed, thus needs to be sent out
+									// to strategies
+//									System.out.println("Depth change for: "+bulkTemp[i+1]+" @\t"+System.currentTimeMillis());
+									updated = true;
+									changed = true;
+									break;
+								}
 							}
+							if (!changed) {
+								// if there is no change continue with the next stock in the same batch
+//								System.out.println("Depth no change for: "+bulkTemp[i+1]);
+								continue;
+							}
+						} else {
+//							System.out.println("Depth change for: "+bulkTemp[i+1]+" @\t"+System.currentTimeMillis());
+							updated = true;
 						}
 					} else {
-						changed = true;
+						// first time
+//						System.out.println("First time for "+bulkTemp[i+1]+" @\t"+System.currentTimeMillis());
+						updated = true;
 					}
-					System.out.println(bulkTemp[i+1]+"\t"+bulkTemp[i+8]+"\tchanged\t"+changed+"\ttimeupdated\t"+timeUpdated);
-					if (!changed) {
-						continue;
-					}
-//					stockTemp = bulkTemp[i].split("\t");
 					Depth stockDepth = new Depth(
-							Double.parseDouble(bulkTemp[i+3]), null, true,
-							Double.parseDouble(bulkTemp[i+33]),
-							Double.parseDouble(bulkTemp[i+29]),
-							Double.parseDouble(bulkTemp[i+25]),
-							Double.parseDouble(bulkTemp[i+21]),
-							Double.parseDouble(bulkTemp[i+17]),
-							Double.parseDouble(bulkTemp[i+18]),
-							Double.parseDouble(bulkTemp[i+22]),
-							Double.parseDouble(bulkTemp[i+26]),
-							Double.parseDouble(bulkTemp[i+30]),
-							Double.parseDouble(bulkTemp[i+34])
+							new BigDecimal(bulkTemp[i+3]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(), stockMap.get(bulkTemp[i+1]), true,
+							new BigDecimal(bulkTemp[i+33]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(),
+							new BigDecimal(bulkTemp[i+29]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(),
+							new BigDecimal(bulkTemp[i+25]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(),
+							new BigDecimal(bulkTemp[i+21]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(),
+							new BigDecimal(bulkTemp[i+17]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(),
+							new BigDecimal(bulkTemp[i+18]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(),
+							new BigDecimal(bulkTemp[i+22]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(),
+							new BigDecimal(bulkTemp[i+26]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(),
+							new BigDecimal(bulkTemp[i+30]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(),
+							new BigDecimal(bulkTemp[i+34]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue()
 					);
 					stockDepth.setVols(
-							Integer.parseInt(bulkTemp[i+35]),
-							Integer.parseInt(bulkTemp[i+31]),
-							Integer.parseInt(bulkTemp[i+27]),
-							Integer.parseInt(bulkTemp[i+23]),
-							Integer.parseInt(bulkTemp[i+19]),
-							Integer.parseInt(bulkTemp[i+20]),
-							Integer.parseInt(bulkTemp[i+24]),
-							Integer.parseInt(bulkTemp[i+28]),
-							Integer.parseInt(bulkTemp[i+32]),
-							Integer.parseInt(bulkTemp[i+36])
+							Integer.parseInt(bulkTemp[i+35])*100,
+							Integer.parseInt(bulkTemp[i+31])*100,
+							Integer.parseInt(bulkTemp[i+27])*100,
+							Integer.parseInt(bulkTemp[i+23])*100,
+							Integer.parseInt(bulkTemp[i+19])*100,
+							Integer.parseInt(bulkTemp[i+20])*100,
+							Integer.parseInt(bulkTemp[i+24])*100,
+							Integer.parseInt(bulkTemp[i+28])*100,
+							Integer.parseInt(bulkTemp[i+32])*100,
+							Integer.parseInt(bulkTemp[i+36])*100
 					);
-					depthMap.put(bulkTemp[i+1], stockDepth);
-					modifiedStocks.add(bulkTemp[i+1]);
+//					System.out.println(name[index]+"/"+bulkTemp[i+1]+" updated@"+(new Date()));
+					depthMap.put(stockDepth.product(), stockDepth);
 				}
-				if (!depthMap.isEmpty()) {
-					System.out.println(System.currentTimeMillis());
-				}
-				// do stuff
-				System.out.println("Time taken(ms) for this round: "+(System.currentTimeMillis() - start));
-//				System.out.println(a);
-				try {
-					Thread.sleep(gapMillis);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+//System.out.println("A @\t"+System.currentTimeMillis());
 			}
+//System.out.println("B @\t"+System.currentTimeMillis());
 		}
+//System.out.println("C @\t"+System.currentTimeMillis());
+//		System.out.println(codes[0]+": Time taken(ms) for this round: "+(System.currentTimeMillis() - start));
+//		System.out.println(depthMap.get(codes[1]));
+		return depthMap;
 	}
 
 	private byte[] calcMarkets(String[] codes) {

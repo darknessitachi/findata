@@ -117,9 +117,9 @@ public class PairStrategyService {
 
 	// Step 1: calculate stats
 	@Transactional(propagation = Propagation.REQUIRED)
-	public void calculateStats (LocalDate trainingStart, LocalDate trainingEnd) {
+	public void calculateStats (LocalDate trainingStart, LocalDate trainingEnd, int idGreaterThanThis) {
 		long start = System.currentTimeMillis();
-		pairRepo.findByEnabled(true).forEach(pair -> {
+		pairRepo.findByEnabledAndIdGreaterThan(true, idGreaterThanThis).forEach(pair -> {
 			double [] result = cointcorrel(
 					trainingStart.toDateTimeAtStartOfDay(),
 					trainingEnd.toDateTimeAtStartOfDay().plusHours(23),
@@ -140,13 +140,19 @@ public class PairStrategyService {
 		System.out.println("calculateStats total(s): "+(System.currentTimeMillis() - start)/1000d);
 	}
 
-	// Step 2: populate PairInstances after stats are calculated
+	// Step 2: update adf p value moving average
+	@Transactional(propagation = Propagation.REQUIRED)
+	public int updateAdfpMovingAverage (LocalDate date) {
+		return pairStatsRepo.updateAdfpMovingAverage(date.toDate(), FinDataConstants.STRATEGY_PAIR_TRAINING_WINDOW_DAYS);
+	}
+
+	// Step 3: populate PairInstances after stats are calculated
 	@Transactional(propagation = Propagation.REQUIRED)
 	public void populatePairInstances (LocalDate openableDate) {
 		// todo: this is for open/close spotting. There will be another strategy to populate in real trading
 		// find all pairs
-		List<PairStats> stats = pairStatsRepo.findByTrainingEndAndCorrelcoGreaterThanAndAdfpLessThan(
-				openableDate.minusDays(1).toDate(), -2d, 0.9999d);
+		List<PairStats> stats = pairStatsRepo.findByTrainingEndAndAdfpLessThanAndAdfpmaLessThan(
+				openableDate.minusDays(1).toDate(), 0.011d, 0.070d);
 		List<PairInstance> pairs = new ArrayList<>();
 		stats.forEach(stat -> {
 			PairInstance p = new PairInstance();
@@ -160,9 +166,6 @@ public class PairStrategyService {
 	}
 
 	public Collection<PairInstance> findSimpleOpenCloseOpportunities (LocalDate openStart, LocalDate openEnd, LocalDate startExe, LocalDate endExe, String[] codesToShort, String[] codesToLong) {
-//		DateTimeFormatter formatter = DateTimeFormat.forPattern(FinDataConstants.yyyyMMdd);
-//		LocalDate current = formatter.parseLocalDate("20160410");
-//		LocalDate end = formatter.parseLocalDate("20160410");
 		LocalDate current = startExe;
 		Collection<PairInstance> result = null;
 

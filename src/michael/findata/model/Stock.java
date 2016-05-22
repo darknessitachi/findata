@@ -1,5 +1,6 @@
 package michael.findata.model;
 
+import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import com.numericalmethod.algoquant.execution.datatype.product.fx.Currencies;
 import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
 import com.numericalmethod.algoquant.execution.datatype.product.stock.SimpleStock;
@@ -11,7 +12,15 @@ import java.util.Currency;
 
 @Entity
 @NamedQuery(name = "Stock.findAll", query = "SELECT s FROM Stock s ORDER BY s.code")
-public class Stock implements com.numericalmethod.algoquant.execution.datatype.product.stock.Stock {
+public class Stock implements com.numericalmethod.algoquant.execution.datatype.product.stock.Stock, Comparable<Product> {
+
+	@Override
+	public int compareTo(Product o) {
+		if (equals(o))	return 0;
+		if (o == null) return 1;
+		return hashCode() - o.hashCode();
+	}
+
 	private int id;
 
 	public Stock() {
@@ -269,5 +278,10 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 	@Override
 	public Exchange exchange() {
 		return exchange;
+	}
+
+	@Override
+	public String toString () {
+		return code+" "+name;
 	}
 }

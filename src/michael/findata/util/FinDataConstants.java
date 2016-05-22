@@ -35,6 +35,8 @@ public final class FinDataConstants {
 	// The most recent # days covered when getting report publication dates from websites;
 	public static final int DAYS_REPORT_PUB_DATES = ResourceUtil.getInt("michael.findata.days_report_pub_dates");
 
+	public static final int STRATEGY_PAIR_TRAINING_WINDOW_DAYS = ResourceUtil.getInt("michael.findata.strategy.pair.training.window");
+
 	public static final Date currentTimeStamp = new Date();
 
 	// Some early dates to assume for date range lower bound in database

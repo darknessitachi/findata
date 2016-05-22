@@ -1,35 +1,41 @@
 package michael.findata.commandcenter;
 
 import com.numericalmethod.algoquant.execution.component.broker.Broker;
+import com.numericalmethod.algoquant.execution.datatype.depth.Depth;
+import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
+import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.SimpleMarketCondition;
+import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.execution.strategy.handler.MarketConditionHandler;
-import michael.findata.external.netease.NeteaseInstantSnapshot;
+import michael.findata.algoquant.execution.component.broker.LocalBrokerProxy;
 import michael.findata.external.tdx.TDXClient;
 import michael.findata.model.Stock;
 import org.joda.time.DateTime;
 import org.joda.time.LocalTime;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 // This is a virtual machine act like a robot that trades
 public class CommandCenter {
 
 	private Set<Stock> targetSecurities = null;
+	private TDXClient shSzClient = null;
 	private TDXClient szClient = null;
 	private TDXClient shClient = null;
 	private Broker broker;
 	private List<Strategy> strategies;
-	private String [] shCodes;
-	private String [] szCodes;
-	private TDXPollThread shThread;
-	private TDXPollThread szThread;
+	private Stock [] shSzStocks;
+	private Stock [] shStocks;
+	private Stock [] szStocks;
+	private TDXPollThread shSzThread = null;
+	private TDXPollThread shThread = null;
+	private TDXPollThread szThread = null;
 	private long firstHalfStart;
 	private long firstHalfEnd;
 	private long secondHalfStart;
 	private long secondHalfEnd;
+	private boolean locked = false;
 
 	public CommandCenter () {
 		strategies = new ArrayList<>();
@@ -46,18 +52,19 @@ public class CommandCenter {
 		}
 		this.targetSecurities = targetSecurities;
 
-		List<String> shCodes = new ArrayList<>();
-		List<String> szCodes = new ArrayList<>();
+		List<Stock> shStocks = new ArrayList<>();
+		List<Stock> szStocks = new ArrayList<>();
 
 		targetSecurities.forEach(stock -> {
 			if (stock.exchange().equals(Exchange.SHSE)) {
-				shCodes.add(stock.getCode());
+				shStocks.add(stock);
 			} else if (stock.exchange().equals(Exchange.SZSE)) {
-				szCodes.add(stock.getCode());
+				szStocks.add(stock);
 			}
 		});
-		this.shCodes = shCodes.toArray(new String [shCodes.size()]);
-		this.szCodes = szCodes.toArray(new String [szCodes.size()]);
+		this.shStocks = shStocks.toArray(new Stock [shStocks.size()]);
+		this.szStocks = szStocks.toArray(new Stock [szStocks.size()]);
+		this.shSzStocks = targetSecurities.toArray(new Stock[targetSecurities.size()]);
 	}
 
 	public void setBroker(Broker broker) {
@@ -80,20 +87,37 @@ public class CommandCenter {
 		this.shClient = shClient;
 	}
 
+	public void setShSzClient(TDXClient shSzClient) {
+		if (this.shSzClient != null) {
+			System.out.println("Unable to set szClient again, it is already set.");
+			return;
+		}
+		this.shSzClient = shSzClient;
+	}
+
 	public void addStrategy (Strategy strategy) {
 		strategies.add(strategy);
 	}
 
 	public void start () {
-		shThread = new TDXPollThread("Shanghai Poller", shClient, 4500, shCodes);
-		szThread = new TDXPollThread("Shenzhen Poller", szClient, 2500, szCodes);
-		shThread.start();
-		szThread.start();
+		if (shClient != null) {
+			shThread = new TDXPollThread("Shanghai Poller", shClient, 4500, shStocks);
+			shThread.start();
+		}
+		if (szClient != null) {
+			szThread = new TDXPollThread("Shenzhen Poller", szClient, 2500, szStocks);
+			szThread.start();
+		}
+		if (shSzClient != null) {
+			shSzThread = new TDXPollThread("Poller", shSzClient, 5000, shSzStocks);
+			shSzThread.start();
+		}
 	}
 
 	public void stop () {
-		shThread.notifyStop();
-		szThread.notifyStop();
+		if (shThread != null) shThread.notifyStop();
+		if (szThread != null) szThread.notifyStop();
+		if (shSzThread != null) shSzThread.notifyStop();
 	}
 
 	public void setFirstHalfStart(LocalTime firstHalfStart) {
@@ -112,6 +136,39 @@ public class CommandCenter {
 		this.secondHalfEnd = secondHalfEnd.toDateTimeToday().getMillis();
 	}
 
+	private boolean obtainLock() {
+		// Performance: as tested, during a 2-client session this section takes 0 ms to execute, acceptable.
+		// check and obtain lock
+		if (locked) { // already blocked? return false, meaning don't do anything and skip
+			return false;
+		} else {
+			// not blocked yet? block it and return true,
+			// meaning: 1. lock obtained; 2. do stuff; and 3. don't for get to unblock after completing
+			locked = true;
+			return true;
+		}
+	}
+
+	private void depthsUpdated(Map<Product, Depth> depths) {
+		// start a new thread to do update
+		Thread t = new Thread(() -> {
+			// Construct market condition and pass it to MarketConditionHandler
+			MarketCondition condition = new SimpleMarketCondition(depths);
+
+			strategies.forEach(strategy -> {
+				DateTime now = new DateTime();
+				if (strategy instanceof MarketConditionHandler) {
+					MarketConditionHandler mch = (MarketConditionHandler) strategy;
+					mch.onMarketConditionUpdate(now, condition, null, broker);
+				}
+			});
+			locked = false;
+			System.out.println("lock released.");
+		});
+		// t.start() // do it with a new thread
+		t.run(); // do it within the same thread
+	}
+
 	private class TDXPollThread extends Thread {
 
 		private String name;
@@ -119,17 +176,23 @@ public class CommandCenter {
 		private TDXClient client;
 		private long heartbeatInterval;
 		private String [] codes;
+		private HashMap<String, Stock> codeProductMap;
 
 		private void notifyStop () {
 			stopSignal = true;
 		}
 
-		private TDXPollThread (String name, TDXClient client, long heartbeatInterval, String ... codes) {
+		private TDXPollThread (String name, TDXClient client, long heartbeatInterval, Stock ... stocks) {
 			this.name = name;
 			this.client = client;
 			this.heartbeatInterval = heartbeatInterval;
 			this.stopSignal = false;
-			this.codes = codes;
+			codes = new String [stocks.length];
+			codeProductMap = new HashMap<>();
+			for (int i = 0; i < stocks.length; i++) {
+				codeProductMap.put(stocks[i].getCode(), stocks[i]);
+				codes[i] = stocks[i].getCode();
+			}
 		}
 
 		@Override
@@ -142,6 +205,9 @@ public class CommandCenter {
 						client.disconnect();
 					}
 					System.out.println(name+" stop signal received, stopping ...");
+					if (broker != null && broker instanceof LocalBrokerProxy) {
+						((LocalBrokerProxy) broker).stop();
+					}
 					return;
 				}
 				now = System.currentTimeMillis();
@@ -150,40 +216,50 @@ public class CommandCenter {
 					if (client.isConnected()) {
 						client.disconnect();
 					}
-					System.out.println(name+" daily session not started or during lunch break, do nothing ...");
+//					System.out.println(name+" daily session not started or during lunch break, do nothing ...");
+					if (heartbeatInterval > 0) {
+						try {
+//							System.out.println(name+" heartbeat completed, sleeping ...");
+							Thread.sleep(heartbeatInterval);
+						} catch (InterruptedException e) {
+							System.out.println(name+" Interrupt: ");
+						}
+					}
 				} else if (secondHalfEnd < now ) { // after daily session
 					if (client.isConnected()) {
 						client.disconnect();
 					}
 					System.out.println(name+" daily session ended, stopping ...");
+					if (broker != null && broker instanceof LocalBrokerProxy) {
+						((LocalBrokerProxy) broker).stop();
+					}
 					return;
 				} else {
 					if (!client.isConnected()) {
 						System.out.println(name+" connecting ...");
 						client.connect();
 					}
-					System.out.println(name+" active, doing stuff ...");
+//					System.out.println(name+" active, doing stuff ...");
 					poll();
-				}
-				try {
-//					System.out.println(name+" heartbeat completed, sleeping ...");
-					Thread.sleep(heartbeatInterval);
-				} catch (InterruptedException e) {
-					System.out.println(name+" Interrupt: ");
 				}
 			}
 		}
 
 		private void poll () {
-			client.pollQuotes(100, codes);
-			// todo if there are depth changes, pass those changes to strategies
-			strategies.forEach(strategy -> {
-				DateTime now = new DateTime();
-				if (strategy instanceof MarketConditionHandler) {
-					MarketConditionHandler mch = (MarketConditionHandler) strategy;
-					mch.onMarketConditionUpdate(now, new NeteaseInstantSnapshot(), null, broker); // todo, need to use real Broker
-				}
-			});
+			Map<Product, Depth> result = client.pollQuotes(100, 20L, codeProductMap, codes);
+			if (result.isEmpty()) {
+				return;
+			}
+//			System.out.println(name+" try obtaining lock. @\t"+System.currentTimeMillis());
+			if (!obtainLock()) {
+				// System.out.println("synchronized code section executed in(ms) "+(System.currentTimeMillis() - start));
+				// if this command center is blocked by broker when executing an order, there is not point notify about the change
+				// already blocked, do nothing
+//				System.out.println(name+" no lock available. @\t"+System.currentTimeMillis());
+				return;
+			}
+//			System.out.println(name+" locked obtained. @\t"+System.currentTimeMillis());
+			depthsUpdated(result);
 		}
 	}
 }

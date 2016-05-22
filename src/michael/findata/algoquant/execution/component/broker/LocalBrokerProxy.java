@@ -8,10 +8,7 @@ import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.model.Stock;
 import net.sf.ehcache.search.expression.Or;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.sql.SQLSyntaxErrorException;
@@ -36,8 +33,14 @@ public class LocalBrokerProxy implements Broker {
 	private final HashMap<Long, String> results = new HashMap<>();
 
 	public void stop () {
-		closeUi.destroy();
-		openUi.destroy();
+		try{
+			closeUi.destroy();
+		} catch (Exception e) {
+		}
+		try {
+			openUi.destroy();
+		} catch (Exception e) {
+		}
 	}
 
 	public void test () {
@@ -130,8 +133,12 @@ public class LocalBrokerProxy implements Broker {
 	public LocalBrokerProxy () throws IOException {
 		portPairClose = new Random (System.currentTimeMillis()).nextInt(9900)+10051;
 		portPairOpen = portPairClose + 1;
-		ProcessBuilder pbClose = new ProcessBuilder("E:/Projects/C#/Autobet/HexinBrokerTest/bin/Release/HexinBrokerTest", ""+portPairClose, "0", "PairClose", "huatai");
-		ProcessBuilder pbOpen = new ProcessBuilder("E:/Projects/C#/Autobet/HexinBrokerTest/bin/Release/HexinBrokerTest", ""+portPairOpen, "1", "PairOpen", "huatai");
+//		ProcessBuilder pbClose = new ProcessBuilder("E:/Projects/C#/Autobet/HexinBrokerTest/bin/Release/HexinBrokerTest", ""+portPairClose, "0", "PairClose", "huatai");
+//		ProcessBuilder pbOpen = new ProcessBuilder("E:/Projects/C#/Autobet/HexinBrokerTest/bin/Release/HexinBrokerTest", ""+portPairOpen, "1", "PairOpen", "huatai");
+		ProcessBuilder pbClose = new ProcessBuilder("HexinBroker", ""+portPairClose, "0", "PairClose", "huatai");
+		ProcessBuilder pbOpen = new ProcessBuilder("HexinBroker", ""+portPairOpen, "1", "PairOpen", "huatai");
+		pbClose.redirectOutput(new File("pair_close.log"));
+		pbOpen.redirectOutput(new File("pair_open.log"));
 		closeUi = pbClose.start();
 		openUi = pbOpen.start();
 		test();
