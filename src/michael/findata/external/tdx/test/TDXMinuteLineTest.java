@@ -19,11 +19,11 @@ public class TDXMinuteLineTest {
 		TDXMinuteLine seriesA = new TDXMinuteLine(codeA);
 		TDXMinuteLine seriesB = new TDXMinuteLine(codeB);
 		SecurityTimeSeriesDatum quoteA, quoteB;
-		DateTime start = new DateTime(new SimpleDateFormat(yyyyMMdd).parse("20160408"));
+		DateTime start = new DateTime(new SimpleDateFormat(yyyyMMdd).parse("20160527"));
 		// Now calculate baseline moving average ratio
-		// 4 Day ma to calculate ratio, 5 days operating window
-		int maLimit = 15 * 240, opLimit = 10 * 240, tCounter = 0;
-		int maCounter = 0;
+		// 1 Day ma to calculate ratio, 1 days operating window
+		int maLimit = 1 * 240, opLimit = 1 * 240;
+		int tCounter = 0, maCounter = 0;
 		int totalA = 0, totalB = 0;
 		double ratio = 0;
 		while (seriesA.hasNext() && seriesB.hasNext()) {

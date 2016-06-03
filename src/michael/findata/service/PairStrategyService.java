@@ -2,17 +2,22 @@ package michael.findata.service;
 
 import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
 import com.numericalmethod.suanshu.stats.test.timeseries.adf.AugmentedDickeyFuller;
+import com.numericalmethod.suanshu.zzz.con.prn.aux.nul.D;
 import michael.findata.algoquant.strategy.PairStrategy;
+import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.netease.NeteaseInstantSnapshot;
 import michael.findata.external.shse.SHSEShortableStockList;
 import michael.findata.external.szse.SZSEShortableStockList;
 import michael.findata.model.*;
 import michael.findata.spring.data.repository.*;
+import michael.findata.util.Consumer2;
+import michael.findata.util.Consumer3;
 import michael.findata.util.Consumer5;
 import michael.findata.util.FinDataConstants;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.apache.commons.math3.util.DoubleArray;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
@@ -24,6 +29,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.function.Function;
 
 public class PairStrategyService {
 
@@ -68,12 +74,12 @@ public class PairStrategyService {
 		end = System.currentTimeMillis();
 		System.out.println("updatePairs step 1(s): "+(end - start)/1000d);
 		start = end;
-		Set<String> shortables = getShortablesUpdateIfRequired();
+//		Set<String> shortables = getShortablesUpdateIfRequired();
 		end = System.currentTimeMillis();
 		System.out.println("updatePairs step 2(s): "+(end - start)/1000d);
 		start = end;
 		for (Stock toShort : stocks) {
-			if (shortables.contains(toShort.getCode())) {
+//			if (shortables.contains(toShort.getCode())) {
 				for (Stock toLong : stocks) {
 					if (toLong.equals(toShort)) {
 						continue;
@@ -87,7 +93,7 @@ public class PairStrategyService {
 						pairRepo.save(pair);
 					}
 				}
-			}
+//			}
 		}
 		end = System.currentTimeMillis();
 		System.out.println("updatePairs step 3(s): "+(end - start)/1000d);
@@ -117,26 +123,31 @@ public class PairStrategyService {
 
 	// Step 1: calculate stats
 	@Transactional(propagation = Propagation.REQUIRED)
-	public void calculateStats (LocalDate trainingStart, LocalDate trainingEnd, int idGreaterThanThis) {
+	public void calculateStats(LocalDate trainingStart, LocalDate trainingEnd, int idGreaterThanThis) {
 		long start = System.currentTimeMillis();
-		pairRepo.findByEnabledAndIdGreaterThan(true, idGreaterThanThis).forEach(pair -> {
-			double [] result = cointcorrel(
-					trainingStart.toDateTimeAtStartOfDay(),
-					trainingEnd.toDateTimeAtStartOfDay().plusHours(23),
-					pair.getCodeToShort(),
-					pair.getCodeToLong(),
-					1000000, stsds, sps, true);
+		List<Pair> pairs = pairRepo.findByEnabledAndIdGreaterThan(true, idGreaterThanThis);
+		String [][] pairCodes = new String [pairs.size()][];
+		for (int i = 0; i < pairCodes.length; i++) {
+			pairCodes[i] = new String [2];
+			pairCodes[i][0] = pairs.get(i).getCodeToShort();
+			pairCodes[i][1] = pairs.get(i).getCodeToLong();
+		}
+		double [][] result = cointcorrel(
+				trainingStart.toDateTimeAtStartOfDay(),
+				trainingEnd.toDateTimeAtStartOfDay().plusHours(23),
+				pairCodes, 1000000, stsds, sps, true);
+		for (int i = result.length - 1; i > -1; i--) {
 			PairStats stats = new PairStats();
-			stats.setPair(pair);
+			stats.setPair(pairs.get(i));
 			stats.setTimeSeriesType(PairStats.TimeSeriesType.MINUTE);
 			stats.setTrainingStart(trainingStart.toDate());
 			stats.setTrainingEnd(trainingEnd.toDate());
-			stats.setSlope(result[0]);
-			stats.setStdev(result[1]);
-			stats.setCorrelco(result[2]);
-			stats.setAdfp(result[3]);
+			stats.setSlope(result[i][0]);
+			stats.setStdev(result[i][1]);
+			stats.setCorrelco(result[i][2]);
+			stats.setAdfp(result[i][3]);
 			pairStatsRepo.save(stats);
-		});
+		}
 		System.out.println("calculateStats total(s): "+(System.currentTimeMillis() - start)/1000d);
 	}
 
@@ -228,6 +239,7 @@ public class PairStrategyService {
 	 *	Return value: if fail test - null
 	 *				  if pass test - [slope, stdev]
 	 */
+	@Deprecated
 	public static double[] cointcorrel (DateTime startTraining,
 										DateTime endTraining,
 										String codeA,
@@ -304,5 +316,117 @@ public class PairStrategyService {
 		System.out.println("\t"+priceListB[0]);
 
 		return new double[] {slope, std, correl, adf_p};
+	}
+
+	public double[][] cointcorrel (DateTime startTraining,
+										DateTime endTraining,
+										String [][] codePairs,
+										int maxSteps,
+										SecurityTimeSeriesDataService stsds,
+										StockPriceService sps,
+										boolean minutesOrDays) {
+		Set<String> codeSet = new HashSet<>();
+		SimpleRegression [] regression = new SimpleRegression [codePairs.length];
+		PearsonsCorrelation [] pearsonsCorrelation = new PearsonsCorrelation [codePairs.length];
+		ArrayList<Double> [] pA = new ArrayList [codePairs.length];
+		ArrayList<Double> [] pB = new ArrayList [codePairs.length];
+		for (int i = codePairs.length - 1; i > -1; i--) {
+			regression[i] = new SimpleRegression (false);
+			pearsonsCorrelation[i] = new PearsonsCorrelation();
+			pA[i] = new ArrayList<>();
+			pB[i] = new ArrayList<>();
+			codeSet.add(codePairs[i][0]);
+			codeSet.add(codePairs[i][1]);
+		}
+		String [] codes = codeSet.toArray(new String [codeSet.size()]);
+		HashMap<String, Double> prices = new HashMap<>();
+		LocalDate startDate = startTraining.toLocalDate();
+		LocalDate endDate = endTraining.toLocalDate();
+		DividendService.PriceAdjuster pa = ds.newPriceAdjuster(startDate, endDate, codes);
+
+		Consumer2<DateTime, HashMap<String, SecurityTimeSeriesDatum>> doTest = (date, data) -> {
+			LocalDate curDate = date.toLocalDate();
+			prices.clear();
+			data.forEach((code, datum) -> {
+				if (datum.isTraded()) {
+					prices.put(code, pa.adjust(code, startDate, curDate, datum.getClose())/1000d);
+				}
+			});
+			for (int i = codePairs.length - 1; i > -1; i--) {
+				String codeA = codePairs[i][0];
+				if (!prices.containsKey(codeA)) continue;
+				String codeB = codePairs[i][1];
+				if (!prices.containsKey(codeB)) continue;
+				double prA = prices.get(codeA);
+				double prB = prices.get(codeB);
+				regression[i].addData(prA, prB);
+				pA[i].add(prA);
+				pB[i].add(prB);
+			}
+		};
+
+		if (stsds != null) {
+			if (minutesOrDays) {
+				stsds.walkMinutes(startTraining, endTraining, maxSteps, codes, false, doTest);
+			} else {
+				stsds.walkDays(startTraining, endTraining, maxSteps, codes, false, doTest);
+			}
+		} else {
+//			sps.walk();
+		}
+
+		String codeA, codeB;
+		double [][] result = new double[codePairs.length][];
+		for (int i = 0; i < codePairs.length; i++) {
+			codeA = codePairs[i][0];
+			codeB = codePairs[i][1];
+			System.out.print(codeA+"->"+codeB+"\t");
+
+			double [] priceListA, priceListB;
+			priceListA = pA[i].stream().mapToDouble(d -> d).toArray();
+			priceListB = pB[i].stream().mapToDouble(d -> d).toArray();
+
+			// Correlation coefficient
+			double correl = pearsonsCorrelation[i].correlation(priceListA, priceListB);
+			System.out.print(correl);
+
+			long ticks = regression[i].getN();
+			System.out.print("\t"+ticks);
+
+			// Regression Parameter slope: pB = slope * pA;
+			double slope = regression[i].getSlope();
+			System.out.print("\t"+slope);
+
+			// ADF test for regression residuals on previously collected end-of-day / end-of-minute data
+			double [] residuals = new double[priceListA.length];
+			for (int j = 0; j <priceListA.length; j++) {
+				// Calculate residuals according to parameters obtains from linear regression
+				// ie. residual = 1 - slope * quoteA / quoteB
+				residuals[j] = 1 - priceListA[j] * slope / priceListB[j];
+			}
+			double adf_p = new AugmentedDickeyFuller(residuals).pValue();
+			System.out.print("\t" + adf_p);
+
+			// ADF test for regression residuals on minute data
+//		ArrayList<Double> res = new ArrayList<>();
+//		stsds.walkMinutes(startTraining, endTraining, 100000, codeA, codeB, false,
+//				(date, prA, prB) -> {
+//					// Calculate residuals according to parameters obtains from linear regression
+//					// ie. residual = quoteB - slope * quoteA
+//					res.add(prB - prA * slope);
+//				}
+//		);
+//		double [] residuals = res.stream().mapToDouble(d->d).toArray();
+//		adf_p = new AugmentedDickeyFuller(residuals).pValue();
+//		System.out.println("adf p: " + adf_p);
+
+			// Residual standard deviation
+			double std = new StandardDeviation().evaluate(residuals);
+			System.out.print("\t"+std);
+			System.out.println("\t"+priceListB[0]);
+			result[i] = new double[] {slope, std, correl, adf_p};
+		}
+
+		return result;
 	}
 }

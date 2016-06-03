@@ -34,7 +34,7 @@ public class TDXClientTest {
 				"221.236.15.14:7709",	// 国金成都电信1.13
 				"119.6.204.139:7709",	// 国金成都联通5.135
 				"125.64.39.61:7709",	// 申银万国成都电信1
-				"125.64.41.12:7709"	// 成都电信54
+				"125.64.41.12:7709"		// 成都电信54
 		);
 		TDXClient client2 = new TDXClient(
 				"119.4.167.141:7709",	// 华西L1
@@ -73,12 +73,16 @@ public class TDXClientTest {
 				"113.207.29.12:7709"	// 西南证券金点子重庆联通主站1
 		);
 
+		client1.connect();
+		client1.disconnect();
+		client2.connect();
+		client2.disconnect();
 		client3.connect();
+		client3.disconnect();
 //		client1.pollQuotes(20L, ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_sz.csv").toArray(new String[0]));
 //		client1.pollQuotes(3, "000568", "600026");
 //		client1.pollQuotes(3, "000568", "600026");
 //		client3.pollQuotes(1000, 20L, "000568", "600026");
-		client3.disconnect();
 //		TDXMetaClient mt = new TDXMetaClient(1000L, client1, client2, client3);
 //		mt.test(1);
 	}

@@ -26,7 +26,7 @@ public class PairStrategy implements Strategy, MarketConditionHandler {
 	 *
 	 * A.
 	 * 300ETF 1%+ -> 0.2%- unlimited position quota
-	 * 510300,510310,510330,510360,160706,165309,512990,159919
+	 * 510300,510310,510330,510360,160706,512990,159919
 	 ,
 	 *
 	 * B.

@@ -123,7 +123,6 @@ public class StockGroups {
 			new SimpleStock("510330.SS", "华夏300", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("510360.SS", "广发300", Currencies.CNY, Exchange.SHSE),
 			new SimpleStock("160706.SZ", "嘉实300", Currencies.CNY, Exchange.SZSE),
-			new SimpleStock("165309.SZ", "建信300", Currencies.CNY, Exchange.SZSE),
 	};
 
 	public static Stock[] ETFSmallCaps = new Stock[]{

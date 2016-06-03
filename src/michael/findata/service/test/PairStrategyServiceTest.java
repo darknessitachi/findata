@@ -118,19 +118,16 @@ public class PairStrategyServiceTest {
 		StockService ss = (StockService) context.getBean("stockService");
 		pss.updatePairs(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_hk.csv").toArray(new String[0]));
 		pss.updatePairs(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_gold.csv").toArray(new String[0]));
-		pss.updatePairs(ss.getStockGroup(
-				"michael/findata/algoquant/strategy/pair/group_domestic.csv",
-				"michael/findata/algoquant/strategy/pair/group_oil.csv",
-				"michael/findata/algoquant/strategy/pair/group_shortable_nongoldorbondETF.csv").toArray(new String[0]));
+		pss.updatePairs(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic.csv").toArray(new String[0]));
 	}
 
-	public static void main2 (String args []) throws IOException {
+	public static void main (String args []) throws IOException {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
 		PairStrategyService pss = (PairStrategyService) context.getBean("pairStrategyService");
 
 		HolidayCalendarFromYahoo cal = HolidayCalendarFromYahoo.forExchange(Exchange.SHSE);
-		LocalDate simulationStart = LocalDate.parse("2015-10-27");
-		LocalDate lastStart = LocalDate.parse("2015-11-03");
+		LocalDate simulationStart = LocalDate.parse("2016-06-06");
+		LocalDate lastStart = LocalDate.parse("2016-06-06");
 		LocalDate today = new LocalDate();
 		while (!simulationStart.isAfter(lastStart)) {
 			if (simulationStart.getDayOfWeek() != DateTimeConstants.SATURDAY &&
@@ -139,7 +136,8 @@ public class PairStrategyServiceTest {
 				LocalDate trainingEnd = simulationStart.minusDays(1);
 				LocalDate trainingStart = trainingEnd.minusDays(FinDataConstants.STRATEGY_PAIR_TRAINING_WINDOW_DAYS);
 				System.out.println("Calculating stats for "+trainingStart+" - "+trainingEnd);
-				pss.calculateStats(trainingStart, trainingEnd, 1488);
+				pss.calculateStats(trainingStart, trainingEnd, -1);
+				pss.updateAdfpMovingAverage(trainingEnd);
 			} else {
 				System.out.println(simulationStart+" is a holiday.");
 			}
@@ -147,19 +145,13 @@ public class PairStrategyServiceTest {
 		}
 	}
 
-	public static void main3 (String [] args) throws IOException {
-		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
-		PairStrategyService pss = (PairStrategyService) context.getBean("pairStrategyService");
-		pss.updateAdfpMovingAverage(LocalDate.parse("2016-05-19"));
-	}
-
-	public static void main4 (String args []) throws IOException {
+	public static void main3 (String args []) throws IOException {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
 		PairStrategyService pss = (PairStrategyService) context.getBean("pairStrategyService");
 
 		HolidayCalendarFromYahoo cal = HolidayCalendarFromYahoo.forExchange(Exchange.SHSE);
-		LocalDate simulationStart = LocalDate.parse("2016-05-23");
-		LocalDate lastStart = LocalDate.parse("2016-05-23");
+		LocalDate simulationStart = LocalDate.parse("2016-05-31");
+		LocalDate lastStart = LocalDate.parse("2016-06-03");
 		LocalDate today = new LocalDate();
 		while (!simulationStart.isAfter(lastStart)) {
 			if (simulationStart.getDayOfWeek() != DateTimeConstants.SATURDAY &&
@@ -174,7 +166,7 @@ public class PairStrategyServiceTest {
 		}
 	}
 
-	public static void main5 (String [] args) throws IOException, SQLException, IllegalAccessException, InstantiationException, ClassNotFoundException {
+	public static void main4 (String [] args) throws IOException, SQLException, IllegalAccessException, InstantiationException, ClassNotFoundException {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
 		DividendService ds = (DividendService) context.getBean("dividendService");
 		PairRepository pairRepo = (PairRepository) context.getBean("pairRepository");
@@ -191,7 +183,7 @@ public class PairStrategyServiceTest {
 		c.disconnect();
 	}
 
-	public static void main6 (String [] args) throws IOException {
+	public static void main5 (String [] args) throws IOException {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
 		StockService ss = (StockService) context.getBean("stockService");
 		ss.updateSpreadForStocks(0.008d, 5000);

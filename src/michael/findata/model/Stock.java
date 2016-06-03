@@ -18,7 +18,7 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 	public int compareTo(Product o) {
 		if (equals(o))	return 0;
 		if (o == null) return 1;
-		return hashCode() - o.hashCode();
+		return symbol.compareTo(o.symbol());
 	}
 
 	private int id;

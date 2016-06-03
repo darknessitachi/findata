@@ -6,6 +6,7 @@ import michael.findata.external.tdx.TDXMinuteLine;
 import michael.findata.external.tdx.TDXPriceHistory;
 import michael.findata.model.AdjFunction;
 import michael.findata.util.CalendarUtil;
+import michael.findata.util.Consumer2;
 import michael.findata.util.Consumer3;
 import michael.findata.util.Consumer5;
 import org.joda.time.DateTime;
@@ -16,6 +17,7 @@ import java.util.function.Function;
 
 public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 
+	@Deprecated
 	public void walkMinutes(DateTime start,
 							DateTime end,
 							int maxTicks,
@@ -28,6 +30,7 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 		walk(start, end, maxTicks, seriesA, seriesB, codeA, codeB, log, doStuff);
 	}
 
+	@Deprecated
 	public void walkDays(DateTime start,
 						 DateTime end,
 						 int maxTicks,
@@ -41,6 +44,7 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 	}
 
 	// seriesA and seriesB must be from the same concrete class
+	@Deprecated
 	private void walk(DateTime start,
 					  DateTime end,
 					  int maxTicks,
@@ -129,54 +133,46 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 	}
 
 	// Walk through a group of stocks
-	public void walkDays(DateTime adjStart,
-					 DateTime start,
+	public void walkDays(DateTime start,
 					 DateTime end,
 					 int maxTicks,
 					 String[] codes,
 					 boolean log,
-					 Consumer3<DateTime,
-							 HashMap<String, SecurityTimeSeriesDatum>,
-							 HashMap<String, Function<Integer, Integer>>> doStuff) {
+					 Consumer2<DateTime,
+							 HashMap<String, SecurityTimeSeriesDatum>> doStuff) {
 		SecurityTimeSeriesData[] serieses = Arrays.stream(codes).map(TDXPriceHistory::new).toArray(TDXPriceHistory[]::new);
-		walk(adjStart, start, end, maxTicks, serieses, codes, log, doStuff);
+		walk(start, end, maxTicks, serieses, codes, log, doStuff);
 	}
 
 	// Walk through a group of stocks
-	public void walkMinutes(DateTime adjStart,
-							DateTime start,
+	public void walkMinutes(DateTime start,
 							DateTime end,
 							int maxTicks,
 							String[] codes,
 							boolean log,
-							Consumer3<DateTime,
-									HashMap<String, SecurityTimeSeriesDatum>,
-									HashMap<String, Function<Integer, Integer>>> doStuff) {
+							Consumer2<DateTime,
+									HashMap<String, SecurityTimeSeriesDatum>> doStuff) {
 		SecurityTimeSeriesData[] serieses = Arrays.stream(codes).map(TDXMinuteLine::new).toArray(TDXMinuteLine[]::new);
-		walk(adjStart, start, end, maxTicks, serieses, codes, log, doStuff);
+		walk(start, end, maxTicks, serieses, codes, log, doStuff);
 	}
 
 	// Walk through a group of stocks
 	// Serieses must be from the same concrete class
-	private void walk(DateTime adjStart,
-					 DateTime start,
+	private void walk(DateTime start,
 					 DateTime end,
 					 int maxTicks,
 					 SecurityTimeSeriesData[] serieses,
 					 String[] codes,
 					 boolean log,
-					 Consumer3<DateTime,
-							HashMap<String, SecurityTimeSeriesDatum>,
-							HashMap<String, Function<Integer, Integer>>> doStuff) {
-		Map<String, Stack<AdjFunction<Integer, Integer>>> adjFct;
-		try {
-			adjFct = DividendService.getAdjFunctions(adjStart.toLocalDate(), end.toLocalDate(), codes, getJdbcTemplate());
-		} catch (Exception e) {
-			// no adj factor found
-			adjFct = new HashMap<>();
-		}
-
-		final Map<String, Stack<AdjFunction<Integer, Integer>>> adjFctn = adjFct;
+					 Consumer2<DateTime, HashMap<String, SecurityTimeSeriesDatum>> doStuff) {
+//		Map<String, Stack<AdjFunction<Integer, Integer>>> adjFct;
+//		try {
+//			adjFct = DividendService.getAdjFunctions(adjStart.toLocalDate(), end.toLocalDate(), codes, getJdbcTemplate());
+//		} catch (Exception e) {
+//			// no adj factor found
+//			adjFct = new HashMap<>();
+//		}
+//		final Map<String, Stack<AdjFunction<Integer, Integer>>> adjFctn = adjFct;
 
 		HashMap<String, Stack<SecurityTimeSeriesDatum>> quotes = new HashMap<>();
 		Arrays.stream(codes).forEach(code -> quotes.put(code, new Stack<>()));
@@ -230,24 +226,24 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 		}
 		Arrays.stream(serieses).forEach(SecurityTimeSeriesData::close);
 
-		HashMap<String, Function<Integer, Integer>> currentAdjFun = new HashMap<>();
-		Arrays.stream(codes).forEach(code -> currentAdjFun.put(code, pri -> pri));
+//		HashMap<String, Function<Integer, Integer>> currentAdjFun = new HashMap<>();
+//		Arrays.stream(codes).forEach(code -> currentAdjFun.put(code, pri -> pri));
 		HashMap<String, SecurityTimeSeriesDatum> minuteSnapshot = new HashMap<>();
 		while (!quotes.get(codes[0]).isEmpty()) {
 			final DateTime tick = quotes.get(codes[0]).peek().getDateTime();
 			Arrays.stream(codes).forEach(code -> {
-				Stack<AdjFunction<Integer, Integer>> adjFctA = adjFctn.get(code);
+//				Stack<AdjFunction<Integer, Integer>> adjFctA = adjFctn.get(code);
 				SecurityTimeSeriesDatum quoteA = quotes.get(code).pop();
 				//后复权
-				while ((!adjFctA.isEmpty()) && CalendarUtil.daysBetween(adjFctA.peek().paymentDate, quoteA.getDateTime()) >= 0) {
-					currentAdjFun.put(code, currentAdjFun.get(code).compose(adjFctA.pop()));
-					System.out.println(code + " adjusted, starting " + quoteA.getDateTime());
-				}
+//				while ((!adjFctA.isEmpty()) && CalendarUtil.daysBetween(adjFctA.peek().paymentDate, quoteA.getDateTime()) >= 0) {
+//					currentAdjFun.put(code, currentAdjFun.get(code).compose(adjFctA.pop()));
+//					System.out.println(code + " adjusted, starting " + quoteA.getDateTime());
+//				}
 				minuteSnapshot.put(code, quoteA);
 
 				assert tick.getMillis() == quoteA.getDateTime().getMillis() : "Error on " + code + ": date time should be " + tick + ", but is " + quoteA.getDateTime();
 			});
-			doStuff.apply(tick, minuteSnapshot, currentAdjFun);
+			doStuff.apply(tick, minuteSnapshot);
 			if (log) {
 				Arrays.stream(codes).forEach(code -> System.out.println(code + "\t" + minuteSnapshot.get(code)));
 			}

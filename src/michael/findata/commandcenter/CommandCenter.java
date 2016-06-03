@@ -9,9 +9,12 @@ import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.execution.strategy.handler.MarketConditionHandler;
 import michael.findata.algoquant.execution.component.broker.LocalBrokerProxy;
+import michael.findata.algoquant.strategy.pair.HoppingStrategy;
 import michael.findata.external.tdx.TDXClient;
 import michael.findata.model.Stock;
 import org.joda.time.DateTime;
+import org.joda.time.LocalDate;
+import org.joda.time.LocalDateTime;
 import org.joda.time.LocalTime;
 
 import java.util.*;
@@ -31,6 +34,9 @@ public class CommandCenter {
 	private TDXPollThread shSzThread = null;
 	private TDXPollThread shThread = null;
 	private TDXPollThread szThread = null;
+//	private boolean shSzStopped = true;
+//	private boolean shStopped = true;
+//	private boolean szStopped = true;
 	private long firstHalfStart;
 	private long firstHalfEnd;
 	private long secondHalfStart;
@@ -149,6 +155,20 @@ public class CommandCenter {
 		}
 	}
 
+	private synchronized void onStop () {
+		if ((shSzThread == null || shSzThread.isStopped()) &&
+				(shThread == null || shThread.isStopped()) &&
+				(szThread == null || szThread.isStopped())) {
+			System.out.println("Command Center Stopped");
+			strategies.forEach(strategy -> {
+				if (strategy instanceof HoppingStrategy) {
+					HoppingStrategy hoppingStrategy = (HoppingStrategy) strategy;
+					hoppingStrategy.onStop();
+				}
+			});
+		}
+	}
+
 	private void depthsUpdated(Map<Product, Depth> depths) {
 		// start a new thread to do update
 		Thread t = new Thread(() -> {
@@ -177,6 +197,7 @@ public class CommandCenter {
 		private long heartbeatInterval;
 		private String [] codes;
 		private HashMap<String, Stock> codeProductMap;
+		private boolean stopped = true;
 
 		private void notifyStop () {
 			stopSignal = true;
@@ -197,18 +218,14 @@ public class CommandCenter {
 
 		@Override
 		public void run() {
+			stopped = false;
 			long now;
+			long lastPrint = System.currentTimeMillis();
 			while (true) {
 //				System.out.println(name+" heartbeat ... ");
 				if (stopSignal) {
-					if (client.isConnected()) {
-						client.disconnect();
-					}
 					System.out.println(name+" stop signal received, stopping ...");
-					if (broker != null && broker instanceof LocalBrokerProxy) {
-						((LocalBrokerProxy) broker).stop();
-					}
-					return;
+					break;
 				}
 				now = System.currentTimeMillis();
 				if (now < firstHalfStart || // before daily session
@@ -216,7 +233,10 @@ public class CommandCenter {
 					if (client.isConnected()) {
 						client.disconnect();
 					}
-//					System.out.println(name+" daily session not started or during lunch break, do nothing ...");
+					if (now - lastPrint > 300000) {
+						System.out.println(LocalDateTime.now()+": "+name+" daily session not started or during lunch break, do nothing ...");
+						lastPrint = now;
+					}
 					if (heartbeatInterval > 0) {
 						try {
 //							System.out.println(name+" heartbeat completed, sleeping ...");
@@ -226,14 +246,8 @@ public class CommandCenter {
 						}
 					}
 				} else if (secondHalfEnd < now ) { // after daily session
-					if (client.isConnected()) {
-						client.disconnect();
-					}
 					System.out.println(name+" daily session ended, stopping ...");
-					if (broker != null && broker instanceof LocalBrokerProxy) {
-						((LocalBrokerProxy) broker).stop();
-					}
-					return;
+					break;
 				} else {
 					if (!client.isConnected()) {
 						System.out.println(name+" connecting ...");
@@ -243,6 +257,14 @@ public class CommandCenter {
 					poll();
 				}
 			}
+			if (client.isConnected()) {
+				client.disconnect();
+			}
+			if (broker != null && broker instanceof LocalBrokerProxy) {
+				((LocalBrokerProxy) broker).stop();
+			}
+			stopped = true;
+			onStop();
 		}
 
 		private void poll () {
@@ -260,6 +282,10 @@ public class CommandCenter {
 			}
 //			System.out.println(name+" locked obtained. @\t"+System.currentTimeMillis());
 			depthsUpdated(result);
+		}
+
+		public boolean isStopped() {
+			return stopped;
 		}
 	}
 }

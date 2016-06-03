@@ -17,6 +17,8 @@ public interface PairStatsRepository extends PagingAndSortingRepository<PairStat
 
 	List<PairStats> findByTrainingEndAndAdfpLessThanAndAdfpmaLessThanAndCodeToShortIn(Date trainingEnd, double adf_pThreshold, double adf_p_maThreshold, Collection<String> codesToShort);
 
+	List<PairStats> findByTrainingEndAndAdfpLessThanAndAdfpmaLessThanAndCodeToShortInAndCodeToLongIn(Date trainingEnd, double adf_pThreshold, double adf_p_maThreshold, Collection<String> codesToShort, Collection<String> codesToLong);
+
 	@Modifying
 	@Query(value="update \n" +
 			"pair_stats s,\n" +

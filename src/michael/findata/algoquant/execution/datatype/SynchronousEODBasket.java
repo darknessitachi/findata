@@ -8,7 +8,6 @@ import java.util.*;
 
 /**
  * Modelled after SynchronousPriceBasket
- * Created by nicky on 2015/11/21.
  */
 public class SynchronousEODBasket {
 

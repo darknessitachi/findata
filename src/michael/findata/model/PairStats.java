@@ -8,7 +8,7 @@ import java.util.Date;
 @Entity
 @Table(name = "pair_stats")
 @Access(AccessType.FIELD)
-public class PairStats {
+public class PairStats implements Comparable<PairStats> {
 
 	@Id
 	@GeneratedValue(generator="increment")
@@ -196,6 +196,12 @@ public class PairStats {
 
 	public void setAdfpma(double adfpma) {
 		this.adfpma = adfpma;
+	}
+
+	@Override
+	public int compareTo(PairStats o) {
+		if (o == null) return 0;
+		return adfpma > o.getAdfpma() ? 1 : (adfpma < o.getAdfpma() ? -1 : 0);
 	}
 
 	public enum TimeSeriesType {

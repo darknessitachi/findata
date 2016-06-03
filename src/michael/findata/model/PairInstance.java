@@ -14,7 +14,7 @@ import java.util.Date;
 @Entity
 @Table(name = "pair_instance")
 @Access(AccessType.FIELD)
-public class PairInstance implements Comparable {
+public class PairInstance implements Comparable<PairInstance> {
 
 	@Id
 	@GeneratedValue(generator="increment")
@@ -545,7 +545,7 @@ public class PairInstance implements Comparable {
 	 * <tt>0</tt>, or <tt>1</tt> according to whether the value of
 	 * <i>expression</i> is negative, zero or positive.
 	 *
-	 * @param o the object to be compared.
+	 * @param anotherPair the object to be compared.
 	 * @return a negative integer, zero, or a positive integer as this object
 	 * is less than, equal to, or greater than the specified object.
 	 * @throws NullPointerException if the specified object is null
@@ -553,13 +553,13 @@ public class PairInstance implements Comparable {
 	 *                              from being compared to this object.
 	 */
 	@Override
-	public int compareTo(Object o) {
-		if (o == null || !(o instanceof PairInstance)) return 0;
-		PairInstance anotherPair = (PairInstance) o;
-		if (status == PairStatus.NEW || anotherPair.status == PairStatus.NEW) return 0;
-		Timestamp thisDate = status == PairStatus.OPENED ? dateOpened : dateClosed;
-		Timestamp anotherDate = anotherPair.status == PairStatus.OPENED ? anotherPair.dateOpened : anotherPair.dateClosed;
-		return thisDate.compareTo(anotherDate);
+	public int compareTo(PairInstance anotherPair) {
+		if (anotherPair == null || anotherPair.getStats() == null) return 0;
+//		PairInstance anotherPair = (PairInstance) o;
+//		if (status == PairStatus.NEW || anotherPair.status == PairStatus.NEW) return 0;
+//		Timestamp thisDate = status == PairStatus.OPENED ? dateOpened : dateClosed;
+//		Timestamp anotherDate = anotherPair.status == PairStatus.OPENED ? anotherPair.dateOpened : anotherPair.dateClosed;
+		return getStats().compareTo(anotherPair.getStats());
 	}
 
 	public double feeEstimate() {

@@ -18,6 +18,7 @@ import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.joda.time.DateTime;
+import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.springframework.context.ApplicationContext;
@@ -347,8 +348,11 @@ public class PairsSearch {
 		List<Pair> executions = new ArrayList<>();
 		DateTime startOfEndSim = endSim.withMillisOfDay(1);
 
-		Consumer3<DateTime, HashMap<String, SecurityTimeSeriesDatum>, HashMap<String, Function<Integer, Integer>>>
-				tickOp = (dateTime, snapshots, adjFuns) -> {
+		LocalDate adjStartDate = adjStart.toLocalDate();
+		DividendService.PriceAdjuster pa = ds.newPriceAdjuster(adjStartDate, endSim.toLocalDate(), codes);
+		Consumer2<DateTime, HashMap<String, SecurityTimeSeriesDatum>>
+				tickOp = (dateTime, snapshots) -> {
+			LocalDate curDate = dateTime.toLocalDate();
 			String codeShort;
 			String codeLong;
 			SecurityTimeSeriesDatum datumShort;
@@ -376,11 +380,13 @@ public class PairsSearch {
 				}
 
 				actualPriceShort = datumShort.getClose()/1000d;
-				adjustedPriceShort = adjFuns.get(codeShort).apply(datumShort.getClose())/1000d;
+				adjustedPriceShort = pa.adjust(codeShort, adjStartDate, curDate, datumShort.getClose())/1000d;
+//				adjustedPriceShort = adjFuns.get(codeShort).apply(datumShort.getClose())/1000d;
 				amountShort = datumShort.getAmount();
 
 				actualPriceLong = datumLong.getClose()/1000d;
-				adjustedPriceLong = adjFuns.get(codeLong).apply(datumLong.getClose())/1000d;
+				adjustedPriceLong = pa.adjust(codeLong, adjStartDate, curDate, datumLong.getClose())/1000d;
+//				adjustedPriceLong = adjFuns.get(codeLong).apply(datumLong.getClose())/1000d;
 				amountLong = datumLong.getAmount();
 
 				double residual = adjustedPriceShort * pair.slope - adjustedPriceLong;
@@ -469,7 +475,7 @@ public class PairsSearch {
 			}
 		};
 
-		stsds.walkMinutes(adjStart, startSim, endSim.withHourOfDay(23), 1000000, codes, false, tickOp);
+		stsds.walkMinutes(startSim, endSim.withHourOfDay(23), 1000000, codes, false, tickOp);
 
 		return executions;
 	}

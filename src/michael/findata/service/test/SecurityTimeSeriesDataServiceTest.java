@@ -20,11 +20,10 @@ public class SecurityTimeSeriesDataServiceTest {
 
 		stsds.walkMinutes(
 				start,
-				start,
 				end,
 				1000000,
 				new String [] {"601009", "000568"}, false,
-				(date, data, adjFunctions) ->{
+				(date, data) ->{
 					System.out.print(date);
 					System.out.print("\tAdjusted:\t" + pa.adjust("601009", start.toLocalDate(), date.toLocalDate(), data.get("601009").getClose()/1000d));
 					System.out.println("\tAdjusted:\t" + pa.adjust("000568", start.toLocalDate(), date.toLocalDate(), data.get("000568").getClose()/1000d));

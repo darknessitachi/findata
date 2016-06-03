@@ -22,7 +22,7 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 	 * @param traded
 	 */
 	public Depth(double spotPrice, Product product, boolean traded, double price) {
-		super(product, price);
+		super(product, price, price);
 		this.traded = traded;
 		this.bidVol = new long[nLevels()];
 		this.askVol = new long[nLevels()];
@@ -66,7 +66,8 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 	 */
 	public double bestBid(double amountThreshold) {
 		double amountAccumulated = 0d;
-		for (int i = 1; i <= 5; i++) {
+		int nlevels = nLevels();
+		for (int i = 1; i <= nlevels; i++) {
 			amountAccumulated += bid(i) * bidVol(i);
 			if (amountAccumulated >= amountThreshold) {
 				return bid(i);
@@ -82,7 +83,8 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 	 */
 	public double bestAsk(double amountThreshold) {
 		double amountAccumulated = 0d;
-		for (int i = 1; i <= 5; i++) {
+		int nlevels = nLevels();
+		for (int i = 1; i <= nlevels; i++) {
 			amountAccumulated += ask(i) * askVol(i);
 			if (amountAccumulated >= amountThreshold) {
 				return ask(i);
@@ -98,7 +100,8 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 	 */
 	public int totalBidAtOrAbove(double priceThreshold) {
 		int volumeAccumulated = 0;
-		for (int i = 1; i<= 5; i++) {
+		int nlevels = nLevels();
+		for (int i = 1; i<= nlevels; i++) {
 			if (bid(i) < priceThreshold) {
 				break;
 			}
@@ -114,7 +117,8 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 	 */
 	public int totalAskAtOrBelow(double priceThreshold) {
 		int volumeAccumulated = 0;
-		for (int i = 1; i<= 5; i++) {
+		int nlevels = nLevels();
+		for (int i = 1; i<= nlevels; i++) {
 			if (ask(i) > priceThreshold) {
 				break;
 			}
@@ -125,17 +129,20 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 
 	public String toString () {
 		StringBuilder sb = new StringBuilder();
+		int nlevels = nLevels();
 		sb.append(product()).append("\n");
-		sb.append("ask5 ").append(ask(5)).append('\t').append(askVol(5)).append('\n');
-		sb.append("ask4 ").append(ask(4)).append('\t').append(askVol(4)).append('\n');
-		sb.append("ask3 ").append(ask(3)).append('\t').append(askVol(3)).append('\n');
-		sb.append("ask2 ").append(ask(2)).append('\t').append(askVol(2)).append('\n');
-		sb.append("ask1 ").append(ask(1)).append('\t').append(askVol(1)).append('\n');
-		sb.append("bid1 ").append(bid(1)).append('\t').append(bidVol(1)).append('\n');
-		sb.append("bid2 ").append(bid(2)).append('\t').append(bidVol(2)).append('\n');
-		sb.append("bid3 ").append(bid(3)).append('\t').append(bidVol(3)).append('\n');
-		sb.append("bid4 ").append(bid(4)).append('\t').append(bidVol(4)).append('\n');
-		sb.append("bid5 ").append(bid(5)).append('\t').append(bidVol(5)).append('\n');
+		if (nlevels >= 5) sb.append("ask5 ").append(ask(5)).append('\t').append(askVol(5)).append('\n');
+		if (nlevels >= 4) sb.append("ask4 ").append(ask(4)).append('\t').append(askVol(4)).append('\n');
+		if (nlevels >= 3) sb.append("ask3 ").append(ask(3)).append('\t').append(askVol(3)).append('\n');
+		if (nlevels >= 2) sb.append("ask2 ").append(ask(2)).append('\t').append(askVol(2)).append('\n');
+		if (nlevels >= 1) {
+			sb.append("ask1 ").append(ask(1)).append('\t').append(askVol(1)).append('\n');
+			sb.append("bid1 ").append(bid(1)).append('\t').append(bidVol(1)).append('\n');
+		}
+		if (nlevels >= 2) sb.append("bid2 ").append(bid(2)).append('\t').append(bidVol(2)).append('\n');
+		if (nlevels >= 3) sb.append("bid3 ").append(bid(3)).append('\t').append(bidVol(3)).append('\n');
+		if (nlevels >= 4) sb.append("bid4 ").append(bid(4)).append('\t').append(bidVol(4)).append('\n');
+		if (nlevels >= 5) sb.append("bid5 ").append(bid(5)).append('\t').append(bidVol(5)).append('\n');
 		return sb.toString();
 	}
 }

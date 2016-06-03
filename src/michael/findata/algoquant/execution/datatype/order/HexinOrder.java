@@ -12,10 +12,12 @@ public class HexinOrder extends Order {
 	public HexinOrder(Product product, double quantity, double price, HexinType hexinType) {
 		super(product,
 				hexinType == HexinType.SIMPLE_BUY ||
+				hexinType == HexinType.CREDIT_BUY ||
 				hexinType == HexinType.PAIR_OPEN_LONG ||
 				hexinType == HexinType.PAIR_CLOSE_SHORT_BUY_BACK ? Side.BUY : Side.SELL,
 				quantity, price);
 		this.hexinType = hexinType;
+		this.type = OrderExecutionType.LIMIT_ORDER;
 	}
 
 	private HexinType hexinType;
@@ -45,6 +47,8 @@ public class HexinOrder extends Order {
 	public enum HexinType {
 		SIMPLE_SELL,
 		SIMPLE_BUY,
+		CREDIT_SELL,
+		CREDIT_BUY,
 		PAIR_OPEN_SHORT,
 		PAIR_OPEN_LONG,
 		PAIR_CLOSE_SHORT_BUY_BACK,
@@ -52,10 +56,14 @@ public class HexinOrder extends Order {
 
 		public HexinType opposite() {
 			switch (this) {
+				case CREDIT_BUY:
+					return CREDIT_SELL;
+				case CREDIT_SELL:
+					return CREDIT_BUY;
 				case PAIR_OPEN_SHORT:
-					return HexinType.PAIR_CLOSE_SHORT_BUY_BACK;
+					return PAIR_CLOSE_SHORT_BUY_BACK;
 				case PAIR_OPEN_LONG:
-					return HexinType.PAIR_CLOSE_LONG_SELL_BACK;
+					return PAIR_CLOSE_LONG_SELL_BACK;
 				case PAIR_CLOSE_SHORT_BUY_BACK:
 					return PAIR_OPEN_SHORT;
 				case PAIR_CLOSE_LONG_SELL_BACK:

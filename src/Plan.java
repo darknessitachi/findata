@@ -1,27 +1,27 @@
+import com.numericalmethod.algoquant.model.elliott2005.strategy.Elliott2005StrategyDemo1;
 import michael.findata.algoquant.strategy.pair.HoppingStrategy;
 
 public class Plan {
-	public static void main (String args []) {
-//		System.out.println(System.currentTimeMillis());
-//		int [] result = HoppingStrategy.calVolumes (3.149, 11700, 3.194, 1900, HoppingStrategy.BalanceOption.CLOSEST_MATCH, 0.005, 0.01, 0.02, 0.05);
-//		System.out.println(System.currentTimeMillis());
-//		System.out.println("3.149 * "+result[0]+" = "+(3.149*result[0]));
-//		System.out.println("3.194 * "+result[1]+" = "+(3.194*result[1]));
+	public static void main(String[] args) {
+		Elliott2005StrategyDemo1 demo = new Elliott2005StrategyDemo1();
+		demo.run();
 	}
 }
 /**
- 用TDXClient驱动PairStrategy
- Completed: 第一步记录开平仓机会
+ *
 
- Completed: 第二步自动下单：测试同市场同时下单能否成功，测试不同市场下两单的时候，最小延迟要多久。
- 普通账户一个单子0.6-0.8s，
- 信用账户一个单子1.1s
+ select pi.code_to_short, pi.code_to_long, openable_on, pctg(max_res) max_res, pctg(ps.stdev) stdev,
+ format(max_res/stdev,2) ratio, pctg(adf_p_ma) adf_p_ma
+ from pair_instance pi, pair_stats ps
+ where pi.pair_stats_id = ps.id and max_res > 0.01 and max_res/stdev > 1.5 order by max_res desc;
 
+ select * from pair_stats where adf_p_ma < 0.07 and adf_p < 0.011 and training_end = date(now()) and code_to_short in ('510060', '510070', '159943');
+
+ select count(*), training_end from pair_stats group by training_end order by training_end
+ *
  紧急:  第三步动态仓位管理
- 交易时编程：
- 检测交易所snapshots时间间隔。
  测试动态仓位控制
- 0. 优化Pair stats计算，达到每天每个文件只读取一次。
+ 0. C#买卖单发出后，若是普通单下单成功，则会正确返回单号（getAck）；其他类型下单成功不会返回单号。需要统一。
  1. Remove all adjFunction/adjFactor calls, replace with Adjuster calls
  0. 相关性条件降低后，要把相应的开仓条件升高（收紧），平仓条件升高（放松），也就是根据相关性系数，动态调整开平仓条件。
  0. 紧急：需要对ETF失败交易进行彻底分析，经简单分析：失败交易包含的股票应该比较集中。
@@ -31,13 +31,17 @@ public class Plan {
 
  测试 java.sql.Timestamp, java.sql.Date 和 java.util.Date 在存储后，提取后的值有无变化
  测试结果：由于各处（包括数据库）的缺省时区是东八区，所以各时间格式可以互换。
+ 用TDXClient驱动PairStrategy
+ Completed: 第二步自动下单：测试同市场同时下单能否成功，测试不同市场下两单的时候，最小延迟要多久。
+ 普通账户一个单子0.6-0.8s，
+ 信用账户一个单子1.1s
 
  ETF对冲策略人工维护项目：
  1. 可融券标的券
- 2. 行情服务器可用性
 
  ETF对冲策略自动维护项目：
- 1. 分红，分拆数据
+ 1. 更新分红，分拆数据
+ 2. 测试行情服务器可用性
 
  策略1：
  利用融券ETF，对广泛ETF进行 隔日统计配对
@@ -46,7 +50,9 @@ public class Plan {
  自持H股ETF（510900）、恒生H股（160717）, 恒生ETF(159920)，对t+0 ETF 进行日内统计配对
  可行,主要难点：1自持股比重分配以便达到最大利用率
 
- select count(*), training_end from pair_stats group by training_end order by training_end
+ todo: select max(fin_date) from report_pub_dates where fin_year = 2012 and fin_season = 3
+ todo: select max(fin_date) from report_pub_dates where fin_year = 2012 and fin_season = 2
+ todo: find out what's wrong with the above
 
  **/
 
