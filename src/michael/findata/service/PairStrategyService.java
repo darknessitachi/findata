@@ -4,16 +4,14 @@ import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.Ma
 import com.numericalmethod.suanshu.stats.test.timeseries.adf.AugmentedDickeyFuller;
 import com.numericalmethod.suanshu.zzz.con.prn.aux.nul.D;
 import michael.findata.algoquant.strategy.PairStrategy;
+import michael.findata.demo.aparapi.simpleregression.OcRegressionFloat;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.netease.NeteaseInstantSnapshot;
 import michael.findata.external.shse.SHSEShortableStockList;
 import michael.findata.external.szse.SZSEShortableStockList;
 import michael.findata.model.*;
 import michael.findata.spring.data.repository.*;
-import michael.findata.util.Consumer2;
-import michael.findata.util.Consumer3;
-import michael.findata.util.Consumer5;
-import michael.findata.util.FinDataConstants;
+import michael.findata.util.*;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
@@ -123,9 +121,9 @@ public class PairStrategyService {
 
 	// Step 1: calculate stats
 	@Transactional(propagation = Propagation.REQUIRED)
-	public void calculateStats(LocalDate trainingStart, LocalDate trainingEnd, int idGreaterThanThis) {
+	public void calculateStats(LocalDate trainingStart, LocalDate trainingEnd, int idGreaterThanThis, int idLessThanThis) {
 		long start = System.currentTimeMillis();
-		List<Pair> pairs = pairRepo.findByEnabledAndIdGreaterThan(true, idGreaterThanThis);
+		List<Pair> pairs = pairRepo.findByEnabledAndIdGreaterThanAndIdLessThan(true, idGreaterThanThis, idLessThanThis);
 		String [][] pairCodes = new String [pairs.size()][];
 		for (int i = 0; i < pairCodes.length; i++) {
 			pairCodes[i] = new String [2];
@@ -154,7 +152,7 @@ public class PairStrategyService {
 	// Step 2: update adf p value moving average
 	@Transactional(propagation = Propagation.REQUIRED)
 	public int updateAdfpMovingAverage (LocalDate date) {
-		return pairStatsRepo.updateAdfpMovingAverage(date.toDate(), FinDataConstants.STRATEGY_PAIR_TRAINING_WINDOW_DAYS);
+		return pairStatsRepo.updateAdfpMovingAverage(date.toDate(), FinDataConstants.STRATEGY_PAIR_ADF_P_MA_WINDOW_DAYS);
 	}
 
 	// Step 3: populate PairInstances after stats are calculated
@@ -318,6 +316,7 @@ public class PairStrategyService {
 		return new double[] {slope, std, correl, adf_p};
 	}
 
+	//slope, std, correl, adf_p
 	public double[][] cointcorrel (DateTime startTraining,
 										DateTime endTraining,
 										String [][] codePairs,
@@ -327,11 +326,23 @@ public class PairStrategyService {
 										boolean minutesOrDays) {
 		Set<String> codeSet = new HashSet<>();
 		SimpleRegression [] regression = new SimpleRegression [codePairs.length];
+//		TrivialRegressionDouble [] regression = new TrivialRegressionDouble[codePairs.length];
+//		OcRegressionDouble [] regression = new OcRegressionDouble[codePairs.length];
+//		OcRegressionDouble1 [] regression = new OcRegressionDouble1[codePairs.length];
+//		OcRegressionLong [] regression = new OcRegressionLong[codePairs.length];
+//		OcRegressionFloat [] regression = new OcRegressionFloat[codePairs.length];
+
 		PearsonsCorrelation [] pearsonsCorrelation = new PearsonsCorrelation [codePairs.length];
 		ArrayList<Double> [] pA = new ArrayList [codePairs.length];
 		ArrayList<Double> [] pB = new ArrayList [codePairs.length];
 		for (int i = codePairs.length - 1; i > -1; i--) {
 			regression[i] = new SimpleRegression (false);
+//			regression[i] = new TrivialRegressionDouble();
+//			regression[i] = new OcRegressionDouble();
+//			regression[i] = new OcRegressionDouble1();
+//			regression[i] = new OcRegressionLong();
+//			regression[i] = new OcRegressionFloat();
+
 			pearsonsCorrelation[i] = new PearsonsCorrelation();
 			pA[i] = new ArrayList<>();
 			pB[i] = new ArrayList<>();
@@ -359,7 +370,9 @@ public class PairStrategyService {
 				if (!prices.containsKey(codeB)) continue;
 				double prA = prices.get(codeA);
 				double prB = prices.get(codeB);
+//				regression[i].addData((float)prA, (float)prB);
 				regression[i].addData(prA, prB);
+//				regression[i].addData((int)(prA*1000), (int)(prB*1000));
 				pA[i].add(prA);
 				pB[i].add(prB);
 			}
@@ -406,19 +419,6 @@ public class PairStrategyService {
 			}
 			double adf_p = new AugmentedDickeyFuller(residuals).pValue();
 			System.out.print("\t" + adf_p);
-
-			// ADF test for regression residuals on minute data
-//		ArrayList<Double> res = new ArrayList<>();
-//		stsds.walkMinutes(startTraining, endTraining, 100000, codeA, codeB, false,
-//				(date, prA, prB) -> {
-//					// Calculate residuals according to parameters obtains from linear regression
-//					// ie. residual = quoteB - slope * quoteA
-//					res.add(prB - prA * slope);
-//				}
-//		);
-//		double [] residuals = res.stream().mapToDouble(d->d).toArray();
-//		adf_p = new AugmentedDickeyFuller(residuals).pValue();
-//		System.out.println("adf p: " + adf_p);
 
 			// Residual standard deviation
 			double std = new StandardDeviation().evaluate(residuals);

@@ -175,15 +175,16 @@ public class CommandCenter {
 			// Construct market condition and pass it to MarketConditionHandler
 			MarketCondition condition = new SimpleMarketCondition(depths);
 
+			DateTime now = new DateTime();
 			strategies.forEach(strategy -> {
-				DateTime now = new DateTime();
+//				DateTime now = new DateTime();
 				if (strategy instanceof MarketConditionHandler) {
 					MarketConditionHandler mch = (MarketConditionHandler) strategy;
 					mch.onMarketConditionUpdate(now, condition, null, broker);
 				}
 			});
 			locked = false;
-			System.out.println("lock released.");
+			System.out.println(now+" lock released.");
 		});
 		// t.start() // do it with a new thread
 		t.run(); // do it within the same thread

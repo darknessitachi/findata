@@ -197,7 +197,7 @@ public abstract class Pair implements Comparable {
 	 */
 	@Override
 	public int compareTo(Object o) {
-		if (o == null || !(o instanceof Pair)) return 0;
+		if (o == null || !(o instanceof Pair)) return 1;
 		Pair anotherPair = (Pair) o;
 		if (status == NEW || anotherPair.status == NEW) return 0;
 		DateTime thisDate = status == OPENED ? dateOpened : dateClosed;

@@ -37,7 +37,11 @@ public final class FinDataConstants {
 
 	public static final int STRATEGY_PAIR_TRAINING_WINDOW_DAYS = ResourceUtil.getInt("michael.findata.strategy.pair.training.window");
 
+	public static final int STRATEGY_PAIR_ADF_P_MA_WINDOW_DAYS = ResourceUtil.getInt("michael.findata.strategy.pair.adf_p_ma.window");
+
 	public static final Date currentTimeStamp = new Date();
+
+	final public static int OPENCL_REGRESSION_SIZE = 8192;
 
 	// Some early dates to assume for date range lower bound in database
 	// See more explanation from actual usages

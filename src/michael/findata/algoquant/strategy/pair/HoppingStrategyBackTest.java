@@ -12,6 +12,8 @@ import com.numericalmethod.algoquant.execution.datatype.product.fx.Currencies;
 import com.numericalmethod.algoquant.execution.datatype.product.portfolio.Portfolio;
 import com.numericalmethod.algoquant.execution.performance.measure.PerformanceMeasure;
 import com.numericalmethod.algoquant.execution.performance.measure.ProfitLoss;
+import com.numericalmethod.algoquant.execution.performance.measure.ir.InformationRatioForPeriods;
+import com.numericalmethod.algoquant.execution.performance.measure.ir.InformationRatioForTrades;
 import com.numericalmethod.algoquant.execution.performance.measure.ir.InformationRatioForZeroInvestment;
 import com.numericalmethod.algoquant.execution.performance.measure.omega.OmegaForPeriods;
 import com.numericalmethod.algoquant.execution.performance.report.PerformanceReport;
@@ -82,6 +84,8 @@ public class HoppingStrategyBackTest {
 		Collection<PerformanceMeasure> measures = new ArrayList<>(3);
 		measures.add(new ProfitLoss());
 		measures.add(new InformationRatioForZeroInvestment(Period.years(1), 0.));
+		measures.add(new InformationRatioForTrades());
+//		measures.add(new InformationRatioForPeriods());
 		measures.add(new OmegaForPeriods(0,
 				Period.years(1),
 				ReturnsCalculators.ABSOLUTE,
@@ -100,31 +104,47 @@ public class HoppingStrategyBackTest {
 		PairInstanceRepository pairInstanceRepo = (PairInstanceRepository) context.getBean("pairInstanceRepository");
 		DividendService ds = (DividendService) context.getBean("dividendService");
 		StockService ss = (StockService) context.getBean("stockService");
-		DateTime start = DateTime.parse("2016-06-03");
-		DateTime end = DateTime.parse("2016-06-03").plusHours(23);
-		Interval interval = new Interval(start, end);
 
 		Portfolio<Stock> portfolio = new Portfolio<>();
-		portfolio.putIfAbsent(stockRepo.findOneByCode("160706"), 36000d*2);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("510300"), 10000d*2);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("510310"), 25000d*2);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("510330"), 10000d*2);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("510360"), 33000d*2);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("159919"), 9000d*2);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("159925"), 25000d*2);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("160706"), 36000d);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("510300"), 10000d);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("510310"), 25000d);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("510330"), 10000d);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("510360"), 33000d);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("159919"), 9000d);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("159925"), 25000d);
 
-//		portfolio.putIfAbsent(stockRepo.findOneByCode("510160"), 25000d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("510060"), 29100d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("510290"), 20800d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("159903"), 30200d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("159943"), 5300d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("512230"), 51800d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("512070"), 1100d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("160706"), 100d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("159938"), 6300d);
 
-		Set<String> scope = ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic_bluechip3.csv");
+		Set<String> scope = ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic_bluechip.csv");
 
+		int numRun = 5;
+		int daysPerRun = 32;
 		// insert strategies
-		HoppingStrategy hoppingStrategy = new HoppingStrategy(
-				scope, portfolio, start.toLocalDate(),
-				CREDIT_SELL,
-				CREDIT_BUY,
-				pairStatsRepo, pairInstanceRepo, ds);
+		DateTime start = DateTime.parse("2016-01-01");
+		DateTime end;
 
-		HoppingStrategyBackTest demo = new HoppingStrategyBackTest(stockRepo.findByCodeIn(scope), hoppingStrategy, interval);
-		demo.run();
+		for (int i = 0; i < numRun; i++) {
+			end = start.plusDays(daysPerRun - 1).plusHours(23);
+			Interval interval = new Interval(start, end);
+			HoppingStrategy hoppingStrategy = new HoppingStrategy(
+					scope, portfolio, start.toLocalDate(),
+					CREDIT_SELL,
+					CREDIT_BUY,
+					pairStatsRepo, pairInstanceRepo, ds);
+			HoppingStrategyBackTest demo = new HoppingStrategyBackTest(stockRepo.findByCodeIn(scope), hoppingStrategy, interval);
+			demo.run();
+
+			portfolio = hoppingStrategy.getPortfolio();
+			System.out.println(portfolio);
+			start = start.plusDays(daysPerRun);
+		}
 	}
 }

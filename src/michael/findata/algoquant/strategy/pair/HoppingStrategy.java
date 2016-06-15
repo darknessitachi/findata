@@ -107,17 +107,8 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 	public void onDateUpdate(LocalDate exeDate) {
 		System.out.println("Preparing for date: " + exeDate);
 		save();
+		refreshShortablePortfolio();
 		this.executionDate = exeDate;
-		this.portfolio = portfolioTmr;
-		this.portfolioTmr = new Portfolio<>();
-		this.portfolio.forEach((product, position) -> {
-			if (position != 0) {
-				portfolioTmr.put(product, position);
-				if (!scope.contains(product.getCode())) {
-					throw new RuntimeException(product.getCode() + " is not in scope. Please verify!");
-				}
-			}
-		});
 
 		Set<String> toShorts = portfolio.products().stream().map(Stock::getCode).collect(Collectors.toSet());
 		List<PairStats> stats =
@@ -172,6 +163,33 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 		adjuster = dividendService.newPriceAdjuster(earliest, exeDate, codeToPairs.keySet().toArray(new String[codeToPairs.size()]));
 	}
 
+	// when a trading day passes, the stocks you bought on the first day can finally be sold on the second day
+	private void refreshShortablePortfolio() {
+		this.portfolio = portfolioTmr;
+		this.portfolioTmr = new Portfolio<>();
+		this.portfolio.forEach((product, position) -> {
+			if (position != 0) {
+				portfolioTmr.put(product, position);
+				if (!scope.contains(product.getCode())) {
+					throw new RuntimeException(product.getCode() + " is not in scope. Please verify!");
+				}
+			}
+		});
+	}
+
+	public Portfolio<Stock> getPortfolio() {
+		Portfolio<Stock> result = new Portfolio<>();
+		this.portfolioTmr.forEach((product, position) -> {
+			if (position != 0) {
+				result.put(product, position);
+				if (!scope.contains(product.getCode())) {
+					throw new RuntimeException(product.getCode() + " is not in scope. Please verify!");
+				}
+			}
+		});
+		return result;
+	}
+
 	private final Set<PairInstance> emptySet = Collections.emptySet();
 
 	@Override
@@ -203,10 +221,14 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 		double residual;
 		double existingPosition;
 		int volumeShort, volumeLong;
-		Set<PairInstance> affectedPairs =
-				dirtyPrd.stream().
-						flatMap(prd -> codeToPairs.getOrDefault(prd.symbol().substring(0, 6), emptySet).stream()).
-						collect(Collectors.toCollection((Supplier<Set<PairInstance>>) TreeSet::new));
+		Set<PairInstance> affectedPairs = new TreeSet<>();
+		for (Product prod: dirtyPrd) {
+			affectedPairs.addAll(codeToPairs.getOrDefault(prod.symbol().substring(0, 6), emptySet));
+		}
+//		if (now.toString().equals("2016-02-05T10:31:00.000+08:00") || now.toString().equals("2016-02-05T10:35:00.000+08:00")) {
+//			System.out.println();
+//		}
+
 		for (PairInstance pair : affectedPairs) {
 //			System.out.println("Affected pair: "+pair.getStats().getAdfpma());
 
@@ -223,6 +245,12 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 			codeShort = ((Stock) pair.toShort()).getCode();
 			codeLong = ((Stock) pair.toLong()).getCode();
 
+//			if (now.toString().equals("2016-02-05T10:31:00.000+08:00") && codeShort.equals("159903") && codeLong.equals("512230")) {
+//				System.out.println();
+//			}
+//			if (now.toString().equals("2016-02-05T10:35:00.000+08:00") && codeShort.equals("159903") && codeLong.equals("512230")) {
+//				System.out.println();
+//			}
 			actualPriceShort = depthShort.bestBid(amountPerSlot);
 			actualPriceLong = depthLong.bestAsk(amountPerSlot);
 			if (actualPriceLong < 0 || actualPriceShort < 0) continue;
@@ -319,6 +347,7 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 
 	public void onStop() {
 		save();
+		refreshShortablePortfolio();
 	}
 
 	private void save() {

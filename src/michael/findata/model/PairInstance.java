@@ -554,7 +554,7 @@ public class PairInstance implements Comparable<PairInstance> {
 	 */
 	@Override
 	public int compareTo(PairInstance anotherPair) {
-		if (anotherPair == null || anotherPair.getStats() == null) return 0;
+		if (anotherPair == null || anotherPair.getStats() == null) return 1;
 //		PairInstance anotherPair = (PairInstance) o;
 //		if (status == PairStatus.NEW || anotherPair.status == PairStatus.NEW) return 0;
 //		Timestamp thisDate = status == PairStatus.OPENED ? dateOpened : dateClosed;

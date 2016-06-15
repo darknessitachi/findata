@@ -1,10 +1,59 @@
-import com.numericalmethod.algoquant.model.elliott2005.strategy.Elliott2005StrategyDemo1;
-import michael.findata.algoquant.strategy.pair.HoppingStrategy;
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.apache.commons.math3.util.FastMath;
 
 public class Plan {
-	public static void main(String[] args) {
-		Elliott2005StrategyDemo1 demo = new Elliott2005StrategyDemo1();
-		demo.run();
+
+//	private double xbar;
+//	private double ybar;
+//	private double sumX;
+//	private double sumY;
+	private double sumXX;
+//	private double sumYY;
+	private double sumXY;
+//	private long n;
+
+	public void addData(double x, double y) {
+//		if(this.n == 0L) {
+//			this.xbar = x;
+//			this.ybar = y;
+//		}
+
+		this.sumXX += x * x;
+//		this.sumYY += y * y;
+		this.sumXY += x * y;
+
+//		this.sumX += x;
+//		this.sumY += y;
+//		++this.n;
+	}
+
+	public double getSlope() {
+		return this.sumXY / this.sumXX;
+	}
+
+	public static void main (String args []) {
+		SimpleRegression sr = new SimpleRegression(false);
+		sr.addData(1.1, 2.3);
+		sr.addData(2.3, 4.3);
+		sr.addData(3.4, 5.5);
+		sr.addData(3.9, 7.6);
+		System.out.println(sr.getSlope()+" "+FastMath.sqrt(sr.getMeanSquareError()));
+
+		Plan p = new Plan();
+		p.addData(1.1, 2.3);
+		p.addData(2.3, 4.3);
+		p.addData(3.4, 5.5);
+		p.addData(3.9, 7.6);
+		double slope = p.getSlope();
+		double [] res = new double[4];
+		res[0] = 1 - 1.1 * slope / 2.3;
+		res[1] = 1 - 2.3 * slope / 4.3;
+		res[2] = 1 - 3.4 * slope / 5.5;
+		res[3] = 1 - 3.9 * slope / 7.6;
+		StandardDeviation std = new StandardDeviation();
+		double stdev = std.evaluate(res);
+		System.out.println(stdev);
 	}
 }
 /**
@@ -17,15 +66,30 @@ public class Plan {
 
  select * from pair_stats where adf_p_ma < 0.07 and adf_p < 0.011 and training_end = date(now()) and code_to_short in ('510060', '510070', '159943');
 
- select count(*), training_end from pair_stats group by training_end order by training_end
+ select * from pair_stats where concat(code_to_short,'->',code_to_long)='601398->600016' order by training_end;
+
+ select count(*), training_end from pair_stats group by training_end having count(*) <> 5740;
+
+ select * from pair_stats where code_to_short = 510300 and code_to_long = 510160 order by training_end desc limit 10;
+
+ delete from pair_instance where max_res is null;
+
+ select count(*) from pair_instance where max_res is not null;
+
+ select max_res, code_to_short, code_to_long from pair_instance where max_res is not null and openable_on = '2016-06-08' order by max_res desc;
  *
- 紧急:  第三步动态仓位管理
- 测试动态仓位控制
+ PairStrategy需要动态仓位管理
+ HoppingStrategy不需要动态仓位管理
+
+ 0. regularly test the running of xiadan2. if crashed, restart it.
+ 1. market order on hexin broker
+ 0. test hopping strategy on stocks
+ 0. 每天启动CommandCenter的时候，自动探测可交易仓位
+ 0. OcRegressionDouble & OcRegressionDouble64 be able to calculate stdev same as in apache math
  0. C#买卖单发出后，若是普通单下单成功，则会正确返回单号（getAck）；其他类型下单成功不会返回单号。需要统一。
  1. Remove all adjFunction/adjFactor calls, replace with Adjuster calls
  0. 相关性条件降低后，要把相应的开仓条件升高（收紧），平仓条件升高（放松），也就是根据相关性系数，动态调整开平仓条件。
  0. 紧急：需要对ETF失败交易进行彻底分析，经简单分析：失败交易包含的股票应该比较集中。
- 7. 尝试使用Kalman Filter
  8. Backup my tdx stock data mysql db data
  10. C# Need to monitor a) positions b) order executions
 

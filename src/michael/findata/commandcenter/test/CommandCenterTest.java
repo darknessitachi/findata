@@ -12,6 +12,7 @@ import michael.findata.service.StockService;
 import michael.findata.spring.data.repository.PairInstanceRepository;
 import michael.findata.spring.data.repository.PairStatsRepository;
 import michael.findata.spring.data.repository.StockRepository;
+import org.joda.time.LocalTime;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
@@ -88,10 +89,10 @@ public class CommandCenterTest {
 //		pss.updateAdfpMovingAverage(trainingEnd);
 
 		// Set up command center
-//		int minute = 59;
-//		cc.setFirstHalfEnd(new LocalTime(23, minute, 10));
-//		cc.setSecondHalfStart(new LocalTime(23, minute, 30));
-//		cc.setSecondHalfEnd(new LocalTime(23, minute, 40));
+//		int minute = 30;
+//		cc.setFirstHalfEnd(new LocalTime(22, minute, 10));
+//		cc.setSecondHalfStart(new LocalTime(22, minute, 30));
+//		cc.setSecondHalfEnd(new LocalTime(22, minute, 40));
 
 		// Construct portfolio
 		// TODO: 2016/5/22 automatically pick up from where it was left the day before
@@ -99,10 +100,12 @@ public class CommandCenterTest {
 
 		// Fri 2016/06/06 starting
 		portfolio.putIfAbsent(stockRepo.findOneByCode("159919"), 3000d);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("510300"), 3300d);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("510310"), 8000d);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("510060"), 1200d);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("510160"), 42800d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("510300"), 3300d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("510310"), 8000d);
 
-		Set<String> scope = ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic_bluechip3.csv");
+		Set<String> scope = ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic_bluechip.csv");
 
 		// insert strategies
 		HoppingStrategy hoppingStrategy = new HoppingStrategy(

@@ -98,11 +98,11 @@
 			<artifactId>algoquant-core</artifactId>
 			<version>${installed.algoquant.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>com.numericalmethod</groupId>
-			<artifactId>algoquant-demo</artifactId>
-			<version>1.0.0</version>
-		</dependency>
+		<!--<dependency>-->
+			<!--<groupId>com.numericalmethod</groupId>-->
+			<!--<artifactId>algoquant-demo</artifactId>-->
+			<!--<version>1.0.0</version>-->
+		<!--</dependency>-->
 		<dependency>
 			<groupId>com.numericalmethod</groupId>
 			<artifactId>suanshu</artifactId>

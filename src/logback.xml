@@ -1,0 +1,48 @@
+<configuration>
+
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<!-- encoders are assigned the type
+		ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36},%line - %msg%n</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>INFO</level>
+		</filter>
+	</appender>
+
+	<!--
+	Insert the current time under the key 'bySecond' into the logger context.
+	This value will be available to all subsequent configuration elements.
+	-->
+	<timestamp key="bySecond" datePattern="yyyy'.'MM'.'dd','HH'.'mm'.'ss" />
+	<property name="logs.folder" value="log"/>
+	<property name="log.file.prefix" value="algoquant"/>
+
+	<!--<appender name="FILE1" class="ch.qos.logback.core.rolling.RollingFileAppender">-->
+		<!--<file>${logs.folder}/${log.file.prefix}.${bySecond}.log</file>-->
+		<!--<rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">-->
+			<!--<fileNamePattern>${logs.folder}/${log.file.prefix}.${bySecond}.%i.log.zip</fileNamePattern>-->
+			<!--&lt;!&ndash;-->
+			<!--Given that the fixed window rolling policy requires as many file renaming operations as the window size, large window sizes are strongly discouraged. When large values are specified by the user, the current implementation will automatically reduce the window size to 12.-->
+			<!--&ndash;&gt;-->
+			<!--<minIndex>1</minIndex>-->
+			<!--<maxIndex>12</maxIndex>-->
+		<!--</rollingPolicy>-->
+		<!--<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">-->
+			<!--<maxFileSize>200MB</maxFileSize>-->
+		<!--</triggeringPolicy>-->
+		<!--<encoder>-->
+			<!--<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36},%line - %msg%n</pattern>-->
+		<!--</encoder>-->
+		<!--<filter class="ch.qos.logback.classic.filter.ThresholdFilter">-->
+			<!--<level>DEBUG</level>-->
+		<!--</filter>-->
+	<!--</appender>-->
+
+	<root level="INFO">
+		<appender-ref ref="STDOUT"/>
+		<!--<appender-ref ref="FILE1"/>-->
+	</root>
+
+</configuration>

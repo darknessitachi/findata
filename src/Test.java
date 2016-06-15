@@ -57,8 +57,8 @@ public class Test {
 //		ss.refreshStockCodes();
 //		sps.refreshStockPriceHistories();
 //		ss.refreshLatestPriceAndName();
-		ds.refreshDividendData();
-//		sncs.refreshNumberOfShares();
+//		ds.refreshDividendData();
+		sncs.refreshNumberOfShares();
 //		ss.calculateAdjustmentFactor(10);
 
 		// The following are used mainly during and immediately after earnings report seasons

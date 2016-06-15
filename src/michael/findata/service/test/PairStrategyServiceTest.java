@@ -116,9 +116,10 @@ public class PairStrategyServiceTest {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
 		PairStrategyService pss = (PairStrategyService) context.getBean("pairStrategyService");
 		StockService ss = (StockService) context.getBean("stockService");
-		pss.updatePairs(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_hk.csv").toArray(new String[0]));
-		pss.updatePairs(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_gold.csv").toArray(new String[0]));
-		pss.updatePairs(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic.csv").toArray(new String[0]));
+//		pss.updatePairs(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_hk.csv").toArray(new String[0]));
+//		pss.updatePairs(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_gold.csv").toArray(new String[0]));
+//		pss.updatePairs(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic.csv").toArray(new String[0]));
+		pss.updatePairs(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_stock.csv").toArray(new String[0]));
 	}
 
 	public static void main (String args []) throws IOException {
@@ -126,8 +127,8 @@ public class PairStrategyServiceTest {
 		PairStrategyService pss = (PairStrategyService) context.getBean("pairStrategyService");
 
 		HolidayCalendarFromYahoo cal = HolidayCalendarFromYahoo.forExchange(Exchange.SHSE);
-		LocalDate simulationStart = LocalDate.parse("2016-06-06");
-		LocalDate lastStart = LocalDate.parse("2016-06-06");
+		LocalDate simulationStart = LocalDate.parse("2016-06-16");
+		LocalDate lastStart = LocalDate.parse("2016-06-16");
 		LocalDate today = new LocalDate();
 		while (!simulationStart.isAfter(lastStart)) {
 			if (simulationStart.getDayOfWeek() != DateTimeConstants.SATURDAY &&
@@ -136,7 +137,8 @@ public class PairStrategyServiceTest {
 				LocalDate trainingEnd = simulationStart.minusDays(1);
 				LocalDate trainingStart = trainingEnd.minusDays(FinDataConstants.STRATEGY_PAIR_TRAINING_WINDOW_DAYS);
 				System.out.println("Calculating stats for "+trainingStart+" - "+trainingEnd);
-				pss.calculateStats(trainingStart, trainingEnd, -1);
+				pss.calculateStats(trainingStart, trainingEnd, -1, 999999999);
+				System.out.println("Updating Adf P Ma for "+trainingStart+" - "+trainingEnd);
 				pss.updateAdfpMovingAverage(trainingEnd);
 			} else {
 				System.out.println(simulationStart+" is a holiday.");
@@ -150,15 +152,17 @@ public class PairStrategyServiceTest {
 		PairStrategyService pss = (PairStrategyService) context.getBean("pairStrategyService");
 
 		HolidayCalendarFromYahoo cal = HolidayCalendarFromYahoo.forExchange(Exchange.SHSE);
-		LocalDate simulationStart = LocalDate.parse("2016-05-31");
-		LocalDate lastStart = LocalDate.parse("2016-06-03");
+		LocalDate simulationStart = LocalDate.parse("2016-06-06");
+		LocalDate lastStart = LocalDate.parse("2016-06-06");
 		LocalDate today = new LocalDate();
 		while (!simulationStart.isAfter(lastStart)) {
 			if (simulationStart.getDayOfWeek() != DateTimeConstants.SATURDAY &&
-					simulationStart.getDayOfWeek() != DateTimeConstants.SUNDAY &&
-					((!simulationStart.isBefore(today)) || !cal.isHoliday(simulationStart.toDateTimeAtStartOfDay().plusHours(2)))) {
-				System.out.println("Populating pair instances for "+simulationStart);
-				pss.populatePairInstances(simulationStart);
+				simulationStart.getDayOfWeek() != DateTimeConstants.SUNDAY &&
+				((!simulationStart.isBefore(today)) || !cal.isHoliday(simulationStart.toDateTimeAtStartOfDay().plusHours(2)))) {
+				LocalDate trainingEnd = simulationStart.minusDays(1);
+				LocalDate trainingStart = trainingEnd.minusDays(FinDataConstants.STRATEGY_PAIR_TRAINING_WINDOW_DAYS);
+				System.out.println("Updating Adf P Ma for "+trainingStart+" - "+trainingEnd);
+				pss.updateAdfpMovingAverage(trainingEnd);
 			} else {
 				System.out.println(simulationStart+" is a holiday.");
 			}

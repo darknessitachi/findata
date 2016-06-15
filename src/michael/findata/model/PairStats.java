@@ -200,8 +200,8 @@ public class PairStats implements Comparable<PairStats> {
 
 	@Override
 	public int compareTo(PairStats o) {
-		if (o == null) return 0;
-		return adfpma > o.getAdfpma() ? 1 : (adfpma < o.getAdfpma() ? -1 : 0);
+		if (o == null) return 1;
+		return adfpma > o.getAdfpma() ? 1 : (adfpma < o.getAdfpma() ? -1 : (equals(o)? 0 : 1));
 	}
 
 	public enum TimeSeriesType {
