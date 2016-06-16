@@ -1,4 +1,5 @@
 package michael.findata.algoquant.strategy.anticor.processing;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -15,15 +16,15 @@ import java.util.TreeMap;
 public class GroupAndSort {
 	private String src_dir;
 	private String dest_dir;
-	
+
 	private Map<String, Map<Integer, Map<String, String>>> lines_by_year_month_and_day_and_symbol;
-	
+
 	public GroupAndSort(String src_dir, String dest_dir) {
 		this.src_dir = src_dir;
 		this.dest_dir = dest_dir;
-		this.lines_by_year_month_and_day_and_symbol = new HashMap<String, Map<Integer, Map<String,String>>>();
+		this.lines_by_year_month_and_day_and_symbol = new HashMap<String, Map<Integer, Map<String, String>>>();
 	}
-	
+
 	public void run() throws IOException {
 		File dir = new File(src_dir);
 		for (File file : dir.listFiles()) {
@@ -45,9 +46,9 @@ public class GroupAndSort {
 				}
 				reader.close();
 				System.out.println("Consumed " + file.getAbsolutePath());
-			}			
-		} 
-		
+			}
+		}
+
 		for (String year_month_key : lines_by_year_month_and_day_and_symbol.keySet()) {
 			String dest_file = dest_dir + "/" + year_month_key + ".txt";
 			BufferedWriter writer = new BufferedWriter(new FileWriter(dest_file));
@@ -60,13 +61,13 @@ public class GroupAndSort {
 			System.out.println("Wrote " + dest_file);
 		}
 	}
-	
+
 	public static void main(String[] args) throws Exception {
 		if (args.length != 2) {
 			System.out.println("<src_dir> <dest_dir>");
 			System.exit(1);
 		}
-		
+
 		String src_dir = args[0];
 		String dest_dir = args[1];
 		new GroupAndSort(src_dir, dest_dir).run();

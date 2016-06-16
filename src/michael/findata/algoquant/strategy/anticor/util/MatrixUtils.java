@@ -10,7 +10,7 @@ public class MatrixUtils {
 		}
 		return retval;
 	}
-	
+
 	public static double[][] product(double[][] first_matrix, double[][] second_matrix) {
 		if (first_matrix[0].length != second_matrix.length) {
 			return null;
@@ -31,7 +31,7 @@ public class MatrixUtils {
 			return retval;
 		}
 	}
-	
+
 	public static double[] columnMeans(double[][] matrix) {
 		int dim = matrix[0].length;
 		double[] retval = new double[dim];
@@ -40,11 +40,11 @@ public class MatrixUtils {
 			for (int i = 0; i < matrix.length; i++) {
 				sum += matrix[i][j];
 			}
-			retval[j] = sum / (double)matrix.length;
+			retval[j] = sum / (double) matrix.length;
 		}
 		return retval;
 	}
-	
+
 	public static double[] columnStdDevs(double[][] matrix, double[] means) {
 		int dim = matrix[0].length;
 		double[] retval = new double[dim];
@@ -54,12 +54,12 @@ public class MatrixUtils {
 				double diff = matrix[i][j] - means[i];
 				sum += diff * diff;
 			}
-			sum /= (double)matrix.length;
+			sum /= (double) matrix.length;
 			retval[j] = Math.sqrt(sum / (double) matrix.length);
 		}
-		return retval;		
+		return retval;
 	}
-	
+
 	public static double innerProduct(double[] first, double[] second) {
 		double sum = 0.0;
 		int dim = first.length;
@@ -68,7 +68,7 @@ public class MatrixUtils {
 		}
 		return sum;
 	}
-	
+
 	public static double[] hadamardProduct(double[] first, double[] second) {
 		double[] result = new double[first.length];
 		for (int i = 0; i < result.length; i++) {
@@ -76,13 +76,13 @@ public class MatrixUtils {
 		}
 		return result;
 	}
-	
+
 	public static void divideAll(double[] arr, double factor) {
 		for (int i = 0; i < arr.length; i++) {
 			arr[i] /= factor;
 		}
 	}
-	
+
 	public static boolean equals(double[][] first, double[][] second) {
 		int num_rows = first.length;
 		int num_cols = first[0].length;

@@ -2,6 +2,7 @@
 <project name="AntTestDemo" default="run" basedir=".">
 	<property name="src" value="src"/>
 	<property name="dest" value="out/production"/>
+	<property name="helloant_jar" value="out/production"/>
 	<target name="init">
 		<mkdir dir="${dest}"/>
 	</target>

@@ -9,7 +9,7 @@ import java.util.List;
 public class MultiFileSource {
 	private List<File> files;
 	private BufferedReader reader;
-	
+
 	public MultiFileSource(String src_dir) {
 		this.files = new ArrayList<File>();
 		for (File file : new File(src_dir).listFiles()) {
@@ -18,7 +18,7 @@ public class MultiFileSource {
 			}
 		}
 	}
-	
+
 	public String nextLine() throws Exception {
 		String line = null;
 		while (line == null && files.size() > 0) {

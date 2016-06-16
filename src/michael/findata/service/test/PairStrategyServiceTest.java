@@ -127,8 +127,8 @@ public class PairStrategyServiceTest {
 		PairStrategyService pss = (PairStrategyService) context.getBean("pairStrategyService");
 
 		HolidayCalendarFromYahoo cal = HolidayCalendarFromYahoo.forExchange(Exchange.SHSE);
-		LocalDate simulationStart = LocalDate.parse("2016-06-16");
-		LocalDate lastStart = LocalDate.parse("2016-06-16");
+		LocalDate simulationStart = LocalDate.parse("2016-06-17");
+		LocalDate lastStart = LocalDate.parse("2016-06-17");
 		LocalDate today = new LocalDate();
 		while (!simulationStart.isAfter(lastStart)) {
 			if (simulationStart.getDayOfWeek() != DateTimeConstants.SATURDAY &&

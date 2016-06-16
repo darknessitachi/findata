@@ -1,4 +1,5 @@
 package michael.findata.algoquant.strategy.anticor.processing;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,13 +14,13 @@ public class Sample {
 	private String src_dir;
 	private String dest_dir;
 	private int min_year;
-	
+
 	public Sample(String src_dir, String dest_dir, int min_year) {
 		this.src_dir = src_dir;
 		this.dest_dir = dest_dir;
 		this.min_year = min_year;
 	}
-	
+
 	@SuppressWarnings("deprecation")
 	public void run() throws IOException {
 		File dir = new File(src_dir);
@@ -36,7 +37,7 @@ public class Sample {
 					int year = Integer.parseInt(fields[2].split("-")[0]);
 					if (year >= min_year) {
 						out_file.write(line + "\n");
-					}				
+					}
 				}
 				in_file.close();
 				out_file.close();
@@ -44,7 +45,7 @@ public class Sample {
 			}
 		}
 	}
-	
+
 	public static void main(String[] args) throws Exception {
 		if (args.length != 3) {
 			System.out.println("<src_dir> <dest_dir> <min_year>");
