@@ -30,6 +30,7 @@
 		<disruptor.version>3.3.2</disruptor.version>
 		<jaxen.version>1.1.6</jaxen.version>
 		<jna.version>4.2.2</jna.version>
+		<!--<nd4j.version>0.4-rc3.10</nd4j.version>-->
 	</properties>
 
 	<dependencies>
@@ -90,11 +91,6 @@
 		</dependency>
 		<dependency>
 			<groupId>com.numericalmethod</groupId>
-			<artifactId>algoquant</artifactId>
-			<version>${installed.algoquant.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.numericalmethod</groupId>
 			<artifactId>algoquant-core</artifactId>
 			<version>${installed.algoquant.version}</version>
 		</dependency>
@@ -143,14 +139,28 @@
 			<!--<artifactId>ehcache-core</artifactId>-->
 			<!--<version>2.3.0</version>-->
 		<!--</dependency>-->
+		<!--<dependency>-->
+			<!--<groupId>org.nd4j</groupId>-->
+			<!--<artifactId>nd4j-cuda-7.5</artifactId>-->
+			<!--<version>${nd4j.version}</version>-->
+		<!--</dependency>-->
 	</dependencies>
-
 	<repositories>
 		<repository>
 			<id>nm-repo</id>
 			<name>Numerical Method's Maven Repository</name>
 			<url>http://repo.numericalmethod.com/maven/</url>
 			<layout>default</layout>
+		</repository>
+		<repository>
+			<id>mvnrepository</id>
+			<url>http://repo1.maven.org/maven2</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
 		</repository>
 	</repositories>
 

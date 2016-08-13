@@ -1,6 +1,7 @@
 package michael.findata.algoquant.execution.datatype.depth;
 
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
+import org.apache.commons.math3.util.FastMath;
 
 public class Depth extends com.numericalmethod.algoquant.execution.datatype.depth.Depth {
 	/**
@@ -125,6 +126,26 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 			volumeAccumulated += askVol(i);
 		}
 		return volumeAccumulated;
+	}
+
+	// % difference between the lowest bid and the given bid
+	public double bidDepthDistance (double bid) {
+		for (int i = nLevels(); i>= 1; i--) {
+			if (bid(i) != 0) {
+				return FastMath.abs(bid(i) - bid) / bid;
+			}
+		}
+		return 1d;
+	}
+
+	// % difference between the highest ask and the given ask
+	public double askDepthDistance (double ask) {
+		for (int i = nLevels(); i>= 1; i--) {
+			if (ask(i) != 0) {
+				return FastMath.abs(ask(i) - ask) / ask;
+			}
+		}
+		return 1d;
 	}
 
 	public String toString () {

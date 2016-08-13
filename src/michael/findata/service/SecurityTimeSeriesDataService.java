@@ -2,12 +2,11 @@ package michael.findata.service;
 
 import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
+import michael.findata.external.tdx.TDXFileBasedPriceHistory;
 import michael.findata.external.tdx.TDXMinuteLine;
-import michael.findata.external.tdx.TDXPriceHistory;
 import michael.findata.model.AdjFunction;
 import michael.findata.util.CalendarUtil;
 import michael.findata.util.Consumer2;
-import michael.findata.util.Consumer3;
 import michael.findata.util.Consumer5;
 import org.joda.time.DateTime;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
@@ -38,8 +37,8 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 						 String codeB,
 						 boolean log,
 						 Consumer5<DateTime, Double, Double, Float, Float> doStuff) {
-		SecurityTimeSeriesData seriesA = new TDXPriceHistory(codeA);
-		SecurityTimeSeriesData seriesB = new TDXPriceHistory(codeB);
+		SecurityTimeSeriesData seriesA = new TDXFileBasedPriceHistory(codeA);
+		SecurityTimeSeriesData seriesB = new TDXFileBasedPriceHistory(codeB);
 		walk(start, end, maxTicks, seriesA, seriesB, codeA, codeB, log, doStuff);
 	}
 
@@ -140,7 +139,7 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 					 boolean log,
 					 Consumer2<DateTime,
 							 HashMap<String, SecurityTimeSeriesDatum>> doStuff) {
-		SecurityTimeSeriesData[] serieses = Arrays.stream(codes).map(TDXPriceHistory::new).toArray(TDXPriceHistory[]::new);
+		SecurityTimeSeriesData[] serieses = Arrays.stream(codes).map(TDXFileBasedPriceHistory::new).toArray(TDXFileBasedPriceHistory[]::new);
 		walk(start, end, maxTicks, serieses, codes, log, doStuff);
 	}
 
@@ -218,8 +217,12 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 			} else {
 				// after end
 				for (int i = codes.length - 1; i > -1; i--) {
-					if (serieses[i].peekNext().getDateTime().getMillis() == latestTick.getMillis()) {
-						serieses[i].popNext();
+					try	{
+						if (serieses[i].peekNext().getDateTime().getMillis() == latestTick.getMillis()) {
+							serieses[i].popNext();
+						}
+					} catch (NullPointerException e) {
+						System.out.println(codes[i]);
 					}
 				}
 			}

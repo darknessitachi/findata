@@ -51,7 +51,7 @@ public class Depth implements Event {
 	/**
 	 *
 	 * @param product
-	 * @param prices  bids then asks in ascending order, e.g., bid3, bid2, bid1, ask1, ask2, ask3
+	 * @param prices  bids then asks in ascending order, e.g., ... bid3, bid2, bid1, ask1, ask2, ask3 ...
 	 */
 	public Depth(Product product, double... prices) {
 		this(product, prices, null);

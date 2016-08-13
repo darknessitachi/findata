@@ -15,17 +15,23 @@ public class OLSRegressionTest {
 				2d,
 				3d,
 				4d);
+//		Matrix X = new DenseMatrix(new double[][]{
+//				{1.12d},
+//				{2.23d},
+//				{3.34d},
+//				{4.45d},
+//		});
 		Matrix X = new DenseMatrix(new double[][]{
-				{1.12d, 2.23d},
-				{2.23d, 4.45d},
-				{3.34d, 6.67d},
-				{4.45d, 8.89d},
+				{0.88d, 2.23d},
+				{1.88d, 4.45d},
+				{2.88d, 6.67d},
+				{3.88d, 8.89d},
 		});
-		LMProblem problem = new LMProblem(y, X);
+		LMProblem problem = new LMProblem(y, X, false);
 		OLSRegression regression = new OLSRegression(problem);
-//		System.out.println(regression.beta().betaHat());
+		System.out.println(regression.beta().betaHat());
 //		System.out.println(X);
-		Matrix Xt = X.t();
-		System.out.println(new Inverse(Xt.multiply(X)).multiply(Xt.multiply(y)));
+//		Matrix Xt = X.t();
+//		System.out.println(new Inverse(Xt.multiply(X)).multiply(Xt.multiply(y)));
 	}
 }

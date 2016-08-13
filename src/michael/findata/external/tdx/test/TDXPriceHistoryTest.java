@@ -1,14 +1,11 @@
 package michael.findata.external.tdx.test;
 
 import michael.findata.external.SecurityTimeSeriesDatum;
-import michael.findata.external.tdx.TDXPriceHistory;
+import michael.findata.external.tdx.TDXFileBasedPriceHistory;
 
-/**
- * Created by nicky on 2015/11/15.
- */
 public class TDXPriceHistoryTest {
 	public static void main (String [] args) {
-		TDXPriceHistory ml = new TDXPriceHistory("000568");
+		TDXFileBasedPriceHistory ml = new TDXFileBasedPriceHistory("600977");
 		SecurityTimeSeriesDatum minute;
 		while (ml.hasNext()) {
 			minute = ml.popNext();

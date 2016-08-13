@@ -6,6 +6,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.util.Set;
 
 public class Test {
 	public static void main (String [] args)
@@ -54,11 +55,12 @@ public class Test {
 
 		long stamp = System.currentTimeMillis();
 		// The following are used regularly throughout the year
-//		ss.refreshStockCodes();
-//		sps.refreshStockPriceHistories();
-//		ss.refreshLatestPriceAndName();
-//		ds.refreshDividendData();
+		ss.refreshStockCodes();
+		ss.refreshLatestPriceAndName();
+		sps.refreshStockPriceHistories();
+		ds.refreshDividendData();
 		sncs.refreshNumberOfShares();
+
 //		ss.calculateAdjustmentFactor(10);
 
 		// The following are used mainly during and immediately after earnings report seasons
@@ -85,10 +87,9 @@ public class Test {
 //		fds.refreshMissingFinDataAccordingToReportPubDates();
 
 
-
 		// Statistics
-//		ds.calculateAdjFactorForStock("600875");
-//		Arrays.stream(StockGroups.Coal).forEach(code -> ds.calculateAdjFactorForStock(code.symbol().substring(0, 6)));
+//		Set<String> codeSet = ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_stock.csv");
+//		codeSet.forEach(ds::calculateAdjFactorForStock);
 
 		System.out.println("Time taken: " + (System.currentTimeMillis() - stamp) / 1000d + " seconds.");
 	}

@@ -1,6 +1,6 @@
-package michael.findata.external.tdx;
+package michael.findata.external.ths;
 
-import michael.findata.external.PriceHistory;
+import michael.findata.external.FileBasedPriceHistory;
 import michael.findata.external.SecurityTimeSeriesData;
 import org.joda.time.DateTime;
 
@@ -8,38 +8,35 @@ import java.sql.Date;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
-import static michael.findata.util.FinDataConstants.TDX_BASE_DIR;
+import static michael.findata.util.FinDataConstants.THS_BASE_DIR;
 import static michael.findata.util.FinDataConstants.yyyyMMdd;
 
-public class TDXPriceHistory extends PriceHistory implements SecurityTimeSeriesData {
+public class THSFileBasedPriceHistory extends FileBasedPriceHistory implements SecurityTimeSeriesData{
 
-	public TDXPriceHistory (String code) {
+	public THSFileBasedPriceHistory(String code) {
 		super(code);
 	}
 
 	protected int getHeaderSize () {
-		return 0;
+		return 184;
 	}
 
 	protected int getRecordSize () {
-		return 32;
+		return 168;
 	}
+
 	@Override
 	protected String getDataFileName() {
-		if (code.startsWith("9") || code.startsWith("6") || code.startsWith("51")) {
-			return TDX_BASE_DIR+"vipdoc/sh/lday/sh"+code+".day";
+		if (code.startsWith("9") || code.startsWith("6")) {
+			return THS_BASE_DIR+"history/shase/day/"+code+".day";
 		} else {
-			return TDX_BASE_DIR+"vipdoc/sz/lday/sz"+code+".day";
+			return THS_BASE_DIR+"history/sznse/day/"+code+".day";
 		}
 	}
 
 	@Override
 	protected DateTime calDateTime() {
-		return new DateTime(intRec[0]/10000, intRec[0]%10000/100, intRec[0]%10000%100, 15, 02);
-	}
-
-	private int getCoeff() {
-		return code.startsWith("9") ? 1 : 10;
+		return new DateTime(intRec[0]/10000, intRec[0]%10000/100, intRec[0]%10000%100, 23, 59);
 	}
 
 	protected Date calDate () {
@@ -58,28 +55,28 @@ public class TDXPriceHistory extends PriceHistory implements SecurityTimeSeriesD
 	}
 
 	protected int calOpen () {
-		return (intRec[1] & 0x0fffffff)*getCoeff();
+		return (intRec[1] & 0x0fffffff);
 	}
 
 	protected int calHigh () {
-		return (intRec[2] & 0x0fffffff)*getCoeff();
+		return (intRec[2] & 0x0fffffff);
 	}
 
 	protected int calLow () {
-		return (intRec[3] & 0x0fffffff)*getCoeff();
+		return (intRec[3] & 0x0fffffff);
 	}
 
 	protected int calClose () {
-		return (intRec[4] & 0x0fffffff)*getCoeff();
+		return (intRec[4] & 0x0fffffff);
 	}
 
 	@Override
 	protected int calVolume() {
-		return intRec[6];
+		return 0; // todo
 	}
 
 	@Override
 	protected float calAmount() {
-		return floatRec[5];
+		return 0; // todo
 	}
 }

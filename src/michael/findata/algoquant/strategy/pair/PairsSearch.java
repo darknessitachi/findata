@@ -688,7 +688,7 @@ public class PairsSearch {
 				stsds.walkDays(startTraining, endTraining, maxSteps, codeA, codeB, false, doTest);
 			}
 		} else {
-			sps.walk(startTraining, endTraining, maxSteps, codeA, codeB, false, doTest);
+//			sps.walk(startTraining, endTraining, maxSteps, codeA, codeB, false, doTest);
 		}
 
 		double [] priceListA, priceListB;

@@ -13,6 +13,8 @@
 	<context:property-placeholder location="/michael/findata/jdbc.properties"/>
 	<context:component-scan base-package="michael.findata.service"/>
 
+	<bean class="michael.findata.service.StockPriceMinuteService" id="stockPriceMinuteService"/>
+
 	<bean class="michael.findata.service.PairStrategyService" id="pairStrategyService"/>
 
 	<bean class="michael.findata.service.SecurityTimeSeriesDataService" id="securityTimeSeriesDataService">

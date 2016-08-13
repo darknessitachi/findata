@@ -9,7 +9,7 @@ import java.nio.*;
 import java.nio.channels.FileChannel;
 import java.sql.Date;
 
-public abstract class PriceHistory implements SecurityTimeSeriesData{
+public abstract class FileBasedPriceHistory implements SecurityTimeSeriesData{
 	private int headerSize = 184, recordSize = 168;
 	protected int[] intRec = null;
 	protected String code;
@@ -25,7 +25,7 @@ public abstract class PriceHistory implements SecurityTimeSeriesData{
 	protected ByteBuffer bb = null;
 	private SecurityTimeSeriesDatum buffer = null;
 
-	public PriceHistory(String code) {
+	public FileBasedPriceHistory(String code) {
 		headerSize = getHeaderSize();
 		recordSize = getRecordSize();
 		this.code = code;

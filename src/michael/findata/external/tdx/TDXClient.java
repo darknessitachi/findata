@@ -4,7 +4,13 @@ import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import com.sun.jna.Native;
 import com.sun.jna.ptr.ShortByReference;
 import michael.findata.algoquant.execution.datatype.depth.Depth;
+import michael.findata.external.SecurityTimeSeriesData;
+import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.model.Stock;
+import michael.findata.util.CalendarUtil;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -18,24 +24,72 @@ public class TDXClient {
 	byte[] result = new byte[65535];
 	byte[] errInfo = new byte[256];
 	boolean connected;
-
-	String testdata [] = new String [] {
-	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
-	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
-	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999983\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1758\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n",
-
-	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
-	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
-	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999983\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1758\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n",
-
-	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
-	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
-	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999983\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1759\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n",
-
-	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
-	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
-	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999984\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1758\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n"
+	private static final short OHLC_QUERY_LIMIT = 800;
+//	private static final short EOM_QUERY_LIMIT = 720; // 3 days
+	public static final String [] TDXClientConfigs = {
+			"221.236.13.218:7709",    // 招商证券成都行情 - 9-33 ms
+			"221.236.13.219:7709",    // 招商证券成都行情 - 8-25 ms
+			"125.71.28.133:7709",    // cd1010 - 8 ms
+			"221.236.15.14:995",    // 国金成都电信2.1
+			"124.161.97.84:7709",    // 申银万国成都网通2
+			"124.161.97.83:7709",    // 申银万国成都网通1
+			"125.64.39.62:7709",    // 申银万国成都电信2
+			"125.71.28.133:443",    // cd1010 - 8 ms
+			"221.236.15.14:7709",    // 国金成都电信1.13
+			"119.6.204.139:7709",    // 国金成都联通5.135
+			"125.64.39.61:7709",    // 申银万国成都电信1
+			"125.64.41.12:7709",    // 成都电信54
+			"119.4.167.141:7709",    // 华西L1
+			"119.4.167.142:7709",    // 华西L2
+			"119.4.167.181:7709",    // 华西L3
+			"119.4.167.182:7709",    // 华西L4
+			"119.4.167.164:7709",    // 华西L5
+			"119.4.167.165:7709",    // 华西L6
+			"119.4.167.163:7709",    // 华西L7
+			"119.4.167.175:7709",    // 华西L8
+			"218.6.198.151:7709",    // 华西L1
+			"218.6.198.152:7709",    // 华西L2
+			"218.6.198.174:7709",    // 华西L3
+			"218.6.198.175:7709",    // 华西L4
+			"218.6.198.155:7709",    // 华西L5
+			"218.6.198.156:7709",    // 华西L6
+			"218.6.198.157:7709",    // 华西L7
+			"218.6.198.158:7709",    // 华西L8
+			"182.131.7.141:7709",    // 华西E1
+			"182.131.7.142:7709",    // 华西E2
+			"182.131.7.143:7709",    // 华西E3
+			"182.131.7.144:7709",    // 华西E4
+			"182.131.7.145:7709",    // 华西E5
+			"182.131.7.146:7709",    // 华西E6
+			"182.131.7.147:7709",    // 华西E7
+			"182.131.7.148:7709",    // 华西E8
+//			"182.131.3.245:7709",    // 上证云行情J330 - 9ms)
+			"221.237.158.106:7709",    // 西南证券金点子成都电信主站1
+			"221.237.158.107:7709",    // 西南证券金点子成都电信主站2
+			"221.237.158.108:7709",    // 西南证券金点子成都电信主站3
+			"183.230.9.136:7709",    // 西南证券金点子重庆移动主站1
+			"183.230.134.6:7709",    // 西南证券金点子重庆移动主站2
+			"219.153.1.115:7709",    // 西南证券金点子重庆电信主站1
+			"113.207.29.12:7709"    // 西南证券金点子重庆联通主站1
 	};
+
+//	String testdata [] = new String [] {
+//	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
+//	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
+//	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999983\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1758\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n",
+//
+//	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
+//	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
+//	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999983\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1758\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n",
+//
+//	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
+//	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
+//	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999983\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1759\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n",
+//
+//	"市场\t代码\t活跃度\t现价\t昨收\t开盘\t最高\t最低\t时间\t保留\t总量\t现量\t总金额\t内盘\t外盘\t保留\t保留\t买一价\t卖一价\t买一量\t卖一量\t买二价\t卖二价\t买二量\t卖二量\t买三价\t卖三价\t买三量\t卖三量\t买四价\t卖四价\t买四量\t卖四量\t买五价\t卖五价\t买五量\t卖五量\t保留\t保留\t保留\t保留\t保留\t涨速\t活跃度\n" +
+//	"0\t000568\t0\t0.000000\t23.500000\t0.000000\t0.000000\t0.000000\t15023600\t0\t0\t0\t0.000000\t0\t0\t0\t2237\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0.000000\t0.000000\t0\t0\t0\t0\t0\t0\t0\t0.000000\t0\n" +
+//	"1\t600026\t1799\t6.170000\t6.130000\t6.130000\t6.200000\t6.070000\t14999984\t-617\t120609\t161\t74034344.000000\t62997\t57612\t-1\t0\t6.170000\t6.180000\t308\t957\t6.160000\t6.190000\t1302\t1634\t6.150000\t6.200000\t2009\t1728\t6.140000\t6.210000\t2277\t700\t6.130000\t6.220000\t1124\t1758\t2681\t1\t-11\t-17\t4\t0.000000\t1799\n"
+//	};
 
 	//	boolean updated = false;
 	// serverConfig is in the format of "ip:port", eg. "182.131.3.245:7709"
@@ -249,6 +303,90 @@ public class TDXClient {
 		}
 	}
 
+	public SecurityTimeSeriesData getEODs (String code, DateTime earliest) {
+		short days = (short) (10 + CalendarUtil.daysBetween(earliest, new DateTime()) * 270 / 365);
+		return getEODs(code, days);
+	}
+
+	public SecurityTimeSeriesData getEODs (String code) {
+		return getEODs(code, OHLC_QUERY_LIMIT);
+	}
+
+	private SecurityTimeSeriesData getEODs(String code, short daysCount) {
+		ShortByReference count = new ShortByReference(daysCount > OHLC_QUERY_LIMIT ? OHLC_QUERY_LIMIT : daysCount);
+		if (hqLib[0].TdxHq_GetSecurityBars((byte)9, calcMarket(code), code, (short)(0), count, result, errInfo)) {
+			return new TDXClientPriceHistory(Native.toString(result, "GBK"), true);
+		} else {
+			return null;
+		}
+	}
+
+	public SecurityTimeSeriesData getEOMs(String code, short startOnDay, short daysCount) {
+		short countPerDay = 240;
+		short daysPerQuery = (short)(OHLC_QUERY_LIMIT / countPerDay);
+		short countPerQuery = (short)(daysPerQuery * countPerDay);
+		short queryCount = (short)(daysCount / daysPerQuery + (daysCount % daysPerQuery == 0 ? 0 : 1));
+		String resultString = "";
+
+		for (short i = 0; i < queryCount; i++) {
+			ShortByReference count;
+			if (i + 1 == queryCount) {
+				count = new ShortByReference((short)((daysCount + daysPerQuery - (i + 1) * daysPerQuery) * countPerDay));
+			} else {
+				count = new ShortByReference(countPerQuery);
+			}
+//			System.out.println("i: "+i);
+//			System.out.println("count: "+count.getValue());
+			if (hqLib[i % hqLib.length].TdxHq_GetSecurityBars((byte)7, calcMarket(code), code, (short)((i * countPerQuery)+(countPerDay*startOnDay)), count, result, errInfo)) {
+				if (i == queryCount - 1) {
+					resultString = Native.toString(result, "GBK") + "\n" + resultString;
+				} else {
+					String temp = Native.toString(result, "GBK");
+					temp = temp.substring(temp.indexOf('\n')+1, temp.length());
+					resultString = temp + "\n"+ resultString ;
+				}
+			} else {
+				return null;
+			}
+		}
+//		System.out.println("----");
+//		System.out.println(resultString);
+//		System.out.println("----");
+		return new TDXClientPriceHistory(resultString, false);
+	}
+
+	public SecurityTimeSeriesData getEOMs(String code, short daysCount) {
+		short countPerDay = 240;
+		short daysPerQuery = (short)(OHLC_QUERY_LIMIT / countPerDay);
+		short countPerQuery = (short)(daysPerQuery * countPerDay);
+		short queryCount = (short)(daysCount / daysPerQuery + (daysCount % daysPerQuery == 0 ? 0 : 1));
+		String resultString = "";
+
+		for (short i = 0; i < queryCount; i++) {
+			ShortByReference count;
+			if (i + 1 == queryCount) {
+				count = new ShortByReference((short)((daysCount + daysPerQuery - (i + 1) * daysPerQuery) * countPerDay));
+			} else {
+				count = new ShortByReference(countPerQuery);
+			}
+			if (hqLib[i % hqLib.length].TdxHq_GetSecurityBars((byte)7, calcMarket(code), code, (short)(i * countPerQuery), count, result, errInfo)) {
+				if (i == queryCount - 1) {
+					resultString = Native.toString(result, "GBK") + "\n" + resultString;
+				} else {
+					String temp = Native.toString(result, "GBK");
+					temp = temp.substring(temp.indexOf('\n')+1, temp.length());
+					resultString = temp + "\n"+ resultString ;
+				}
+			} else {
+				return null;
+			}
+		}
+		System.out.println("----");
+		System.out.println(resultString);
+		System.out.println("----");
+		return new TDXClientPriceHistory(resultString, false);
+	}
+
 	public void getHistoryTransactionData (String code) {
 		ShortByReference count = new ShortByReference();
 		if (hqLib[0].TdxHq_GetHistoryTransactionData(calcMarket(code), code, (short)20, count, 20160427, result, errInfo)) {
@@ -280,5 +418,85 @@ public class TDXClient {
 			}
 		}
 		return res;
+	}
+
+//	private static String testData =
+//					"时间\t开盘价\t收盘价\t最高价\t最低价\t成交量\t成交额\n" +
+//					"20130313\t30.800000\t30.740000\t31.110000\t30.620000\t53917\t166228672.000000\n" +
+//					"20130314\t30.780000\t30.280000\t30.870000\t30.240000\t92563\t282208800.000000\n" +
+//					"20130315\t30.250000\t29.350000\t30.250000\t29.300000\t141922\t420919552.000000\n" +
+//					"20130318\t29.100000\t27.590000\t29.490000\t27.480000\t197692\t554878784.000000\n" +
+//					"20130319\t27.500000\t27.260000\t27.590000\t26.700000\t164236\t445620736.000000\n" +
+//					"20130320\t27.230000\t27.920000\t28.200000\t27.100000\t128528\t355753760.000000\n" +
+//					"20130321\t27.800000\t27.950000\t28.270000\t27.440000\t111634\t311196320.000000\n";
+
+	private class TDXClientPriceHistory implements SecurityTimeSeriesData {
+
+		private String [] data;
+
+		private int current;
+
+		private SecurityTimeSeriesDatum buffer = null;
+
+		private DateTimeFormatter formatterDay = DateTimeFormat.forPattern("yyyyMMdd");
+
+		private DateTimeFormatter formatterMinute = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm");
+
+		boolean dayOrMinute;
+
+		// true: day | false: minute
+		private TDXClientPriceHistory (String data, boolean dayOrMinute) {
+			this.dayOrMinute = dayOrMinute;
+			this.data = data.split("\n");
+			this.current = this.data.length;
+		}
+
+		private SecurityTimeSeriesDatum getNext () {
+//			DateTimeFormatter formatter = dayOrMinute ? formatterDay : formatterMinute;
+			this.current --;
+			if (current > 0) {
+				String[] datum = data[current].split("\t");
+				return new SecurityTimeSeriesDatum(
+						dayOrMinute ? formatterDay.parseDateTime(datum[0]).plusHours(15).plusMinutes(2) : formatterMinute.parseDateTime(datum[0]),
+						(int)(Double.parseDouble(datum[1])*1000),
+						(int)(Double.parseDouble(datum[3])*1000),
+						(int)(Double.parseDouble(datum[4])*1000),
+						(int)(Double.parseDouble(datum[2])*1000),
+						dayOrMinute ? Integer.parseInt(datum[5])*100 : Integer.parseInt(datum[5]),
+						(float)Double.parseDouble(datum[6]));
+			} else {
+				return null;
+			}
+		}
+
+		@Override
+		public SecurityTimeSeriesDatum popNext() {
+			if (buffer != null) {
+				SecurityTimeSeriesDatum temp = buffer;
+				buffer = null;
+				return temp;
+			} else {
+				return getNext();
+			}
+		}
+
+		@Override
+		public SecurityTimeSeriesDatum peekNext() {
+			if (buffer == null) {
+				buffer = getNext();
+			}
+			return buffer;
+		}
+
+		@Override
+		public void close() {
+			current = data.length;
+			data = null;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return peekNext() != null;
+		}
 	}
 }

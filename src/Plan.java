@@ -1,59 +1,51 @@
-import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
-import org.apache.commons.math3.stat.regression.SimpleRegression;
-import org.apache.commons.math3.util.FastMath;
+import com.numericalmethod.suanshu.algebra.linear.vector.doubles.dense.DenseVector;
+
+import java.io.IOException;
+import java.util.Arrays;
 
 public class Plan {
 
-//	private double xbar;
-//	private double ybar;
-//	private double sumX;
-//	private double sumY;
-	private double sumXX;
-//	private double sumYY;
-	private double sumXY;
-//	private long n;
+	public static void main (String args []) throws IOException {
 
-	public void addData(double x, double y) {
-//		if(this.n == 0L) {
-//			this.xbar = x;
-//			this.ybar = y;
+//		Double [] n = new Double[] {1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d};
+		double [] n = new double [] {1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d};
+		DenseVector v = new DenseVector(Arrays.copyOfRange(n, 1, n.length));
+		System.out.println(v);
+		DenseVector vMinusOne = new DenseVector(Arrays.copyOfRange(n, 0, n.length-1));
+		System.out.println(vMinusOne);
+		v = v.minus(vMinusOne).divide(vMinusOne);
+		System.out.println(v);
+
+		// a
+//		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
+//		StockService ss = (StockService) context.getBean("stockService");
+//
+//		Set<String> liquidETFs = ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_commodity.csv");
+//		liquidETFs.addAll(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic_bluechip.csv"));
+//		liquidETFs.addAll(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic_smallcap.csv"));
+//		liquidETFs.addAll(ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_gold.csv"));
+//
+//		StockRepository stockRepo = (StockRepository) context.getBean("stockRepository");
+//		Collection<Stock> stocks = stockRepo.findByCodeIn(liquidETFs);
+//		for (Stock s :stocks) {
+//			s.setInteresting(true);
 //		}
+//		stockRepo.save(stocks);
 
-		this.sumXX += x * x;
-//		this.sumYY += y * y;
-		this.sumXY += x * y;
-
-//		this.sumX += x;
-//		this.sumY += y;
-//		++this.n;
-	}
-
-	public double getSlope() {
-		return this.sumXY / this.sumXX;
-	}
-
-	public static void main (String args []) {
-		SimpleRegression sr = new SimpleRegression(false);
-		sr.addData(1.1, 2.3);
-		sr.addData(2.3, 4.3);
-		sr.addData(3.4, 5.5);
-		sr.addData(3.9, 7.6);
-		System.out.println(sr.getSlope()+" "+FastMath.sqrt(sr.getMeanSquareError()));
-
-		Plan p = new Plan();
-		p.addData(1.1, 2.3);
-		p.addData(2.3, 4.3);
-		p.addData(3.4, 5.5);
-		p.addData(3.9, 7.6);
-		double slope = p.getSlope();
-		double [] res = new double[4];
-		res[0] = 1 - 1.1 * slope / 2.3;
-		res[1] = 1 - 2.3 * slope / 4.3;
-		res[2] = 1 - 3.4 * slope / 5.5;
-		res[3] = 1 - 3.9 * slope / 7.6;
-		StandardDeviation std = new StandardDeviation();
-		double stdev = std.evaluate(res);
-		System.out.println(stdev);
+		// b
+//		System.out.println(sizeof );
+//		Chart chart = ChartUtils.plotXYSeries("Demo XY Plot",
+//				"x",
+//				"y",
+//				new String[]{"series 1", "series 2"},
+//				new double[][]{
+//						{1, 3, 4, 6, 2, 3, 1, 3, 5, 3, 4, 6, 8, 3, 2, 4},
+//						{4, 6, 8, 3, 2, 4, 1, 3, 4, 6, 2, 3, 1, 3, 5, 3}});
+//
+////		File dir = new File("log");
+////		dir.mkdir();
+////		chart.saveAsPNG(new File(dir, "xy.png"), 400, 300);
+//		chart.show();
 	}
 }
 /**
@@ -69,6 +61,7 @@ public class Plan {
  select * from pair_stats where concat(code_to_short,'->',code_to_long)='601398->600016' order by training_end;
 
  select count(*), training_end from pair_stats group by training_end having count(*) <> 5740;
+ select count(*), training_end from pair_stats group by training_end order by training_end;
 
  select * from pair_stats where code_to_short = 510300 and code_to_long = 510160 order by training_end desc limit 10;
 
@@ -77,13 +70,21 @@ public class Plan {
  select count(*) from pair_instance where max_res is not null;
 
  select max_res, code_to_short, code_to_long from pair_instance where max_res is not null and openable_on = '2016-06-08' order by max_res desc;
+
+ select * from stock where id in (select stock_id from dividend where payment_date is null and announcement_date < '2016-01-01');
+
  *
  PairStrategy需要动态仓位管理
  HoppingStrategy不需要动态仓位管理
 
+ 0。
+ 策略1：只适用于流动性良好的不多的20-30多只ETF，还是要坚持把这个策略做下去。需要对这些高流动性etf重新进行回测。
+ 利用融券ETF，对广泛ETF进行 隔日统计配对
+
  0. regularly test the running of xiadan2. if crashed, restart it.
- 1. market order on hexin broker
- 0. test hopping strategy on stocks
+ 1. market order on hexin broker: this can be achieved with limit order: just relax the price much more
+ 0. test/revise hopping strategy on stocks (instead of ETFs)
+ 0. OLMAR on more diversified chinese stocks: prepare getting stock data from my own local mysql
  0. 每天启动CommandCenter的时候，自动探测可交易仓位
  0. OcRegressionDouble & OcRegressionDouble64 be able to calculate stdev same as in apache math
  0. C#买卖单发出后，若是普通单下单成功，则会正确返回单号（getAck）；其他类型下单成功不会返回单号。需要统一。
@@ -106,9 +107,6 @@ public class Plan {
  ETF对冲策略自动维护项目：
  1. 更新分红，分拆数据
  2. 测试行情服务器可用性
-
- 策略1：
- 利用融券ETF，对广泛ETF进行 隔日统计配对
 
  策略2：
  自持H股ETF（510900）、恒生H股（160717）, 恒生ETF(159920)，对t+0 ETF 进行日内统计配对

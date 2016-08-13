@@ -11,7 +11,7 @@ public class SecurityTimeSeriesDatum extends StockEOM{
 	private int low; // lowest of the day * 1000
 	private int close; // closing price * 1000
 	private int volume; // volume (#shares)
-	private float amount; // amount (#RMB)
+	private float amount; // amount (in RMB)
 	private boolean traded; // is this security traded at this moment?
 
 	public SecurityTimeSeriesDatum (DateTime dateTime, int open, int high, int low, int close, int volume, float amount) {

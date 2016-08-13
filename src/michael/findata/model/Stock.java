@@ -144,15 +144,23 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 	}
 
 	private boolean isIgnored;
-
 	@Column(name = "is_ignored", nullable = true, insertable = true, updatable = true, length = 1, precision = 0)
 	@Basic
 	public boolean isIgnored() {
 		return isIgnored;
 	}
-
 	public void setIgnored(boolean ignored) {
 		isIgnored = ignored;
+	}
+
+	private boolean isFund;
+	@Column(name = "is_fund", nullable = true, insertable = true, updatable = true, length = 1, precision = 0)
+	@Basic
+	public boolean isFund () {
+		return isFund;
+	}
+	public void setFund (boolean fund) {
+		this.isFund = fund;
 	}
 
 	private Timestamp lastUpdated;

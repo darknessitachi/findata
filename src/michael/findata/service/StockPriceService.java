@@ -2,42 +2,44 @@ package michael.findata.service;
 
 import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
-import michael.findata.external.tdx.TDXPriceHistory;
-import michael.findata.model.AdjFactor;
-import michael.findata.util.CalendarUtil;
-import michael.findata.util.Consumer5;
+import michael.findata.external.tdx.TDXClient;
+import michael.findata.external.tdx.TDXFileBasedPriceHistory;
+import michael.findata.util.Consumer2;
 import michael.findata.util.FinDataConstants;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.core.env.SystemEnvironmentPropertySource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.sql.*;
+import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.Date;
 
 import static michael.findata.util.FinDataConstants.yyyyDashMMDashdd;
 
 public class StockPriceService extends JdbcDaoSupport {
 	// Bulk-load stock pricing data from THS, make sure THS pricing data is complete before doing this!!!!!
-	public void refreshStockPriceHistories() throws IOException, SQLException, ParseException, ClassNotFoundException, IllegalAccessException, InstantiationException {
-		SqlRowSet rs = getJdbcTemplate().queryForRowSet("SELECT code, id, name FROM stock WHERE (NOT is_fund) AND NOT is_ignored ORDER BY code");
+	public void refreshStockPriceHistories() throws IOException, SQLException, ParseException,
+			ClassNotFoundException, IllegalAccessException, InstantiationException {
+		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
+				"SELECT code, id, name FROM stock WHERE ((stock.number_of_shares <> 0 AND NOT is_fund) OR (is_fund AND stock.is_interesting)) AND NOT is_ignored ORDER BY code");
 		List<String> codes = new ArrayList<>();
 		while (rs.next()) {
 			codes.add(rs.getString("code"));
 		}
-		codes.parallelStream().forEach(code -> {
+		ThreadLocal<TDXClient> threadLocalClient = new ThreadLocal<>();
+		codes.stream().forEach(code -> {
 			try {
-				refreshStockPriceHistory(code);
-			} catch (IOException | SQLException | ParseException e) {
+				refreshStockPriceHistory(code, threadLocalClient);
+			} catch (IOException | SQLException | ParseException | InterruptedException e) {
 				e.printStackTrace();
 			}
 		});
@@ -60,12 +62,12 @@ public class StockPriceService extends JdbcDaoSupport {
 			this.buying_date = buying_date;
 		}
 
-		public float getInvestment(){
-			return number_shares*paid_price*(1+0.0008f);
+		public float getInvestment() {
+			return number_shares * paid_price * (1 + 0.0008f);
 		}
 
 		public float getSellTotal(float selling_price) {
-			return (selling_price*number_shares)*(1-0.0018f);
+			return (selling_price * number_shares) * (1 - 0.0018f);
 		}
 	}
 
@@ -73,84 +75,65 @@ public class StockPriceService extends JdbcDaoSupport {
 		return (float) slots.stream().mapToDouble(Slot::getInvestment).sum();
 	}
 
-//	public void cointegrationTestOHLC(String start, String end, String codeA, String codeB) {
-//		Stack<AdjFactor> divA = new Stack<>();
-//		Stack<AdjFactor> divB = new Stack<>();
-//		getAdjFactors(start, end, codeA, codeB, divA, divB);
-//		walk(start, end, codeA, codeB, (date, closeA, closeB) -> {
-//			while ((!divA.isEmpty()) && divA.peek().paymentDate.compareTo(date) <= 0) {
-//				divA.pop();
-//			}
-//			while ((!divB.isEmpty()) && divB.peek().paymentDate.compareTo(date) <= 0) {
-//				divB.pop();
-//			}
-//			double adjFctA = divA.empty()? 1.0d : divA.peek().factor;
-//			double adjFctB = divB.empty()? 1.0d : divB.peek().factor;
-//			System.out.println(date+"\t"+closeA/adjFctA+"\t"+closeB/adjFctB);
-//		});
-//
-//		double [] statistics = stats.stream().mapToDouble(Double::doubleValue).toArray();
-//		AugmentedDickeyFuller adfTest = new AugmentedDickeyFuller(statistics);
-//		System.out.println("ADF p value: "+adfTest.pValue());
-//	}
-
-	private static class Tuple {
-		DateTime date;
-		Double prA;
-		Double prB;
-
-		Tuple (DateTime d, Double pA, Double pB) {
-			date = d;
-			prA = pA;
-			prB = pB;
-		}
-
-		Tuple (Date d, Double pA, Double pB) {
-			date = new DateTime(d);
-			prA = pA;
-			prB = pB;
-		}
-	}
-
 	public void walk(DateTime start,
 					 DateTime end,
-					 int maxSteps,
-					 String codeA,
-					 String codeB,
+					 String[] codes,
 					 boolean log,
-					 Consumer5<DateTime, Double, Double, Float, Float> doStuff) {
-
-		Stack<AdjFactor> adjFctA = new Stack<>();
-		Stack<AdjFactor> adjFctB = new Stack<>();
-		DividendService.getAdjFactors(start, end, codeA, codeB, adjFctA, adjFctB, getJdbcTemplate());
+					 Consumer2<DateTime, Map<String, SecurityTimeSeriesDatum>> doStuff) {
+		String temp = "";
+		for (String s : codes) {
+			temp += "'" + s + "', ";
+		}
 
 		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
-			"SELECT stockA.date date, stockA.close closeA, stockB.close closeB "+
-			"FROM code_price stockA INNER JOIN code_price stockB ON stockA.date = stockB.date " +
-			"WHERE stockA.code = ? AND stockB.code = ? AND ? <= stockA.date AND stockA.date <= ? ORDER BY stockA.date DESC LIMIT ?"
-			, codeA, codeB, start.toLocalDate().toDate(), end.toLocalDate().toDate(), maxSteps);
-		Stack<Tuple> temp = new Stack<>();
+				"SELECT date, code, open, high, low, close " +
+				"FROM code_price " +
+				"WHERE ? <= date AND date <= ? AND code IN ("+temp+"'') ORDER BY date, code ASC"
+				, start.toLocalDate().toDate(), end.toLocalDate().toDate());
+		DateTime date = null;
+		DateTime oldDate;
+		HashMap<String, SecurityTimeSeriesDatum> datumMap = new HashMap<>();
 		while (rs.next()) {
-			temp.push(new Tuple(rs.getDate("date"), rs.getInt("closeA")/1000d, rs.getInt("closeB")/1000d));
-		}
-		Tuple t;
-		DateTime date;
-		while (!temp.isEmpty()) {
-			t = temp.pop();
-			date = t.date;
-			while ((!adjFctA.isEmpty()) && CalendarUtil.daysBetween(adjFctA.peek().paymentDate, date) >= 0) {
-				adjFctA.pop();
-			}
-			while ((!adjFctB.isEmpty()) && CalendarUtil.daysBetween(adjFctB.peek().paymentDate, date) >= 0) {
-				adjFctB.pop();
-			}
-			//前复权
-			double prA = t.prA / (adjFctA.empty() ? 1.0d : adjFctA.peek().factor);
-			double prB = t.prB / (adjFctB.empty() ? 1.0d : adjFctB.peek().factor);
+			oldDate = date;
+			date = new DateTime(rs.getDate("date"));
+			if (oldDate != null && !oldDate.equals(date)) {
+				// date changed ...
 
-			doStuff.apply(date, prA, prB, 100000f, 100000f);
+				// fill in dummy data for missing stocks
+				Set<String> codesIn = datumMap.keySet();
+				for (String code : codes) {
+					if (!codesIn.contains(code)) {
+						datumMap.put(code, new SecurityTimeSeriesDatum(oldDate));
+					}
+				}
+
+				doStuff.apply(oldDate, datumMap);
+				if (log) {
+					Arrays.stream(codes).forEach(code -> System.out.println(code + "\t" + datumMap.get(code)));
+				}
+				datumMap.clear();
+			}
+			datumMap.put(rs.getString("code"),
+					new SecurityTimeSeriesDatum(
+					date,
+					rs.getInt("open"),
+					rs.getInt("high"),
+					rs.getInt("low"),
+					rs.getInt("close"),
+					999999, 999999));
+		}
+		// last day
+		if (date != null) {
+			// fill in dummy data for missing stocks
+			Set<String> codesIn = datumMap.keySet();
+			for (String code : codes) {
+				if (!codesIn.contains(code)) {
+					datumMap.put(code, new SecurityTimeSeriesDatum(date));
+				}
+			}
+			doStuff.apply(date, datumMap);
 			if (log) {
-				System.out.println(date + "\t" + "\t" + prA + "\t" + "\t" + prB);
+				Arrays.stream(codes).forEach(code -> System.out.println(code + "\t" + datumMap.get(code)));
 			}
 		}
 	}
@@ -168,14 +151,14 @@ public class StockPriceService extends JdbcDaoSupport {
 			System.out.print("\tS.Floor: " + pList.get(pList.size() - 1).sell_floor);
 			System.out.println("\tB.Ceiling: " + pList.get(pList.size() - 1).buy_ceiling);
 			p = p / deltaPctg;
-			serial ++;
+			serial++;
 		}
 		float baseUnitAmount = 10000f;
 
 		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
-			"SELECT * " +
-			"FROM stock s LEFT OUTER JOIN stock_price sp ON sp.stock_id = s.id " +
-			"WHERE s.code = ? AND sp.date >= ? AND sp.date <= ?", code, start, end);
+				"SELECT * " +
+						"FROM stock s LEFT OUTER JOIN stock_price sp ON sp.stock_id = s.id " +
+						"WHERE s.code = ? AND sp.date >= ? AND sp.date <= ?", code, start, end);
 
 		ArrayList<Slot> positionsToBuy = new ArrayList<>();
 		ArrayList<Slot> positionsToSell = new ArrayList<>();
@@ -196,13 +179,13 @@ public class StockPriceService extends JdbcDaoSupport {
 			if (lastDate == null) {
 				investment += 0f;
 			} else {
-				investment += getInvestedCash(pList)*((currentDate.getTime()-lastDate.getTime())/1000/60/60/24);
+				investment += getInvestedCash(pList) * ((currentDate.getTime() - lastDate.getTime()) / 1000 / 60 / 60 / 24);
 			}
 			lastDate = currentDate;
 
 			// First find out what slots can be bought
 			int i = 0;
-			for (; i < pList.size(); i ++) {
+			for (; i < pList.size(); i++) {
 				pTemp = pList.get(i);
 				if (pTemp.buy_ceiling >= low) {
 					if (pTemp.number_shares <= 0) {
@@ -215,7 +198,7 @@ public class StockPriceService extends JdbcDaoSupport {
 //			float buying_price = (i == 0) ? low : (high > pList.get(i-1).buy_ceiling ? pList.get(i-1).buy_ceiling : high);
 //			float buying_price = (high < pList.get(i-1).buy_ceiling ? pList.get(i-1).buy_ceiling : high);
 			// Find out what slots can be sold
-			for (i = pList.size() - 1; i > -1; i --) {
+			for (i = pList.size() - 1; i > -1; i--) {
 				pTemp = pList.get(i);
 				if (pTemp.sell_floor <= high) {
 					if (pTemp.number_shares > 0) {
@@ -229,12 +212,12 @@ public class StockPriceService extends JdbcDaoSupport {
 			// Buy
 			positionsToBuy.stream().forEach(position -> {
 				position.paid_price = high > position.buy_ceiling ? position.buy_ceiling : high;
-				position.number_shares = (int) (Math.ceil(baseUnitAmount / position.paid_price / 100)*100);
+				position.number_shares = (int) (Math.ceil(baseUnitAmount / position.paid_price / 100) * 100);
 				position.buying_date = currentDate;
-				System.out.println(currentDate + "\tBuying No."+position.serial+": " + position.paid_price + "\t" + position.number_shares);
+				System.out.println(currentDate + "\tBuying No." + position.serial + ": " + position.paid_price + "\t" + position.number_shares);
 			});
 			if (positionsToBuy.size() != 0) {
-				System.out.println("Total Investment: "+ getInvestedCash(pList));
+				System.out.println("Total Investment: " + getInvestedCash(pList));
 			}
 			// Sell
 			positionsToSell.stream().forEach(position -> {
@@ -243,31 +226,36 @@ public class StockPriceService extends JdbcDaoSupport {
 				if (position.paid_price == -1f) {
 					System.out.println("error");
 				}
-				System.out.println(currentDate+"\tSelling No." + position.serial + ": " + selling_price + "\t" + position.paid_price + "\t" + position.number_shares + "\t" + profit);
+				System.out.println(currentDate + "\tSelling No." + position.serial + ": " + selling_price + "\t" + position.paid_price + "\t" + position.number_shares + "\t" + profit);
 				cashProfit[0] += profit;
 				position.buying_date = null;
 				position.paid_price = -1f;
 				position.number_shares = 0;
 			});
 			if (positionsToSell.size() != 0) {
-				System.out.println("Total Profit: "+ cashProfit[0]);
+				System.out.println("Total Profit: " + cashProfit[0]);
 			}
 		}
-		long period = (end.getTime()-start.getTime())/1000/60/60/24;
-		float averageInv = investment/period;
-		float profitR = (cashProfit[0] + averageInv)/averageInv;
+		long period = (end.getTime() - start.getTime()) / 1000 / 60 / 60 / 24;
+		float averageInv = investment / period;
+		float profitR = (cashProfit[0] + averageInv) / averageInv;
 //		float anualizedProfR = profitR ^ (365f/period);
-		System.out.println("Period: " + period +" days ("+(period/365f)+" years)");
-		System.out.println("Time*Investment: "+investment);
-		System.out.println("Average investment: "+averageInv);
-		System.out.println("Profit rate: "+profitR);
-		System.out.println("Annualized: "+Math.pow(profitR, 365f/period));
+		System.out.println("Period: " + period + " days (" + (period / 365f) + " years)");
+		System.out.println("Time*Investment: " + investment);
+		System.out.println("Average investment: " + averageInv);
+		System.out.println("Profit rate: " + profitR);
+		System.out.println("Annualized: " + Math.pow(profitR, 365f / period));
+	}
+
+	private int tdxclientcount = -1;
+	private synchronized String getNextTDXClientConfig () {
+		tdxclientcount ++;
+		System.out.println("Got config: "+TDXClient.TDXClientConfigs[tdxclientcount]);
+		return TDXClient.TDXClientConfigs[tdxclientcount];
 	}
 
 	@Transactional
-	public void refreshStockPriceHistory(String code) throws IOException, SQLException, ParseException {
-//		SecurityTimeSeriesData ts = new THSPriceHistory(code);
-		SecurityTimeSeriesData ts = new TDXPriceHistory(code);
+	public void refreshStockPriceHistory(String code, ThreadLocal<TDXClient> threadLocalClient) throws IOException, SQLException, ParseException, InterruptedException {
 		DateTime latest = null;
 		int stockId;
 		String name;
@@ -276,16 +264,22 @@ public class StockPriceService extends JdbcDaoSupport {
 		try {
 			rs = getJdbcTemplate().queryForRowSet("SELECT max(sp.date) date, s.name name, s.id stock_id FROM stock s LEFT OUTER JOIN stock_price sp ON sp.stock_id = s.id WHERE s.code = ?", code);
 		} catch (Exception e) {
-			System.out.println("Cannot find max pricing date for stock: "+code);
+			System.out.println("Cannot find max pricing date for stock: " + code);
 			e.printStackTrace();
 			return;
 		}
+		Date d;
 		if (rs.next()) {
-			latest = new DateTime(rs.getDate("date"));
+			d = rs.getDate("date");
+			if (d == null) {
+				latest = null;
+			} else {
+				latest = new DateTime(rs.getDate("date"));
+			}
 			stockId = rs.getInt("stock_id");
 			name = rs.getString("name");
 		} else {
-			System.out.println("Stock "+ code + " cannot be found.");
+			System.out.println("Stock " + code + " cannot be found.");
 			return;
 		}
 
@@ -293,11 +287,27 @@ public class StockPriceService extends JdbcDaoSupport {
 			latest = new DateTime(FinDataConstants.EARLIEST);
 		}
 		DateTimeFormatter format = DateTimeFormat.forPattern(yyyyDashMMDashdd);
-		System.out.println(code+" Latest price: " + format.print(latest));
+		System.out.println(code + " Latest price: " + format.print(latest));
 //		System.err.println((fc.size()-headerSize)/recordSize);
+		if (threadLocalClient.get() == null) {
+			TDXClient client = new TDXClient(getNextTDXClientConfig());
+			client.connect();
+			threadLocalClient.set(client);
+		}
+		TDXClient client = threadLocalClient.get();
+
+//		SecurityTimeSeriesData ts = new THSPriceHistory(code);
+//		SecurityTimeSeriesData ts = new TDXFileBasedPriceHistory(code);
+		SecurityTimeSeriesData ts = client.getEODs(code, latest);
+
 		SecurityTimeSeriesDatum temp;
 		while (ts.hasNext()) {
 			temp = ts.popNext();
+
+			if (temp.getVolume() == 0){
+				System.out.println("Skipped: "+code+" "+temp.getDateTime());
+				continue;
+			}
 
 			if (temp.getDateTime().isAfter(latest)) {
 				System.out.println((temp.getDateTime().getYear()) + "-" + (temp.getDateTime().getMonthOfYear()) + "-" + temp.getDateTime().getDayOfMonth());
@@ -314,11 +324,12 @@ public class StockPriceService extends JdbcDaoSupport {
 				break;
 			}
 		}
-		System.out.println(code + " "+ name + " 's daily quote updated.");
+		System.out.println(code + " " + name + " 's daily quote updated.");
 		ts.close();
+		Thread.sleep(20l);
 	}
 
-	public static void main (String [] args) throws ParseException {
+	public static void main(String[] args) throws ParseException {
 		SimpleDateFormat FORMAT_yyyyDashMMDashdd = new SimpleDateFormat(FinDataConstants.yyyyDashMMDashdd);
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/findata_spring.xml");
 		StockPriceService sps = (StockPriceService) context.getBean("stockPriceService");
@@ -329,6 +340,6 @@ public class StockPriceService extends JdbcDaoSupport {
 				FORMAT_yyyyDashMMDashdd.parse(args[2]),
 				Float.parseFloat(args[3]),
 				Float.parseFloat(args[4]));
-		System.out.println("Time taken: " + (System.currentTimeMillis() - stamp) / 1000+" seconds.");
+		System.out.println("Time taken: " + (System.currentTimeMillis() - stamp) / 1000 + " seconds.");
 	}
 }

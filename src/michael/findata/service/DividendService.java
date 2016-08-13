@@ -41,7 +41,8 @@ public class DividendService extends JdbcDaoSupport {
 	@Autowired
 	StockRepository stockRepo;
 
-	public void refreshDividendDataForFund(String code, TDXClient client) {
+	public boolean refreshDividendDataForFund(String code, TDXClient client) {
+		boolean updated = false;
 		Stock stock = stockRepo.findOneByCode(code);
 		Set<Dividend> existing = dividendRepo.findByStock_Code(code);
 		SimpleDateFormat sdf = new SimpleDateFormat(FinDataConstants.yyyyMMdd);
@@ -74,6 +75,8 @@ public class DividendService extends JdbcDaoSupport {
 			}
 			dividend.setAmount(amount);
 			dividend.setSplit(split);
+			dividend.setBonus(0f);
+			dividend.setAnnouncementDate(dividend.getPaymentDate());
 			dividendRepo.save(dividend);
 			System.out.print("Dividend saved:\t");
 			System.out.print(dividend.getStock().getCode());
@@ -83,7 +86,9 @@ public class DividendService extends JdbcDaoSupport {
 			System.out.print(dividend.getAmount());
 			System.out.print("\t");
 			System.out.println(split);
+			updated = true;
 		}
+		return updated;
 	}
 
 	/**
@@ -91,8 +96,7 @@ public class DividendService extends JdbcDaoSupport {
 	 */
 	public void refreshDividendData() throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
-		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE (NOT is_fund) AND NOT is_ignored ORDER BY code");
-//		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE id IN (select * from temp)");
+		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE ((NOT is_fund) OR (is_fund AND stock.is_interesting)) AND NOT is_ignored ORDER BY code");
 		List<Stock> stocks = new ArrayList<>();
 		while (rs.next()) {
 			Stock s = new Stock();
@@ -102,11 +106,16 @@ public class DividendService extends JdbcDaoSupport {
 			stocks.add(s);
 		}
 		stocks.parallelStream().forEach(stock -> {
+			boolean [] updated = {false};
 			try {
-				refreshDividendDataForStock(stock.getCode(), stock.getId(), stock.getName());
+				refreshDividendDataForStock(stock.getCode(), stock.getId(), stock.getName(), updated);
 			} catch (Exception e) {
 				System.err.println("Unexpected exception caught when refreshing dividend records for "+stock.getCode());
 				System.err.println(e.getMessage());
+			}
+			if (updated[0]) {
+				System.out.println("Dividend updated: "+stock.getCode());
+				calculateAdjFactorForStock(stock.getCode());
 			}
 		});
 	}
@@ -119,6 +128,7 @@ public class DividendService extends JdbcDaoSupport {
 				"WHERE stock_id = stock.id " +
 //				"AND payment_date >= '2015-01-01' " +
 //				"AND dividend.adj_factor is NULL " +
+				"AND dividend.payment_date IS NOT NULL " +
 				"AND stock.code = ? " +
 				"ORDER BY code, payment_date", code);
 		Date payment_date;
@@ -139,7 +149,8 @@ public class DividendService extends JdbcDaoSupport {
 	}
 
 	@Transactional
-	public void refreshDividendDataForStock(String code, int id, String name) throws SQLException {
+	public void refreshDividendDataForStock(String code, int id, String name, boolean [] updated) throws SQLException {
+		updated[0] = false;
 		Date announcementDate;
 		Date paymentDate;
 		float amount;
@@ -155,23 +166,23 @@ public class DividendService extends JdbcDaoSupport {
 		sdd.getDividendRecords();
 		Map.Entry<java.util.Date, SecurityDividendRecord> e = sdd.getDividendRecords().pollLastEntry();
 		System.out.println("Refreshing dividend data for "+code+" - "+name);
-		while (e != null)
-		{
+		while (e != null) {
 			announcementDate = new Date(e.getKey().getTime());
 			paymentDate = e.getValue().getPaymentDate() == null ? null : new Date(e.getValue().getPaymentDate().getTime());
 			amount = e.getValue().getAmount();
 			bonus = e.getValue().getBonus();
 			split = e.getValue().getSplit();
-			if (amount != 0 || bonus != 0 || split != 0) {
+			if ((amount != 0 || bonus != 0 || split != 0) && paymentDate != null) {
 				totalAmount = e.getValue().getTotal_amount();
 				System.out.println(announcementDate+"\t"+amount+"\t"+paymentDate);
 				try {
 					getJdbcTemplate().update("INSERT INTO dividend (stock_id, announcement_date, amount, bonus, split, payment_date, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)",
 							id, announcementDate, amount, bonus, split, paymentDate, totalAmount);
+					updated[0] = true;
 				} catch (Exception ex) {
 					if (ex.getMessage().contains("Duplicate")) {
-						getJdbcTemplate().update("UPDATE dividend SET amount = ?, bonus = ?, split = ?, payment_date = ?, total_amount = ? WHERE stock_id = ? AND announcement_date = ?",
-								amount, bonus, split, paymentDate, totalAmount, id, announcementDate);
+//						getJdbcTemplate().update("UPDATE dividend SET amount = ?, bonus = ?, split = ?, payment_date = ?, total_amount = ? WHERE stock_id = ? AND announcement_date = ?",
+//								amount, bonus, split, paymentDate, totalAmount, id, announcementDate);
 					} else {
 						//forcing rollback
 						throw ex;
@@ -371,8 +382,12 @@ public class DividendService extends JdbcDaoSupport {
 				for (Dividend div : divs) {
 					indexInstant = div.getPaymentDate().getTime();
 					if (indexInstant > queryInstant) {
-					} else if (indexInstant >= referenceInstant) {
-						price = price*(1+div.getBonus()+div.getSplit())+div.getAmount();
+					} else if (indexInstant > referenceInstant) {
+						if (div.getAdjustmentFactor() == null) {
+							price = price*(1+div.getBonus()+div.getSplit())+div.getAmount();
+						} else {
+							price = price*div.getAdjustmentFactor();
+						}
 					} else {
 						break;
 					}
@@ -391,19 +406,24 @@ public class DividendService extends JdbcDaoSupport {
 			}
 
 			Dividend[] divs = divArrays.get(stockCode);
+			double p = price;
 			if (divs == null) {
 				return price;
 			} else {
 				for (Dividend div : divs) {
 					indexInstant = div.getPaymentDate().getTime();
 					if (indexInstant > queryInstant) {
-					} else if (indexInstant >= referenceInstant) {
-						price = (int)(price*(1+div.getBonus()+div.getSplit()))+(int)(div.getAmount()*1000);
+					} else if (indexInstant > referenceInstant) {
+						if (div.getAdjustmentFactor() == null) {
+							p = p*(1+div.getBonus()+div.getSplit())+div.getAmount()*1000;
+						} else {
+							p = p * div.getAdjustmentFactor();
+						}
 					} else {
 						break;
 					}
 				}
-				return price;
+				return (int)p;
 			}
 		}
 	}

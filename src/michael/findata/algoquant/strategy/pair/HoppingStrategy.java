@@ -309,13 +309,24 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 				double shortVol = sellBuyVol[0];
 				double longVol = sellBuyVol[1];
 
-				ArrayList<Order> orders = new ArrayList<>(2);
-				orders.add(new HexinOrder(pair.toShort(), shortVol, actualPriceShort, openSellOrderType));
-				System.out.println(now + ": sell order " + orders.get(0));
-				broker.sendOrder(orders);
-				orders.clear();
-				orders.add(new HexinOrder(pair.toLong(), longVol, actualPriceLong, openBuyOrderType));
-				System.out.println(now + ": buy order " + orders.get(0));
+				// determine buy/sell order, take the whichever side that has the higher depth distance
+				ArrayList<Order> orders = new ArrayList<>(3);
+				Order sellOrder = new HexinOrder(pair.toShort(), shortVol, actualPriceShort, openSellOrderType);
+				Order buyOrder = new HexinOrder(pair.toLong(), longVol, actualPriceLong, openBuyOrderType);
+				if (depthLong.askDepthDistance(actualPriceLong) > depthShort.bidDepthDistance(actualPriceShort)) {
+					// buy first
+					orders.add(buyOrder);
+					System.out.println(now + ": buy order " + buyOrder);
+					orders.add(sellOrder);
+					System.out.println(now + ": sell order " + sellOrder);
+				} else {
+					// sell first
+					orders.add(sellOrder);
+					System.out.println(now + ": sell order " + sellOrder);
+					orders.add(buyOrder);
+					System.out.println(now + ": buy order " + buyOrder);
+				}
+
 				broker.sendOrder(orders);
 				System.out.println(depthShort);
 				System.out.println(depthLong);
@@ -399,8 +410,11 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 		return null;
 	}
 
+	// always
 	private enum BalanceOption {
-		CLOSEST_MATCH, SHORT_LARGER, LONG_LARGER;
+		CLOSEST_MATCH,	// buy more or sell more whichever option makes the most balanced trade
+		SHORT_LARGER,	// always sell a little more than buy
+		LONG_LARGER;	// always buy a little more than sell
 
 		BalanceOption opposite() {
 			switch (this) {

@@ -94,6 +94,18 @@ public class Dividend {
 		this.totalAmount = totalAmount;
 	}
 
+	private Double adjustmentFactor;
+
+	@Column(name = "adj_factor")
+	@Basic
+	public Double getAdjustmentFactor() {
+		return adjustmentFactor;
+	}
+
+	public void setAdjustmentFactor(Double adjustmentFactor) {
+		this.adjustmentFactor = adjustmentFactor;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;

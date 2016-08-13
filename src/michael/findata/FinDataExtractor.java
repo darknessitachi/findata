@@ -10,7 +10,7 @@ import michael.findata.external.shse.SHSEFinancialReportDailyList;
 import michael.findata.external.shse.SHSEReportPublication;
 import michael.findata.external.szse.SZSEFinancialReportDailyList;
 import michael.findata.external.szse.SZSEReportPublication;
-import michael.findata.external.tdx.TDXPriceHistory;
+import michael.findata.external.tdx.TDXFileBasedPriceHistory;
 import michael.findata.util.FinDataConstants;
 import michael.findata.util.ResourceUtil;
 import org.dom4j.DocumentException;
@@ -673,7 +673,7 @@ public class FinDataExtractor {
 	private static void refreshStockPriceHistory(int stockId, String code, Connection con) throws IOException, SQLException, ParseException {
 
 //		SecurityTimeSeriesData ts = new THSPriceHistory(code);
-		SecurityTimeSeriesData ts = new TDXPriceHistory(code);
+		SecurityTimeSeriesData ts = new TDXFileBasedPriceHistory(code);
 		Statement st = con.createStatement();
 //		HashMap<Integer, PreparedStatement> pm = new HashMap<>();
 		PreparedStatement ps = con.prepareStatement("INSERT INTO stock_price (stock_id, date, open, high, low, close, avg, adjustment_factor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");

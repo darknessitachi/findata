@@ -1,14 +1,15 @@
 package michael.findata.external.tdx;
 
-import michael.findata.external.PriceHistory;
+import michael.findata.external.FileBasedPriceHistory;
 import michael.findata.external.SecurityTimeSeriesData;
 import org.joda.time.DateTime;
+import org.joda.time.IllegalFieldValueException;
 
 import java.sql.Date;
 
 import static michael.findata.util.FinDataConstants.TDX_BASE_DIR;
 
-public class TDXMinuteLine extends PriceHistory implements SecurityTimeSeriesData {
+public class TDXMinuteLine extends FileBasedPriceHistory implements SecurityTimeSeriesData {
 
 	public TDXMinuteLine (String code) {
 		super(code);
@@ -23,7 +24,7 @@ public class TDXMinuteLine extends PriceHistory implements SecurityTimeSeriesDat
 	}
 	@Override
 	protected String getDataFileName() {
-		if (code.startsWith("9") || code.startsWith("6") || code.startsWith("51")) {
+		if (code.startsWith("9") || code.startsWith("6") || code.startsWith("5")) {
 			return TDX_BASE_DIR+"vipdoc/sh/minline/sh"+code+".lc1";
 		} else {
 			return TDX_BASE_DIR+"vipdoc/sz/minline/sz"+code+".lc1";
@@ -33,7 +34,13 @@ public class TDXMinuteLine extends PriceHistory implements SecurityTimeSeriesDat
 	@Override
 	protected DateTime calDateTime() {
 //		System.out.println("Old "+calDate()+":"+calMinute());
-		DateTime dt = new DateTime(shortRec[0]/2048+2004, (shortRec[0]%2048)/100, (shortRec[0]%2048)%100, shortRec[1] / 60, shortRec[1] % 60);
+		DateTime dt;
+		dt = new DateTime(shortRec[0]/2048+2004, (shortRec[0]%2048)/100, (shortRec[0]%2048)%100, shortRec[1] / 60, shortRec[1] % 60);
+//		try {
+//			dt = new DateTime(shortRec[0]/2048+2004, (shortRec[0]%2048)/100, (shortRec[0]%2048)%100, shortRec[1] / 60, shortRec[1] % 60);
+//		} catch (IllegalFieldValueException e) {
+//			dt = new DateTime(2000, 01, 01, 0, 0);
+//		}
 //		System.out.println("New "+dt);
 		return dt;
 	}

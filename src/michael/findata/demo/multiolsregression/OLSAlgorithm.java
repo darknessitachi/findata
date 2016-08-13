@@ -1,6 +1,5 @@
 package michael.findata.demo.multiolsregression;
 
-import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.regression.OLSMultipleLinearRegression;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 
@@ -8,22 +7,22 @@ public class OLSAlgorithm {
 	public static void helpMeUnderstandEstimateRegressionParamters() {
 		OLSMultipleLinearRegression regression2 = new OLSMultipleLinearRegression();
 		double[] y = {
-				1,
-				2,
-				3,
-				4
+				0,
+				0,
+				0,
+				0
 		};
 //		double[][] x2 =	{
-//				{1,1.1,1.2},
-//				{2,2.1,2.2},
-//				{3,3.1,3.2},
-//				{4,4.1,4.2},
+//				{1.12d},
+//				{2.23d},
+//				{3.34d},
+//				{4.45d},
 //		};
 		double[][] x2 =	{
-				{1.12d, 2.23d},
-				{2.23d, 4.45d},
-				{3.34d, 6.67d},
-				{4.45d, 8.89d},
+				{1.12d,1},
+				{2.23d,2},
+				{3.34d,3},
+				{4.45d,4},
 		};
 
 //		regression2.newSampleData(y, x2);
