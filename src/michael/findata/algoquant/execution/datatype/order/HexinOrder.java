@@ -5,6 +5,8 @@ import com.numericalmethod.algoquant.execution.datatype.product.Product;
 
 public class HexinOrder extends Order {
 
+	private long id;
+
 	private String ack;
 
 	private OrderExecutionType type;
@@ -18,6 +20,7 @@ public class HexinOrder extends Order {
 				quantity, price);
 		this.hexinType = hexinType;
 		this.type = OrderExecutionType.LIMIT_ORDER;
+		this.id = -1;
 	}
 
 	private HexinType hexinType;
@@ -42,6 +45,18 @@ public class HexinOrder extends Order {
 
 	public void setAck(String ack) {
 		this.ack = ack;
+	}
+
+	public long id() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public boolean submitted () {
+		return id != -1;
 	}
 
 	public enum HexinType {

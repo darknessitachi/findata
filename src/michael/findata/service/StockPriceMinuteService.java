@@ -10,8 +10,11 @@ import michael.findata.spring.data.repository.StockPriceMinuteRepository;
 import michael.findata.spring.data.repository.StockRepository;
 import michael.findata.util.Consumer2;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeField;
+import org.joda.time.LocalDate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +26,7 @@ import java.util.*;
 import java.util.function.Consumer;
 
 import static michael.findata.util.FinDataConstants.yyyyMMdd;
-
+@Service
 public class StockPriceMinuteService {
 
 	@Autowired
@@ -36,19 +39,19 @@ public class StockPriceMinuteService {
 	private StockService ss;
 
 	public void updateMinuteData() throws IOException {
-		saveAllMinuteLines("000000", true);
+		saveAllMinuteLines("000000", "999999", true);
 	}
 
-	public void saveAllMinuteLines(String afterCode, boolean stopOrContinueOnExistingRecord) throws IOException {
+	public void saveAllMinuteLines(String codeStart, String codeEnd, boolean stopOrContinueOnExistingRecord) throws IOException {
 		TDXClient client1 = new TDXClient(
 //				"182.131.3.245:7709",    // 上证云行情J330 - 9ms)
-				"221.237.158.106:7709",    // 西南证券金点子成都电信主站1
 				"221.237.158.107:7709",    // 西南证券金点子成都电信主站2
-				"221.237.158.108:7709"    // 西南证券金点子成都电信主站3
+				"221.237.158.108:7709",    // 西南证券金点子成都电信主站3
+				"221.237.158.106:7709"    // 西南证券金点子成都电信主站1
 		);
 		client1.connect();
 
-		List<Stock> stocks = stockRepo.findByIgnoredAndFundAndCodeGreaterThanAndLatestSeasonIsNotNullOrderByCodeAsc(false, false, afterCode);
+		List<Stock> stocks = stockRepo.findByIgnoredAndFundAndCodeBetweenAndLatestSeasonIsNotNullOrderByCodeAsc(false, false, codeStart, codeEnd);
 		stocks.addAll(stockRepo.findByIgnoredAndFundAndInterestingOrderByCodeAsc(false, true, true));
 		for (Stock stock : stocks) {
 			try {
@@ -203,13 +206,13 @@ public class StockPriceMinuteService {
 		}
 	}
 
-	public void walk(DateTime start,
-					 DateTime end,
-					 String[] codes,
+	public void walk(LocalDate start,
+					 LocalDate end,
 					 boolean log,
-					 Consumer2<DateTime, Map<String, SecurityTimeSeriesDatum>> doStuff) {
-		Timestamp tsStart = new Timestamp(start.getMillis());
-		Timestamp tsEnd = new Timestamp(end.getMillis());
+					 Consumer2<DateTime, Map<String, SecurityTimeSeriesDatum>> doStuff,
+					 String ... codes) {
+		Timestamp tsStart = new Timestamp(start.toDateTimeAtStartOfDay().getMillis());
+		Timestamp tsEnd = new Timestamp(end.toDateTimeAtStartOfDay().getMillis());
 		List<StockPriceMinute> spms = stockPriceMinuteRepo.findByDateBetweenAndStock_CodeInOrderByDate(tsStart, tsEnd, codes);
 
 		Map<String, StockPriceMinute> dataPerDay = new HashMap<>();

@@ -6,15 +6,15 @@ public class SecurityDividendRecord {
 	private Date announcementDate;
 	private float amount;
 	private float bonus;
-	private float split;
+	private float bonus2;
 	private Date paymentDate;
 	private double total_amount;
 
-	public SecurityDividendRecord(Date announcementDate, float amount, float bonus, float split, Date paymentDate, double total_amount) {
+	public SecurityDividendRecord(Date announcementDate, float amount, float bonus, float bonus2, Date paymentDate, double total_amount) {
 		this.announcementDate = announcementDate;
 		this.amount = amount;
 		this.bonus = bonus;
-		this.split = split;
+		this.bonus2 = bonus2;
 		this.paymentDate = paymentDate;
 		this.total_amount = total_amount;
 	}
@@ -51,12 +51,12 @@ public class SecurityDividendRecord {
 		this.bonus = bonus;
 	}
 
-	public float getSplit() {
-		return split;
+	public float getBonus2() {
+		return bonus2;
 	}
 
-	public void setSplit(float split) {
-		this.split = split;
+	public void setBonus2(float bonus2) {
+		this.bonus2 = bonus2;
 	}
 
 	public double getTotal_amount() {

@@ -1,8 +1,7 @@
 package michael.findata.commandcenter.test;
 
 import com.numericalmethod.algoquant.execution.datatype.product.portfolio.Portfolio;
-import michael.findata.algoquant.execution.component.broker.LocalBrokerProxy;
-import michael.findata.algoquant.execution.datatype.order.HexinOrder;
+import michael.findata.algoquant.execution.component.broker.LocalTdxBrokerProxy;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType;
 import michael.findata.algoquant.strategy.pair.HoppingStrategy;
 import michael.findata.commandcenter.CommandCenter;
@@ -14,7 +13,6 @@ import michael.findata.service.StockService;
 import michael.findata.spring.data.repository.PairInstanceRepository;
 import michael.findata.spring.data.repository.PairStatsRepository;
 import michael.findata.spring.data.repository.StockRepository;
-import org.joda.time.LocalTime;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
@@ -23,6 +21,7 @@ import java.util.Set;
 
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.*;
 
+// Test the CommandCenter with HoppingStrategy
 public class CommandCenterTest {
 	public static void main(String[] args) throws IOException {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
@@ -39,8 +38,8 @@ public class CommandCenterTest {
 		HexinType sellOrderType = SIMPLE_SELL;
 		HexinType buyOrderType = SIMPLE_BUY;
 
-		cc.setBroker(new LocalBrokerProxy(sellOrderType, buyOrderType));
-		cc.setShSzClient(new TDXClient(TDXClient.TDXClientConfigs));
+		cc.setBroker(new LocalTdxBrokerProxy(10001));
+		cc.setShSzHqClient(new TDXClient(TDXClient.TDXClientConfigs));
 
 //		// Calculate pairStats
 //		LocalDate simulationStart = LocalDate.now();
@@ -60,7 +59,6 @@ public class CommandCenterTest {
 		Portfolio<Stock> portfolio = new Portfolio<>();
 
 		// Fri 2016/07/06 starting
-//		portfolio.putIfAbsent(stockRepo.findOneByCode("510160"), 49600d);
 		portfolio.putIfAbsent(stockRepo.findOneByCode("159940"), 30900d);
 
 		Set<String> scope = ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic_bluechip.csv");
@@ -70,8 +68,9 @@ public class CommandCenterTest {
 				scope, portfolio,
 				sellOrderType, buyOrderType,
 				pairStatsRepo, pairInstanceRepo, ds);
+
 		cc.addStrategy(hoppingStrategy);
-		cc.setTargetSecurities(hoppingStrategy.getStocks());
+		cc.setTargetSecurities(hoppingStrategy.getTargetSecurities());
 		cc.start();
 	}
 }

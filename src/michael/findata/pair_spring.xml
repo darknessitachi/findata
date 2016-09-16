@@ -11,11 +11,15 @@
         http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
 
 	<context:property-placeholder location="/michael/findata/jdbc.properties"/>
-	<context:component-scan base-package="michael.findata.service"/>
+	<context:component-scan base-package="michael.findata"/>
 
-	<bean class="michael.findata.service.StockPriceMinuteService" id="stockPriceMinuteService"/>
+	<bean class="michael.findata.external.tdx.TDXClient" id="tdxClient">
+		<constructor-arg index="0" value="221.237.158.106:7709"/>
+	</bean>
 
-	<bean class="michael.findata.service.PairStrategyService" id="pairStrategyService"/>
+	<!--<bean class="michael.findata.service.StockPriceMinuteService" id="stockPriceMinuteService"/>-->
+
+	<!--<bean class="michael.findata.service.PairStrategyService" id="pairStrategyService"/>-->
 
 	<bean class="michael.findata.service.SecurityTimeSeriesDataService" id="securityTimeSeriesDataService">
 		<property name="dataSource" ref="ds"/>
@@ -37,8 +41,7 @@
 		<property name="dataSource" ref="ds"/>
 	</bean>
 
-	<bean class="michael.findata.commandcenter.CommandCenter" id="commandCenter">
-	</bean>
+	<bean class="michael.findata.commandcenter.CommandCenter" id="commandCenter"/>
 
 	<bean id="ds" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
 		<property name="driverClassName" value="${jdbc.driverClassName}"/>
@@ -50,7 +53,12 @@
 	<bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
 		<property name="dataSource" ref="ds" />
 		<!-- This makes /META-INF/persistence.xml is no longer necessary -->
-		<property name="packagesToScan" value="michael.findata.model" />
+		<property name="packagesToScan" >
+			<array>
+				<value>michael.findata.model</value>
+				<value>michael.findata.algoquant.strategy.grid</value>
+			</array>
+		</property>
 		<!-- JpaVendorAdapter implementation for Hibernate EntityManager.
 			 Exposes Hibernate's persistence provider and EntityManager extension interface -->
 		<property name="jpaVendorAdapter">

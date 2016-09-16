@@ -11,16 +11,10 @@ import michael.findata.model.Dividend;
 import michael.findata.model.Stock;
 import michael.findata.spring.data.repository.DividendRepository;
 import michael.findata.spring.data.repository.StockRepository;
-import michael.findata.util.CalendarUtil;
 import michael.findata.util.FinDataConstants;
 import org.joda.time.DateTime;
-import org.joda.time.Days;
 import org.joda.time.LocalDate;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cglib.core.Local;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
@@ -37,9 +31,13 @@ import java.util.function.Function;
 public class DividendService extends JdbcDaoSupport {
 
 	@Autowired
-	DividendRepository dividendRepo;
+	private DividendRepository dividendRepo;
+
 	@Autowired
-	StockRepository stockRepo;
+	private StockRepository stockRepo;
+
+	@Autowired
+	private TDXClient tdxClient;
 
 	public boolean refreshDividendDataForFund(String code, TDXClient client) {
 		boolean updated = false;
@@ -51,8 +49,19 @@ public class DividendService extends JdbcDaoSupport {
 		while (!info.empty()) {
 			data = info.pop();
 			Dividend dividend = new Dividend();
+			dividend.setStock(stock);
 			float amount = Float.parseFloat(data[4])/10;
-			float split = Float.parseFloat(data[6])/10;
+			float split;
+			switch (data[3]) {
+				case "1":
+					split = Float.parseFloat(data[6]) / 10;
+					break;
+				case "11":
+					split = Float.parseFloat(data[6]) - 1;
+					break;
+				default:
+					continue;
+			}
 			if (amount == 0 && split == 0) {
 //				System.out.println("Skipped: ");
 //				for (String field : data) {
@@ -62,7 +71,6 @@ public class DividendService extends JdbcDaoSupport {
 //				System.out.println();
 				continue;
 			}
-			dividend.setStock(stock);
 			try {
 				dividend.setPaymentDate(sdf.parse(data[2]));
 			} catch (ParseException e) {
@@ -74,8 +82,8 @@ public class DividendService extends JdbcDaoSupport {
 				break;
 			}
 			dividend.setAmount(amount);
-			dividend.setSplit(split);
-			dividend.setBonus(0f);
+//			dividend.setSplit(split);
+			dividend.setBonus(split);
 			dividend.setAnnouncementDate(dividend.getPaymentDate());
 			dividendRepo.save(dividend);
 			System.out.print("Dividend saved:\t");
@@ -96,7 +104,8 @@ public class DividendService extends JdbcDaoSupport {
 	 */
 	public void refreshDividendData() throws ClassNotFoundException, SQLException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs;
-		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE ((NOT is_fund) OR (is_fund AND stock.is_interesting)) AND NOT is_ignored ORDER BY code");
+//		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE ((NOT is_fund) OR (is_fund AND stock.is_interesting)) AND NOT is_ignored ORDER BY code");
+		rs = getJdbcTemplate().queryForRowSet("SELECT id, code, name, latest_year, latest_season FROM stock WHERE (NOT is_fund) AND NOT is_ignored ORDER BY code");
 		List<Stock> stocks = new ArrayList<>();
 		while (rs.next()) {
 			Stock s = new Stock();
@@ -120,10 +129,20 @@ public class DividendService extends JdbcDaoSupport {
 		});
 	}
 
+	public void refreshDividendDataForInterestingFunds() {
+		tdxClient.connect();
+		List<Stock> interestingFunds = stockRepo.findByFundAndInteresting(true, true);
+		for (Stock fund : interestingFunds) {
+			System.out.println("Refreshing dividend for fund: "+fund.getCode()+" "+fund.getName());
+			refreshDividendDataForFund(fund.getCode(), tdxClient);
+		}
+		tdxClient.disconnect();
+	}
+
 	@Transactional
 	public void calculateAdjFactorForStock(String code) {
 		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
-				"SELECT dividend.id id, stock_id, code, name, payment_date, round(bonus + split + 1, 4) as fct, amount " +
+				"SELECT dividend.id id, stock_id, code, name, payment_date, round(bonus + 1, 6) as fct, amount " +
 				"FROM dividend, stock " +
 				"WHERE stock_id = stock.id " +
 //				"AND payment_date >= '2015-01-01' " +
@@ -133,8 +152,13 @@ public class DividendService extends JdbcDaoSupport {
 				"ORDER BY code, payment_date", code);
 		Date payment_date;
 		double yest_close, adj;
+		long currentTime = System.currentTimeMillis();
 		while (rs.next()) {
 			payment_date = rs.getDate("payment_date");
+			if (payment_date.getTime() > currentTime) {
+				// payment_date in future
+				continue;
+			}
 			System.out.print(rs.getString("code")+" Payment date: " + payment_date);
 			try {
 				yest_close = getJdbcTemplate().queryForObject("SELECT close FROM code_price WHERE code = ? AND date < ? ORDER BY date DESC LIMIT 1", Double.class, code, payment_date) / 1000d;
@@ -155,7 +179,6 @@ public class DividendService extends JdbcDaoSupport {
 		Date paymentDate;
 		float amount;
 		float bonus;
-		float split;
 		double totalAmount;
 		SecurityDividendData sdd;
 		if (code.startsWith("5") || code.startsWith("1")) {
@@ -170,14 +193,13 @@ public class DividendService extends JdbcDaoSupport {
 			announcementDate = new Date(e.getKey().getTime());
 			paymentDate = e.getValue().getPaymentDate() == null ? null : new Date(e.getValue().getPaymentDate().getTime());
 			amount = e.getValue().getAmount();
-			bonus = e.getValue().getBonus();
-			split = e.getValue().getSplit();
-			if ((amount != 0 || bonus != 0 || split != 0) && paymentDate != null) {
+			bonus = e.getValue().getBonus() + e.getValue().getBonus2();
+			if ((amount != 0 || bonus != 0) && paymentDate != null) {
 				totalAmount = e.getValue().getTotal_amount();
 				System.out.println(announcementDate+"\t"+amount+"\t"+paymentDate);
 				try {
-					getJdbcTemplate().update("INSERT INTO dividend (stock_id, announcement_date, amount, bonus, split, payment_date, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)",
-							id, announcementDate, amount, bonus, split, paymentDate, totalAmount);
+					getJdbcTemplate().update("INSERT INTO dividend (stock_id, announcement_date, amount, bonus, payment_date, total_amount) VALUES (?, ?, ?, ?, ?, ?)",
+							id, announcementDate, amount, bonus, paymentDate, totalAmount);
 					updated[0] = true;
 				} catch (Exception ex) {
 					if (ex.getMessage().contains("Duplicate")) {
@@ -384,7 +406,7 @@ public class DividendService extends JdbcDaoSupport {
 					if (indexInstant > queryInstant) {
 					} else if (indexInstant > referenceInstant) {
 						if (div.getAdjustmentFactor() == null) {
-							price = price*(1+div.getBonus()+div.getSplit())+div.getAmount();
+							price = price*(1+div.getBonus())+div.getAmount();
 						} else {
 							price = price*div.getAdjustmentFactor();
 						}
@@ -415,7 +437,7 @@ public class DividendService extends JdbcDaoSupport {
 					if (indexInstant > queryInstant) {
 					} else if (indexInstant > referenceInstant) {
 						if (div.getAdjustmentFactor() == null) {
-							p = p*(1+div.getBonus()+div.getSplit())+div.getAmount()*1000;
+							p = p*(1+div.getBonus())+div.getAmount()*1000;
 						} else {
 							p = p * div.getAdjustmentFactor();
 						}

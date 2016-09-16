@@ -9,6 +9,7 @@ import michael.findata.util.ResourceUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static michael.findata.util.FinDataConstants.STOCK_LIST_FILE;
-
+@Service
 public class StockService extends JdbcDaoSupport {
 
 	@Autowired

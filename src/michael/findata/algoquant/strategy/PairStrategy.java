@@ -6,7 +6,7 @@ import com.numericalmethod.algoquant.execution.datatype.depth.Depth;
 import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
-import com.numericalmethod.algoquant.execution.strategy.handler.MarketConditionHandler;
+import michael.findata.algoquant.execution.strategy.handler.MarketConditionHandler;
 import michael.findata.model.PairInstance;
 import michael.findata.service.DividendService;
 import michael.findata.util.Consumer2;

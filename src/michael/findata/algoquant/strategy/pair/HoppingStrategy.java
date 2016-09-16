@@ -7,10 +7,10 @@ import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.Ma
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import com.numericalmethod.algoquant.execution.datatype.product.portfolio.Portfolio;
-import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.execution.strategy.handler.DepthHandler;
-import com.numericalmethod.algoquant.execution.strategy.handler.MarketConditionHandler;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
+import michael.findata.algoquant.execution.strategy.Strategy;
+import michael.findata.algoquant.execution.strategy.handler.MarketConditionHandler;
 import michael.findata.model.PairInstance;
 import michael.findata.model.PairStats;
 import michael.findata.model.Stock;
@@ -31,6 +31,7 @@ import static michael.findata.algoquant.execution.datatype.order.HexinOrder.Hexi
 // The difference is that it only opens and doesn't need to close.
 // So in effect, it looks like the strategy is hopping from on stock/etf to another very quickly
 public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthHandler {
+
 	/**
 	 * 510500<->159902: 3dev->1.5dev
 	 * <p>
@@ -352,7 +353,8 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 //		System.out.println("Strategy executed @\t"+System.currentTimeMillis());
 	}
 
-	public Set<Stock> getStocks() {
+	@Override
+	public Collection<Stock> getTargetSecurities() {
 		return stocks;
 	}
 
@@ -410,7 +412,6 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 		return null;
 	}
 
-	// always
 	private enum BalanceOption {
 		CLOSEST_MATCH,	// buy more or sell more whichever option makes the most balanced trade
 		SHORT_LARGER,	// always sell a little more than buy

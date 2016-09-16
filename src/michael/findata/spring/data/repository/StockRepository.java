@@ -12,7 +12,9 @@ public interface StockRepository extends PagingAndSortingRepository<Stock, Integ
 	Stock findOneByCode(String code);
 	Set<Stock> findByCodeIn(String ... codes);
 	Set<Stock> findByCodeIn(Collection<String> codes);
-	List<Stock> findByIgnoredAndFundAndCodeGreaterThanAndLatestSeasonIsNotNullOrderByCodeAsc(boolean ignored, boolean fund, String code);
+	List<Stock> findByFund(boolean isFund);
+	List<Stock> findByFundAndInteresting(boolean isFund, boolean isInteresting);
+	List<Stock> findByIgnoredAndFundAndCodeBetweenAndLatestSeasonIsNotNullOrderByCodeAsc(boolean ignored, boolean fund, String codeStart, String codeEnd);
 	List<Stock> findByIgnoredAndFundAndLatestSeasonIsNotNullOrderByCodeAsc(boolean ignored, boolean fund);
 	List<Stock> findByIgnoredAndFundAndInterestingOrderByCodeAsc(boolean ignored, boolean fund, boolean interesting);
 	@Query (value = "SELECT DISTINCT s FROM Pair p, Stock s WHERE p.stockToShort = s")

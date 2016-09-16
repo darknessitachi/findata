@@ -6,10 +6,12 @@ import com.numericalmethod.algoquant.execution.datatype.depth.Depth;
 import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.execution.strategy.handler.DepthHandler;
-import com.numericalmethod.algoquant.execution.strategy.handler.MarketConditionHandler;
+import michael.findata.algoquant.execution.strategy.handler.DividendHandler;
+import michael.findata.algoquant.execution.strategy.handler.MarketConditionHandler;
+import michael.findata.model.Dividend;
 import org.joda.time.DateTime;
 
-public class DummyStrategy implements Strategy, MarketConditionHandler, DepthHandler {
+public class DummyStrategy implements Strategy, MarketConditionHandler, DepthHandler, DividendHandler {
 	@Override
 	public void onMarketConditionUpdate(DateTime now, MarketCondition mc, TradeBlotter blotter, Broker broker) {
 		System.out.println("Dummy Strategy: marketCondition updated @ "+now);
@@ -28,5 +30,9 @@ public class DummyStrategy implements Strategy, MarketConditionHandler, DepthHan
 			System.out.println(d);
 		});
 		System.out.println("Ending @ "+System.currentTimeMillis());
+	}
+
+	@Override
+	public void onDividend(DateTime now, Dividend dividend, MarketCondition mc, TradeBlotter blotter, Broker broker) {
 	}
 }

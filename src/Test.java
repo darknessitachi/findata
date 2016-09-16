@@ -55,11 +55,11 @@ public class Test {
 
 		long stamp = System.currentTimeMillis();
 		// The following are used regularly throughout the year
-		ss.refreshStockCodes();
-		ss.refreshLatestPriceAndName();
+//		ss.refreshStockCodes();
+//		ss.refreshLatestPriceAndName();
 		sps.refreshStockPriceHistories();
-		ds.refreshDividendData();
-		sncs.refreshNumberOfShares();
+//		ds.refreshDividendData();
+//		sncs.refreshNumberOfShares();
 
 //		ss.calculateAdjustmentFactor(10);
 

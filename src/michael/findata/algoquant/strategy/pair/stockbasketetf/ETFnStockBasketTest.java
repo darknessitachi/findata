@@ -143,10 +143,9 @@ public class ETFnStockBasketTest {
 		}
 		final int[] count = {0};
 		spms.walk(
-				start,
-				end,
-//				1000000,
-				codes, false,
+				startDate,
+				end.toLocalDate(),
+				false,
 				(date, data) -> {
 					// step 1: make sure no stock is missing
 					LocalDate curDate = date.toLocalDate();
@@ -168,7 +167,9 @@ public class ETFnStockBasketTest {
 
 //					System.out.println(count[0] + " " + date);
 					count[0]++;
-				});
+				},
+				codes
+		);
 		HashMap<String, Vector> pVectors = new HashMap<>();
 		for (String code : codes) {
 			pVectors.put(code, new DenseVector(prices.get(code)));

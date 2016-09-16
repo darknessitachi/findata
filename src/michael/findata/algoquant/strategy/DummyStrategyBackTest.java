@@ -57,7 +57,6 @@ public class DummyStrategyBackTest {
 			depthCaches.addCache(entry.getKey(), entry.getValue());
 		});
 
-
 		// set up a simulator to host the strategy
 		Simulator simulator = new SimpleSimulatorBuilder()
 				.withDepthUpdates(depthCaches)

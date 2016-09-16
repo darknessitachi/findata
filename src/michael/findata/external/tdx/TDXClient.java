@@ -63,7 +63,7 @@ public class TDXClient {
 			"182.131.7.146:7709",    // 华西E6
 			"182.131.7.147:7709",    // 华西E7
 			"182.131.7.148:7709",    // 华西E8
-//			"182.131.3.245:7709",    // 上证云行情J330 - 9ms)
+			"182.131.3.245:7709",    // 上证云行情J330 - 9ms)
 			"221.237.158.106:7709",    // 西南证券金点子成都电信主站1
 			"221.237.158.107:7709",    // 西南证券金点子成都电信主站2
 			"221.237.158.108:7709",    // 西南证券金点子成都电信主站3
@@ -156,7 +156,8 @@ public class TDXClient {
 	// this is a much resource-intensive way of polling quotes, given SH and SZ exchanges are only publishing snapshots
 	// every 5/3 seconds respectively. In other words, there is no point polling from SH for another 4.5/2.5 seconds if
 	// SH/SZ has just published a snapshot.
-	public Map<Product, com.numericalmethod.algoquant.execution.datatype.depth.Depth> pollQuotes (int pollTimes, long gapMillis, Map<String, Stock> stockMap, String... codes) {
+	public Map<Product, com.numericalmethod.algoquant.execution.datatype.depth.Depth> pollQuotes (
+			int pollTimes, long gapMillis, Map<String, Stock> stockMap, String... codes) {
 //		System.out.println("Polling ... @\t"+System.currentTimeMillis());
 		int count = -1;
 //		long start;
@@ -200,6 +201,7 @@ public class TDXClient {
 //				System.out.println(count+"---------------");
 				rawTemp = raw;
 				raw = Native.toString(result, "GBK");
+//				System.out.println(raw);
 //				raw = testdata[count]; // todo test only
 				if (raw.equals(rawTemp)) {
 //					System.out.println("not updated!");
@@ -337,7 +339,7 @@ public class TDXClient {
 			}
 //			System.out.println("i: "+i);
 //			System.out.println("count: "+count.getValue());
-			if (hqLib[i % hqLib.length].TdxHq_GetSecurityBars((byte)7, calcMarket(code), code, (short)((i * countPerQuery)+(countPerDay*startOnDay)), count, result, errInfo)) {
+			if (hqLib[i % hqLib.length].TdxHq_GetSecurityBars((byte)8, calcMarket(code), code, (short)((i * countPerQuery)+(countPerDay*startOnDay)), count, result, errInfo)) {
 				if (i == queryCount - 1) {
 					resultString = Native.toString(result, "GBK") + "\n" + resultString;
 				} else {
@@ -409,8 +411,14 @@ public class TDXClient {
 			} else {
 				String [] lines = Native.toString(result, "GBK").split("\n");
 				String [] data;
+//				System.out.println(lines[0]);
 				for (int j = 1; j < lines.length; j++ ) {
+//					System.out.println(lines[j]);
 					data = lines[j].split("\t");
+					//  1: 轉送股或紅利
+					// 11: 類似基金的合並或分拆
+					// 復權方法不一樣
+					// 若11：復權方法為簡單地將股價除以比例
 					if (data[3].equals("1") || data[3].equals("11")) {
 						res.push(data);
 					}

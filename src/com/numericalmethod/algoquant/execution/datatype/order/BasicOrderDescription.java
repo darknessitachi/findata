@@ -123,11 +123,11 @@ public class BasicOrderDescription {
 
 	@Override
 	public String toString() {
-		String result = String.format("\t%s \t%s @\t%f\tfor\t%f\t, tags: %s",
+		String result = String.format("\t%s \t%s @\t%.3f\tfor\t%.3f\t, tags: %s",
 				side().toString(),
 				product(),
 				price(),
-				quantity(),
+				side.sign()*quantity(),
 				tags);
 		return result;
 	}

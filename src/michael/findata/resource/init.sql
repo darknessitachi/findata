@@ -37,7 +37,6 @@ CREATE TABLE dividend (
 	announcement_date DATE,
 	amount FLOAT,
 	bonus FLOAT,
-	split FLOAT,
 	payment_date DATE,
 	FOREIGN KEY (stock_id) REFERENCES stock(id),
 	UNIQUE (stock_id, announcement_date),

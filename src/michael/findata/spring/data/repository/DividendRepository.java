@@ -10,5 +10,8 @@ import java.util.Set;
 
 public interface DividendRepository extends PagingAndSortingRepository<Dividend, Integer> {
 	List<Dividend> findByPaymentDateBetweenAndStock_CodeInOrderByPaymentDateDesc(Date paymentDateStart, Date paymentDateEnd, Collection<String> codes);
+	List<Dividend> findByPaymentDateBetweenAndStock_CodeInOrderByPaymentDate(Date paymentDateStart, Date paymentDateEnd, String ... codes);
 	Set<Dividend> findByStock_Code(String code);
+	List<Dividend> findByStock_CodeInOrderByPaymentDate(String ... codes);
+	List<Dividend> findByStock_CodeInOrderByPaymentDate(Collection<String> codes);
 }

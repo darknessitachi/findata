@@ -1,20 +1,14 @@
-import com.numericalmethod.suanshu.algebra.linear.vector.doubles.dense.DenseVector;
+import michael.findata.external.tdx.TDXClient;
+import michael.findata.model.Stock;
+import michael.findata.spring.data.repository.StockRepository;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 public class Plan {
 
 	public static void main (String args []) throws IOException {
-
-//		Double [] n = new Double[] {1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d};
-		double [] n = new double [] {1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d};
-		DenseVector v = new DenseVector(Arrays.copyOfRange(n, 1, n.length));
-		System.out.println(v);
-		DenseVector vMinusOne = new DenseVector(Arrays.copyOfRange(n, 0, n.length-1));
-		System.out.println(vMinusOne);
-		v = v.minus(vMinusOne).divide(vMinusOne);
-		System.out.println(v);
 
 		// a
 //		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
@@ -46,6 +40,74 @@ public class Plan {
 ////		dir.mkdir();
 ////		chart.saveAsPNG(new File(dir, "xy.png"), 400, 300);
 //		chart.show();
+
+		TDXClient client = new TDXClient(
+//				"182.131.3.245:7709",    // 上证云行情J330 - 9ms)
+				"221.237.158.106:7709",    // 西南证券金点子成都电信主站1
+				"221.237.158.107:7709",    // 西南证券金点子成都电信主站2
+				"221.237.158.108:7709"    // 西南证券金点子成都电信主站3
+
+//				"221.236.13.218:7709",	// 招商证券成都行情 - 9-33 ms
+//				"221.236.13.219:7709",	// 招商证券成都行情 - 8-25 ms
+//				"125.71.28.133:7709",	// cd1010 - 8 ms
+//				"221.236.15.14:995",	// 国金成都电信2.1
+//				"124.161.97.84:7709",	// 申银万国成都网通2
+//				"124.161.97.83:7709",	// 申银万国成都网通1
+//				"125.64.39.62:7709",	// 申银万国成都电信2
+//				"125.71.28.133:443",	// cd1010 - 8 ms
+//				"221.236.15.14:7709",	// 国金成都电信1.13
+//				"119.6.204.139:7709",	// 国金成都联通5.135
+//				"125.64.39.61:7709",	// 申银万国成都电信1
+//				"125.64.41.12:7709"		// 成都电信54
+		);
+//		TDXClient client2 = new TDXClient(
+//				"119.4.167.141:7709",	// 华西L1
+//				"119.4.167.142:7709",	// 华西L2
+//				"119.4.167.181:7709",	// 华西L3
+//				"119.4.167.182:7709",	// 华西L4
+//				"119.4.167.164:7709",	// 华西L5
+//				"119.4.167.165:7709",	// 华西L6
+//				"119.4.167.163:7709",	// 华西L7
+//				"119.4.167.175:7709",	// 华西L8
+//				"218.6.198.151:7709",	// 华西L1
+//				"218.6.198.152:7709",	// 华西L2
+//				"218.6.198.174:7709",	// 华西L3
+//				"218.6.198.175:7709"	// 华西L4
+//		);
+//		TDXClient client3 = new TDXClient(
+//				"218.6.198.155:7709",	// 华西L5
+//				"218.6.198.156:7709",	// 华西L6
+//				"218.6.198.157:7709",	// 华西L7
+//				"218.6.198.158:7709",	// 华西L8
+//				"182.131.7.141:7709",	// 华西E1
+//				"182.131.7.142:7709",	// 华西E2
+//				"182.131.7.143:7709",	// 华西E3
+//				"182.131.7.144:7709",	// 华西E4
+//				"182.131.7.145:7709",	// 华西E5
+//				"182.131.7.146:7709",	// 华西E6
+//				"182.131.7.147:7709",	// 华西E7
+//				"182.131.7.148:7709",	// 华西E8
+//				"182.131.3.245:7709",	// 上证云行情J330 - 9ms)
+//				"221.237.158.106:7709",	// 西南证券金点子成都电信主站1
+//				"221.237.158.107:7709",	// 西南证券金点子成都电信主站2
+//				"221.237.158.108:7709",	// 西南证券金点子成都电信主站3
+//				"183.230.9.136:7709",	// 西南证券金点子重庆移动主站1
+//				"183.230.134.6:7709",	// 西南证券金点子重庆移动主站2
+//				"219.153.1.115:7709",	// 西南证券金点子重庆电信主站1
+//				"113.207.29.12:7709"	// 西南证券金点子重庆联通主站1
+//		);
+		client.connect();
+		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
+		StockRepository sr = (StockRepository) context.getBean("stockRepository");
+		for (Stock s : sr.findByFund(true)) {
+			for (String [] strs : client.getXDXRInfo(s.getCode())) {
+				if (strs[3].equals("11")) {
+					System.out.println(s.getCode());
+					break;
+				}
+			}
+		}
+		client.disconnect();
 	}
 }
 /**
@@ -78,12 +140,17 @@ public class Plan {
  HoppingStrategy不需要动态仓位管理
 
  0。
- 策略1：只适用于流动性良好的不多的20-30多只ETF，还是要坚持把这个策略做下去。需要对这些高流动性etf重新进行回测。
  利用融券ETF，对广泛ETF进行 隔日统计配对
+ 策略1：只适用于流动性良好的不多的20-30多只ETF，还是要坚持把这个策略做下去。需要对这些高流动性etf重新进行回测。
 
- 0. regularly test the running of xiadan2. if crashed, restart it.
- 1. market order on hexin broker: this can be achieved with limit order: just relax the price much more
+
+ 0. backtest 510050 和 510300 之间 10 w 级别的套利。
  0. test/revise hopping strategy on stocks (instead of ETFs)
+ 0. test dividend update routine to make sure the removal of split column is ok.
+ 0. regularly test the running of xiadan2. if crashed, restart it.
+ 0. 在年底要再做一次adjustment factor recalc for all stocks/interesting funds
+ 1. market order on hexin broker: this can be achieved with limit order: just relax the price much more
+ 0. Update the list of all AH stocks and able to update their price, so that our spread comparison can automatically include them
  0. OLMAR on more diversified chinese stocks: prepare getting stock data from my own local mysql
  0. 每天启动CommandCenter的时候，自动探测可交易仓位
  0. OcRegressionDouble & OcRegressionDouble64 be able to calculate stdev same as in apache math

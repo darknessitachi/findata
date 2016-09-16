@@ -21,6 +21,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +31,7 @@ import java.sql.SQLSyntaxErrorException;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.function.Function;
-
+@Service
 public class PairStrategyService {
 
 	@Autowired

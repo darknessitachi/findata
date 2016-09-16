@@ -95,27 +95,27 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 		this.currentPrice = currentPrice;
 	}
 
-	private int latestYear;
+	private Integer latestYear;
 
 	@Column(name = "latest_year", nullable = true, insertable = true, updatable = true, length = 10, precision = 0)
 	@Basic
-	public int getLatestYear() {
+	public Integer getLatestYear() {
 		return latestYear;
 	}
 
-	public void setLatestYear(int latestYear) {
+	public void setLatestYear(Integer latestYear) {
 		this.latestYear = latestYear;
 	}
 
-	private int latestSeason;
+	private Integer latestSeason;
 
 	@Column(name = "latest_season", nullable = true, insertable = true, updatable = true, length = 10, precision = 0)
 	@Basic
-	public int getLatestSeason() {
+	public Integer getLatestSeason() {
 		return latestSeason;
 	}
 
-	public void setLatestSeason(int latestSeason) {
+	public void setLatestSeason(Integer latestSeason) {
 		this.latestSeason = latestSeason;
 	}
 

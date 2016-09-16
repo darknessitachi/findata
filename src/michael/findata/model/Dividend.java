@@ -1,5 +1,6 @@
 package michael.findata.model;
 
+import com.numericalmethod.algoquant.execution.component.simulator.event.Event;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
@@ -7,7 +8,7 @@ import java.util.Date;
 
 
 @Entity
-public class Dividend {
+public class Dividend implements Event {
 	private int id;
 
 	@GeneratedValue(generator="increment")
@@ -70,17 +71,17 @@ public class Dividend {
 		this.bonus = bonus;
 	}
 
-	private Float split;
+//	private Float split;
 
-	@Column(name = "split", nullable = true, insertable = true, updatable = true, length = 12, precision = 0)
-	@Basic
-	public Float getSplit() {
-		return split;
-	}
-
-	public void setSplit(Float split) {
-		this.split = split;
-	}
+//	@Column(name = "split", nullable = true, insertable = true, updatable = true, length = 12, precision = 0)
+//	@Basic
+//	public Float getSplit() {
+//		return split;
+//	}
+//
+//	public void setSplit(Float split) {
+//		this.split = split;
+//	}
 
 	private Double totalAmount;
 
@@ -123,6 +124,11 @@ public class Dividend {
 		int result = stock.hashCode();
 		result = 31 * result + (paymentDate != null ? paymentDate.hashCode() : 0);
 		return result;
+	}
+
+	@Override
+	public String toString() {
+		return String.format("Dividend [id=%d] [stock=%s %s] [paymentDate=%s] [bonus=%f] [amount=%f]", id, stock.getCode(), stock.getName(), paymentDate, bonus, amount);
 	}
 
 	private Stock stock;

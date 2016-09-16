@@ -15,6 +15,7 @@ import org.springframework.core.env.SystemEnvironmentPropertySource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
@@ -24,13 +25,13 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static michael.findata.util.FinDataConstants.yyyyDashMMDashdd;
-
+@Service
 public class StockPriceService extends JdbcDaoSupport {
 	// Bulk-load stock pricing data from THS, make sure THS pricing data is complete before doing this!!!!!
 	public void refreshStockPriceHistories() throws IOException, SQLException, ParseException,
 			ClassNotFoundException, IllegalAccessException, InstantiationException {
 		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
-				"SELECT code, id, name FROM stock WHERE ((stock.number_of_shares <> 0 AND NOT is_fund) OR (is_fund AND stock.is_interesting)) AND NOT is_ignored ORDER BY code");
+				"SELECT code, id, name FROM stock WHERE ((stock.number_of_shares <> 0 AND latest_year IS NOT NULL AND NOT is_fund) OR (is_fund AND stock.is_interesting)) AND NOT is_ignored ORDER BY code");
 		List<String> codes = new ArrayList<>();
 		while (rs.next()) {
 			codes.add(rs.getString("code"));

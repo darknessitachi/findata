@@ -17,7 +17,7 @@ public class Hexun2008FundDividendDataTest {
 			System.out.print("\t");
 			System.out.print(sdd.getDividendRecords().get(d).getBonus());
 			System.out.print("\t");
-			System.out.print(sdd.getDividendRecords().get(d).getSplit());
+			System.out.print(sdd.getDividendRecords().get(d).getBonus2());
 			System.out.print("\t");
 			System.out.print(sdd.getDividendRecords().get(d).getPaymentDate());
 			System.out.print("\t");
@@ -31,7 +31,7 @@ public class Hexun2008FundDividendDataTest {
 			System.out.print("\t");
 			System.out.print(sdd.getDividendRecords().get(d).getBonus());
 			System.out.print("\t");
-			System.out.print(sdd.getDividendRecords().get(d).getSplit());
+			System.out.print(sdd.getDividendRecords().get(d).getBonus2());
 			System.out.print("\t");
 			System.out.print(sdd.getDividendRecords().get(d).getPaymentDate());
 			System.out.print("\t");
