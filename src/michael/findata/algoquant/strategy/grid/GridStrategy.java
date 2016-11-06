@@ -132,6 +132,16 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 	@Column(name = "active")
 	private boolean active;
 
+	@Basic
+	@Column(name = "valuation")
+	private Double shareValuation;
+
+	@Basic
+	@Column(name = "resv_limit_under_valuation")
+	private Integer reserveLimitUnderValuation;
+
+	// set this field to have actions saved
+	// Usually, set it in real trading and don't set it in simulation
 	@Transient
 	private GridInstanceRepository gridRepo;
 
@@ -142,8 +152,9 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 	}
 
 	private double tradeVolumeActual (double current) {
+		int lotSize = stock.getLotSize();
 		double bsln = tradeAmountBaseline(current);
-		return FastMath.round(FastMath.abs(bsln/(current*100)))*100*(bsln<0 ? -1:1);
+		return FastMath.round(FastMath.abs(bsln)/(current*lotSize))*lotSize;
 	}
 
 	private double tradeAmountActual (double current) {
@@ -162,27 +173,25 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 	@Override
 	public void onDepthUpdate(DateTime now, Depth depth, MarketCondition mc, TradeBlotter blotter, Broker broker) {
 		if (!stock.equals(depth.product())) {
+			LOGGER.warn("Irrelevant depth!!");
+			LOGGER.warn("{} should not be passed to strategy {}", depth, this);
 			return;
 		}
 		if (getPositionDate() == null || getPositionDate().before(now.toLocalDate().toDate())) {
 			onDateUpdate(now.toLocalDate());
 		}
-		LOGGER.debug("Grid Strategy: depth updated @ "+now);
-		LOGGER.debug(depth.toString());
+		LOGGER.debug("Grid Strategy: depth for {} updated.", depth.product());
 		LOGGER.debug("CurrentBaseline/CurrentPeak/CurrentBottom\t{}\t{}\t{}", getCurrentBaseline(), getCurrentPeak(), getCurrentBottom());
 
-		// TODO: 9/3/2016 improve it with michael's Depth
-//		michael.findata.algoquant.execution.datatype.depth.Depth dpt;
-//		if (depth instanceof michael.findata.algoquant.execution.datatype.depth.Depth) {
-//			dpt = (michael.findata.algoquant.execution.datatype.depth.Depth) depth;
-//		} else {
-//			System.out.println("Cannot handle simple Depth.");
-//			return;
-//		}
-//		if (!dpt.isTraded()) {
-//			return;
-//		}
+		if (depth instanceof michael.findata.algoquant.execution.datatype.depth.Depth) {
+			michael.findata.algoquant.execution.datatype.depth.Depth dpt = (michael.findata.algoquant.execution.datatype.depth.Depth) depth;
+			if (!dpt.isTraded()) {
+				LOGGER.debug("Security {} is not traded, ending...", dpt.product());
+				return;
+			}
+		}
 
+		LOGGER.debug("Processing depth: {}", depth);
 		if (getCurrentPeak() == null) {
 			setCurrentPeak(depth.mid());
 		}
@@ -210,37 +219,63 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 		if (depth.bid(1) > getCurrentPeak()) {
 			setCurrentPeak(depth.bid(1));
 		}
-		if (depth.ask(1)/ getCurrentBottom() < 1+ getPeakBottomThreshold()) {
+		if (depth.ask(1)/getCurrentBottom() < 1+getPeakBottomThreshold()) {
 			// too close to bottom. We won't consider buying, no matter what -- there could be possible new bottom incoming
 			return;
 		}
-		if (getCurrentPeak() /depth.bid(1) < 1+ getPeakBottomThreshold()) {
+		if (getCurrentPeak()/depth.bid(1) < 1+getPeakBottomThreshold()) {
 			// too close to peak. We won't consider selling, no matter what -- there could be possible new peak incoming
 			return;
 		}
 
-		double volume = tradeVolumeActual(depth.mid());
-		if (FastMath.abs(volume * depth.mid()) < getBuySellAmountThreshold()) {
+		HexinOrder.HexinType type;
+		List<HexinOrder> orders = new ArrayList<>(1);
+		double baselineAmount = tradeAmountBaseline(depth.mid());
+		double volume, actualAmount;
+		double effectivePrice;
+		if (FastMath.abs(baselineAmount) < buySellAmountThreshold) {
 			// drop/climb not enough for buy/sell
 			return;
 		}
-
-		double effectivePrice;
-		HexinOrder.HexinType type;
-		List<HexinOrder> orders = new ArrayList<>(1);
-		if (volume < 0) {
-			// buy
-			// TODO: 9/3/2016 this is only suitable for small/mid volume. For bigger volume, execution price needs to be calculated.
-			effectivePrice = depth.ask(1);
-			type = SIMPLE_BUY;
-			// always assume there is enough money
-			volume = FastMath.abs(volume);
-		} else {
+		if (baselineAmount > 0) {
 			// sell
 			// TODO: 9/3/2016 this is only suitable for small/mid volume. For bigger volume, execution price needs to be calculated.
-			effectivePrice = depth.bid(1);
 			type = SIMPLE_SELL;
-			volume = FastMath.abs(volume);
+			effectivePrice = depth.bid(1);
+			if (shareValuation == null || reserveLimitUnderValuation == null || (depth.bid(1) < shareValuation && reserveLimitUnderValuation < positionTotal)) {
+				// If current price is below valuation and there is no reserve quota available
+				// sell according to grid - for the same price gap, sell more volume on lower price, less volume on higher prices
+				// This sell style has less reservation side-effect, it doesn't tend to build up position
+				volume = tradeVolumeActual(depth.bid(1));
+				if (volume * effectivePrice < buySellAmountThreshold) {
+					// drop/climb not enough for buy/sell
+					return;
+				}
+			} else {
+				// if current price is higher than valuation or there is reservation quota available,
+				// sell according to valuation - for the same price gap, sell around the same volume, regardless of the current price
+				// This sell style has more reservation side-effect, it tend to gradually build up +position
+				volume = FastMath.round(FastMath.abs(baselineAmount)/(shareValuation*stock.getLotSize()))*stock.getLotSize();
+			}
+			if (volume * effectivePrice * 2 < buySellAmountThreshold) {
+				// drop/climb not enough for buy/sell
+				return;
+			}
+		} else {
+			// buy
+			// TODO: 9/3/2016 this is only suitable for small/mid volume. For bigger volume, execution price needs to be calculated.
+			type = SIMPLE_BUY;
+			volume = tradeVolumeActual(depth.ask(1));
+			effectivePrice = depth.ask(1);
+			if (volume * effectivePrice < buySellAmountThreshold) {
+				// drop/climb not enough for buy/sell
+				return;
+			}
+		}
+
+		// todo Compare baseline amount with actual, cannot be too different
+
+		if (type == SIMPLE_SELL) {
 			// are there enough to sell?
 			if (getPositionSellable() <= 0) {
 				LOGGER.info("No stock to sell: {} @ {} at {}", depth.product(), effectivePrice, now);
@@ -254,11 +289,12 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 		}
 		HexinOrder order = new HexinOrder(depth.product(), volume, effectivePrice, type);
 		orders.add(order);
-		LOGGER.info("Submitting order {} at {}", order, now);
+		LOGGER.info("At {}, submitting order {}", now, order);
 		broker.sendOrder(orders);
 		LOGGER.info("CurrentBaseline/CurrentBottom/CurrentPeak before adjustment: {}/{}/{} ->", getCurrentBaseline(), getCurrentBottom(), getCurrentPeak());
 		currentBottom = currentPeak = currentBaseline = effectivePrice;
 		LOGGER.info("CurrentBaseline/CurrentBottom/CurrentPeak after adjustment: {}/{}/{}", getCurrentBaseline(), getCurrentBottom(), getCurrentPeak());
+		LOGGER.info("Baseline amount: {}, actual amount: {}", FastMath.abs(baselineAmount), volume*effectivePrice);
 
 		if (!order.submitted()) {
 			// Order has not been submitted, something is wrong
@@ -277,15 +313,19 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 			setPositionSellable(getPositionSellable() - (int)volume);
 		}
 		LOGGER.info("Position total/sellable {}/{}", getPositionTotal(), getPositionSellable());
-		LOGGER.debug("Ending @ "+System.currentTimeMillis());
+		LOGGER.debug("Ending.");
 		LOGGER.debug("------------------------------------------------------------------");
+		if (gridRepo != null) {
+			gridRepo.save(this);
+		}
 	}
 
 	@Override
 	// Contract: it is the DividendHandler(strategy)'s responsibility to filter repeated or out-of-order dividend events
 	public void onDividend(DateTime now, Dividend dividend, MarketCondition mc, TradeBlotter blotter, Broker broker) {
-		LOGGER.debug("{} is testing {}", this, dividend);
 		if (!dividend.getStock().equals(stock)) {
+			LOGGER.warn("Irrelevant dividend!!");
+			LOGGER.warn("{} should not be passed to strategy {}", dividend, this);
 			return;
 		}
 		if (getCurrentBaseline() == null) {
@@ -311,7 +351,9 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 			setPositionTotal((int)(getPositionTotal() * (1+dividend.getBonus())));
 			setPositionSellable((int)(getPositionSellable() * (1+dividend.getBonus())));
 			LOGGER.info("CurrentBaseline/CurrentBottom/CurrentPeak after adjustment: {}/{}/{}", getCurrentBaseline(), getCurrentBottom(), getCurrentPeak());
-			gridRepo.save(this);
+			if (gridRepo != null) {
+				gridRepo.save(this);
+			}
 		}
 	}
 
@@ -441,5 +483,21 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 
 	public void setPositionSellable(Integer positionSellable) {
 		this.positionSellable = positionSellable;
+	}
+
+	public Double getShareValuation() {
+		return shareValuation;
+	}
+
+	public void setShareValuation(Double shareValuation) {
+		this.shareValuation = shareValuation;
+	}
+
+	public Integer getReserveLimitUnderValuation() {
+		return reserveLimitUnderValuation;
+	}
+
+	public void setReserveLimitUnderValuation(Integer reserveLimitUnderValuation) {
+		this.reserveLimitUnderValuation = reserveLimitUnderValuation;
 	}
 }
