@@ -38,11 +38,11 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 
 	public static class Param implements Strategy.Param {
 		private double tenPercentCapital;
-		private double buySellAmountThreshold;
+		private double buySellAmountThresholdLowerBound;
 		private double peakBottomThreshold = 0.0035;
-		public Param (double tenPercentCapital, double buySellAmountThreshold, double peakBottomThreshold) {
+		public Param (double tenPercentCapital, double buySellAmountThresholdLowerBound, double peakBottomThreshold) {
 			this.tenPercentCapital = tenPercentCapital;
-			this.buySellAmountThreshold = buySellAmountThreshold;
+			this.buySellAmountThresholdLowerBound = buySellAmountThresholdLowerBound;
 			this.peakBottomThreshold = peakBottomThreshold;
 		}
 	}
@@ -55,7 +55,7 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 
 	public GridStrategy (Param p, Stock s) {
 		this.tenPercentCapital = p.tenPercentCapital;
-		this.buySellAmountThreshold = p.buySellAmountThreshold;
+		this.buySellAmountThresholdLowerBound = p.buySellAmountThresholdLowerBound;
 		this.peakBottomThreshold = p.peakBottomThreshold;
 		this.stock = s;
 	}
@@ -82,6 +82,9 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 	@Column(name = "buy_sell_amount_threshold")
 	// action on a buy/sell signal if calculated amount is higher than this
 	private double buySellAmountThreshold;
+
+	@Transient
+	private double buySellAmountThresholdLowerBound;
 
 	@Basic
 	@Column(name = "peak_bottom_threshold")
@@ -256,10 +259,10 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 				// sell according to valuation - for the same price gap, sell around the same volume, regardless of the current price
 				// This sell style has more reservation side-effect, it tend to gradually build up +position
 				volume = FastMath.round(FastMath.abs(baselineAmount)/(shareValuation*stock.getLotSize()))*stock.getLotSize();
-			}
-			if (volume * effectivePrice * 2 < buySellAmountThreshold) {
-				// drop/climb not enough for buy/sell
-				return;
+				if (volume * effectivePrice * 2 < buySellAmountThreshold) {
+					// drop/climb not enough for buy/sell
+					return;
+				}
 			}
 		} else {
 			// buy
@@ -292,7 +295,9 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 		LOGGER.info("At {}, submitting order {}", now, order);
 		broker.sendOrder(orders);
 		LOGGER.info("CurrentBaseline/CurrentBottom/CurrentPeak before adjustment: {}/{}/{} ->", getCurrentBaseline(), getCurrentBottom(), getCurrentPeak());
-		currentBottom = currentPeak = currentBaseline = effectivePrice;
+		setCurrentBottom(effectivePrice);
+		setCurrentPeak(effectivePrice);
+		setCurrentBaseline(effectivePrice);
 		LOGGER.info("CurrentBaseline/CurrentBottom/CurrentPeak after adjustment: {}/{}/{}", getCurrentBaseline(), getCurrentBottom(), getCurrentPeak());
 		LOGGER.info("Baseline amount: {}, actual amount: {}", FastMath.abs(baselineAmount), volume*effectivePrice);
 
@@ -463,6 +468,10 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 
 	public void setCurrentBaseline(Double currentBaseline) {
 		this.currentBaseline = currentBaseline;
+		// when baseline is set, we also adjust buySellAmountThreshold according to baseline and buySellAmountThresholdLowerBound
+		buySellAmountThreshold = FastMath.ceil(buySellAmountThresholdLowerBound/(currentBaseline*stock.getLotSize()))*stock.getLotSize()*currentBaseline;
+		LOGGER.info("buySellAmountThreshold: {}", buySellAmountThreshold);
+//		buySellAmountThreshold = buySellAmountThresholdLowerBound;
 	}
 
 	public void setCurrentPeak(Double currentPeak) {
