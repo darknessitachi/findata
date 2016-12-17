@@ -40,6 +40,12 @@ public class StockPriceMinute {
 		return true;
 	}
 
+	public StockPriceMinute () {}
+
+	public StockPriceMinute (int count) {
+		this.count = count;
+	}
+
 	@GeneratedValue(generator="increment")
 	@GenericGenerator(name="increment", strategy = "increment")
 	@Column(name = "id", nullable = false, insertable = true, updatable = true, length = 20, precision = 0)
@@ -50,6 +56,17 @@ public class StockPriceMinute {
 	public void setId(long id) {
 		this.id = id;
 	}
+
+
+	@Basic
+	@Column(name = "count_per_day", nullable = false, length = 4)
+	public int getCountPerDay () {
+		return count;
+	}
+	private void setCountPerDay (int count) {
+		this.count = count;
+	}
+	private int count = 240; // default 240 for A share
 
 	@JoinColumn(name = "stock_id", nullable = false, insertable = true, updatable = false)
 	@ManyToOne
@@ -150,15 +167,18 @@ public class StockPriceMinute {
 	}
 	private void setInt (int index, int value) {
 		if (bb == null) {
-			bb = ByteBuffer.allocate(240*6*4);
+			bb = ByteBuffer.allocate(count*6*4);
 			ib = bb.asIntBuffer();
 			fb = bb.asFloatBuffer();
 		}
 		ib.put(index, value);
 	}
+
+	// A: 120 min 1st half; 120 min 2nd half
+	// H: 150 min 1st half; 180 min 2nd half
 	private void setFloat (int index, float value) {
 		if (bb == null) {
-			bb = ByteBuffer.allocate(240*6);
+			bb = ByteBuffer.allocate(count*6);
 			ib = bb.asIntBuffer();
 			fb = bb.asFloatBuffer();
 		}

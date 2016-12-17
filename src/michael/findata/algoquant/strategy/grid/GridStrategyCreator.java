@@ -1,7 +1,6 @@
 package michael.findata.algoquant.strategy.grid;
 
-import michael.findata.model.Stock;
-import michael.findata.spring.data.repository.GridInstanceRepository;
+import michael.findata.spring.data.repository.GridStrategyRepository;
 import michael.findata.spring.data.repository.StockRepository;
 import org.joda.time.LocalDate;
 import org.springframework.context.ApplicationContext;
@@ -19,16 +18,16 @@ public class GridStrategyCreator {
 //		String code = "002128"; // 12000 / 9986 : 9940.00 Â¶ÌìÃºÒµ : 8.37 1300 shares
 	public static void main (String args []) {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
-		GridInstanceRepository gridRepo = (GridInstanceRepository)context.getBean("gridInstanceRepository");
+		GridStrategyRepository gridRepo = (GridStrategyRepository)context.getBean("gridStrategyRepository");
 		StockRepository stockRepo = (StockRepository)context.getBean("stockRepository");
 
-		String code = "002128";
-		double baseline = 8.37;
-		int pos = 1300;
+		String code = "06818";
+		double baseline = 3.66;
+		int pos = 37250;
 		GridStrategy grid = new GridStrategy(
 				new GridStrategy.Param(
-						12000,
-						9986,
+						14000,
+						9972,
 						0.0035),
 				stockRepo.findOneByCode(code)
 		);

@@ -1,15 +1,14 @@
 package michael.findata.algoquant.execution.component.broker;
 
-import com.numericalmethod.algoquant.execution.component.broker.Broker;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType;
+import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.text.DecimalFormat;
 import java.util.*;
 
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.*;
@@ -59,6 +58,11 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 		keepAliveTimer.cancel();
 	}
 
+	@Override
+	public void setOrderListener(Order o, OrderListener listener) {
+
+	}
+
 	public void test () {
 		long start = System.currentTimeMillis();
 		ArrayList<HexinOrder> orderList = new ArrayList<>();
@@ -78,18 +82,18 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 			orderList.add(normalSell);
 			orderList.add(normalBuy);
 			sendOrder(orderList);
-			if (normalSell.getAck().contains("证券可用数量不足") || normalSell.getAck().contains("当前时间不允许委托")) {
+			if (normalSell.ack().contains("证券可用数量不足") || normalSell.ack().contains("当前时间不允许委托")) {
 				System.out.println("normalSell test passed!");
 			} else {
 				System.out.println("normalSell test failed!!!");
-				System.out.println(normalSell.getAck());
+				System.out.println(normalSell.ack());
 				testPassed = false;
 			}
-			if (normalBuy.getAck().contains("您的买入委托已成功提交") || normalBuy.getAck().contains("当前时间不允许委托")) {
+			if (normalBuy.ack().contains("您的买入委托已成功提交") || normalBuy.ack().contains("当前时间不允许委托")) {
 				System.out.println("normalBuy test passed!");
 			} else {
 				System.out.println("normalBuy test failed!!!");
-				System.out.println(normalBuy.getAck());
+				System.out.println(normalBuy.ack());
 				testPassed = false;
 			}
 			String refreshGridMsg = refreshGrid(portNormalBuySell);
@@ -114,18 +118,18 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 			orderList.add(creditSell);
 			orderList.add(creditBuy);
 			sendOrder(orderList);
-			if (creditSell.getAck().contains("证券可用数量不足") || creditSell.getAck().contains("当前时间不允许委托")) {
+			if (creditSell.ack().contains("证券可用数量不足") || creditSell.ack().contains("当前时间不允许委托")) {
 				System.out.println("creditSell test passed!");
 			} else {
 				System.out.println("creditSell test failed!!!");
-				System.out.println(creditSell.getAck());
+				System.out.println(creditSell.ack());
 				testPassed = false;
 			}
-			if (creditBuy.getAck().contains("您的买入委托已成功提交") || creditBuy.getAck().contains("当前时间不允许委托")) {
+			if (creditBuy.ack().contains("您的买入委托已成功提交") || creditBuy.ack().contains("当前时间不允许委托")) {
 				System.out.println("creditBuy test passed!");
 			} else {
 				System.out.println("creditBuy test failed!!!");
-				System.out.println(creditBuy.getAck());
+				System.out.println(creditBuy.ack());
 				testPassed = false;
 			}
 			String refreshGridMsg = refreshGrid(portCreditBuySell);
@@ -149,18 +153,18 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 			orderList.add(closeLongSellBack);
 			orderList.add(closeShortBuyBack);
 			sendOrder(orderList);
-			if (closeLongSellBack.getAck().contains("证券可用数量不足")) {
+			if (closeLongSellBack.ack().contains("证券可用数量不足")) {
 				System.out.println("CloseLongSellBack test passed!");
 			} else {
 				System.out.println("CloseLongSellBack test failed!!!");
-				System.out.println(closeLongSellBack.getAck());
+				System.out.println(closeLongSellBack.ack());
 				testPassed = false;
 			}
-			if (closeShortBuyBack.getAck().contains("买券还券数量不可超过融券负债可还数量加买入单位")) {
+			if (closeShortBuyBack.ack().contains("买券还券数量不可超过融券负债可还数量加买入单位")) {
 				System.out.println("CloseShortBuyBack test passed!");
 			} else {
 				System.out.println("CloseShortBuyBack test failed!!!");
-				System.out.println(closeShortBuyBack.getAck());
+				System.out.println(closeShortBuyBack.ack());
 				testPassed = false;
 			}
 			String refreshGridMsg = refreshGrid(portPairClose);
@@ -184,18 +188,18 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 			orderList.add(openShort);
 			orderList.add(openLong);
 			sendOrder(orderList);
-			if (openShort.getAck().contains("证券可用数量不足")) {
+			if (openShort.ack().contains("证券可用数量不足")) {
 				System.out.println("OpenShort test passed!");
 			} else {
 				System.out.println("OpenShort test failed!!!");
-				System.out.println(openShort.getAck());
+				System.out.println(openShort.ack());
 				testPassed = false;
 			}
-			if (openLong.getAck().contains("可用资金不足")) {
+			if (openLong.ack().contains("可用资金不足")) {
 				System.out.println("OpenLong test passed!");
 			} else {
 				System.out.println("OpenLong test failed!!!");
-				System.out.println(openLong.getAck());
+				System.out.println(openLong.ack());
 				testPassed = false;
 			}
 			String refreshGridMsg = refreshGrid(portPairOpen);

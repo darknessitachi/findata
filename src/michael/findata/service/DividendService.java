@@ -36,9 +36,6 @@ public class DividendService extends JdbcDaoSupport {
 	@Autowired
 	private StockRepository stockRepo;
 
-	@Autowired
-	private TDXClient tdxClient;
-
 	public boolean refreshDividendDataForFund(String code, TDXClient client) {
 		boolean updated = false;
 		Stock stock = stockRepo.findOneByCode(code);
@@ -129,7 +126,7 @@ public class DividendService extends JdbcDaoSupport {
 		});
 	}
 
-	public void refreshDividendDataForInterestingFunds() {
+	public void refreshDividendDataForInterestingFunds(TDXClient tdxClient) {
 		tdxClient.connect();
 		List<Stock> interestingFunds = stockRepo.findByFundAndInteresting(true, true);
 		for (Stock fund : interestingFunds) {
@@ -448,5 +445,25 @@ public class DividendService extends JdbcDaoSupport {
 				return (int)p;
 			}
 		}
+	}
+
+
+	/**
+	 * Only use this on HK stocks
+	 * @param code
+	 * @param amount
+	 * @param bonus
+	 * @param paymentDate "yyyy-MM-dd"
+	 * @param announcementDate "yyyy-MM-dd"
+	 */
+	public void addDividend (String code,  String announcementDate, float amount, float bonus, String paymentDate) {
+		Stock stock = stockRepo.findOneByCode(code);
+		Dividend d = new Dividend();
+		d.setStock(stock);
+		d.setAmount(amount);
+		d.setBonus(bonus);
+		d.setAnnouncementDate(LocalDate.parse(announcementDate).toDate());
+		d.setPaymentDate(LocalDate.parse(paymentDate).toDate());
+		dividendRepo.save(d);
 	}
 }

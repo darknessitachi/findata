@@ -277,7 +277,7 @@ public final class FinDataConstants {
 	public final static DateTimeFormatter NEW_FORMATTER_yyyyDashMMDashdd = DateTimeFormatter.ofPattern (yyyyDashMMDashdd);
 
 	public final static String yyyyMMdd = "yyyyMMdd";
-	public final static String yyyyMMDDHHmmss = "yyyyMMdd HH:mm:ss";
+	public final static String yyyyMMddHHmmss = "yyyyMMdd HH:mm:ss";
 	public final static String yyMMdd = "yyMMdd";
 
 	public static String s1Report = "Ò»¼¾";

@@ -1,0 +1,894 @@
+package michael.findata.algoquant.strategy.pair.stocks;
+
+import com.numericalmethod.algoquant.execution.component.broker.Broker;
+import com.numericalmethod.algoquant.execution.component.tradeblotter.TradeBlotter;
+import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
+import com.numericalmethod.algoquant.execution.datatype.order.Order;
+import com.numericalmethod.algoquant.execution.datatype.product.fx.Currencies;
+import com.numericalmethod.algoquant.execution.strategy.handler.DepthHandler;
+import michael.findata.algoquant.execution.component.broker.LocalInteractiveBrokers;
+import michael.findata.algoquant.execution.datatype.depth.Depth;
+import michael.findata.algoquant.execution.datatype.order.HexinOrder;
+import michael.findata.algoquant.execution.listener.OrderListener;
+import michael.findata.algoquant.execution.strategy.Strategy;
+import michael.findata.algoquant.execution.strategy.handler.DividendHandler;
+import michael.findata.algoquant.strategy.Pair;
+import michael.findata.algoquant.strategy.pair.PairStrategyUtil;
+import michael.findata.commandcenter.CommandCenter;
+import michael.findata.email.AsyncMailer;
+import michael.findata.model.Dividend;
+import michael.findata.model.PairStats;
+import michael.findata.model.Stock;
+import michael.findata.spring.data.repository.ShortInHkPairStrategyRepository;
+import org.hibernate.annotations.GenericGenerator;
+import org.joda.time.DateTime;
+import org.joda.time.Days;
+import org.joda.time.LocalDate;
+import org.slf4j.Logger;
+import org.springframework.data.repository.Repository;
+
+import javax.persistence.*;
+import java.sql.Timestamp;
+import java.util.*;
+
+import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolumes;
+
+/**
+ * Open suitable for a pair with the short side from HK stock exchange
+ * Strategy workflow cycle:
+ *
+ * Opening the position, meaning the following is executed when position is not yet opened
+ * 0. If position is not opened yet, check price delta;
+ * 1. If price delta > openThreshold: open short order, and wait for the short order to fill - strategyStatus = OPENING;
+ * 2. If price delta drops back to < openThreshold:
+ * 		a. if short order is unfilled, cancel it and go back to step 0;
+ * 		b. if short order is partially filled, wait for it to be fully filled
+ * 3. short order fully filled: execute long order and consider that we have opened our position - strategyStatus = OPENED.
+ *
+ * Closing the position, meaning the following is executed when we already have our position opened.
+ * 4. If position already opened, check price delta;
+ * 5. If price delta < close threshold, buy back short and sell back long - strategyStatus = CLOSED;
+ *
+ * 经验参数：
+ * 1. 中国平安：02318->601318
+ * 0.01		-	-0.005
+ * 0.02		-	0.005
+ * 0.025	-	0.005
+ *
+ * 2. 潍柴动力：02338->000338
+ * 0.025	-	0.005
+ * 0.04		-	0.02
+ * 0.045	-	0.02
+ *
+ * 3. 海螺水泥：00914->600585
+ * 0.012	-	0
+ * 0.022	-	0
+ * 0.032	-	0
+ *
+ * 4. 福耀玻璃：03606->600660
+ * 0.016	-	0
+ * 0.024	-	0
+ * 0.034	-	0
+ *
+ * 5.
+ *
+ */
+@Entity
+@Table(name = "strategy_instance_pair")
+@Access(AccessType.FIELD)
+public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHandler, DividendHandler, Comparable<ShortInHKPairStrategy> {
+	private static final Logger LOGGER = getClassLogger();
+
+	// for hibernate use only
+	protected ShortInHKPairStrategy() {
+		openThreshold = 0.03; // todo might need to be customized with stdev
+		closeThreshold = .013; // todo might need to be customized with stdev
+		amountUpperLimit = 57000; // default in RMB!!!
+		amountLowerLimit = 37000; // default in RMB!!!
+		reset(false);
+	}
+
+	public ShortInHKPairStrategy(PairStats stats) {
+		this();
+		openableDate = LocalDate.fromDateFields(stats.getTrainingEnd()).plusDays(1).toDate();
+		stats(stats);
+	}
+
+	public ShortInHKPairStrategy(PairStats stats, double amountLowerLimit, double amountUpperLimit) {
+		this(stats);
+		this.amountLowerLimit = amountLowerLimit;
+		this.amountUpperLimit = amountUpperLimit;
+	}
+
+	@Id
+	@GeneratedValue(generator="increment")
+	@GenericGenerator(name="increment", strategy = "increment")
+	private int id;
+
+	@Basic
+	@Column(name = "status",columnDefinition="char(20) not null")
+	@Enumerated(EnumType.STRING)
+	private Status status;
+
+	@Basic
+	@Column(name = "date_opened")
+	private Timestamp dateOpened; // done
+
+	@Basic
+	@Column(name = "date_closed")
+	private Timestamp dateClosed; // done
+
+	@Basic
+	@Column(name = "threshold_open")
+	private double openThreshold;
+
+	@Basic
+	@Column(name = "threshold_close")
+	private double closeThreshold;
+
+	@Basic
+	@Column(name = "amount_upper_limit")
+	private double amountUpperLimit;
+
+	@Basic
+	@Column(name = "amount_lower_limit")
+	private double amountLowerLimit;
+
+	@Basic
+	@Column(name = "short_open")
+	private Double shortOpen; // done
+
+	@Basic
+	@Column(name = "long_open")
+	private Double longOpen; // done
+
+	@Basic
+	@Column(name = "short_close")
+	private Double shortClose; // done
+
+	@Basic
+	@Column(name = "long_close")
+	private Double longClose; // done
+
+	@Basic
+	@Column(name = "short_volume_held")
+	private Double shortVolumeHeld; // done
+
+	@Basic
+	@Column(name = "long_volume_held")
+	private Double longVolumeHeld; // done
+
+	@Basic
+	@Column(name = "short_volume_calculated")
+	private Double shortVolumeCalculated; // done, only meaningful when status is not new;
+
+	@Basic
+	@Column(name = "long_volume_calculated")
+	private Double longVolumeCalculated; // done, only meaningful when status is not new;
+
+	@Basic
+	@Column(name = "min_res")
+	private Double minResidual; // done
+
+	@Basic
+	@Column(name = "max_res")
+	private Double maxResidual; // done
+
+	@Basic
+	@Column(name = "min_res_date")
+	private Timestamp minResidualDate; // done
+
+	@Basic
+	@Column(name = "max_res_date")
+	private Timestamp maxResidualDate; // done
+
+	@Basic
+	@Column(name = "res_open")
+	private Double residualOpen; // done
+
+	@Basic
+	@Column(name = "res_close")
+	private Double residualClose; // done
+
+	@ManyToOne
+	@JoinColumn(name = "pair_stats_id", nullable = false, insertable = true, updatable = false)
+	private PairStats stats;
+
+	private void stats(PairStats stats) {
+		this.stats = stats;
+	}
+
+	public PairStats stats() {
+		return this.stats;
+	}
+
+	@Basic
+	@Column(name = "openable_on")
+	private Date openableDate;
+
+	@Basic
+	@Column(name = "force_closure_on_or_after")
+	private Date forceClosureDate;
+
+	@Transient
+	private String codeToShort = null;
+
+	@Basic
+	@Access(AccessType.PROPERTY)
+	@Column(name = "code_to_short", columnDefinition = "char(9)")
+	public String getCodeToShort () {
+		if (codeToShort == null) {
+			codeToShort = stats.getPair().getStockToShort().getCode();
+		}
+		return codeToShort;
+	}
+
+	public void setCodeToShort (String codeToShort) {
+		this.codeToShort = codeToShort;
+	}
+
+	@Transient
+	private String codeToLong = null;
+
+	@Basic
+	@Access(AccessType.PROPERTY)
+	@Column(name = "code_to_long", columnDefinition = "char(9)")
+	public String getCodeToLong() {
+		if (codeToLong == null) {
+			codeToLong = stats.getPair().getStockToLong().getCode();
+		}
+		return codeToLong;
+	}
+
+	public void setCodeToLong(String codeToLong) {
+		this.codeToLong = codeToLong;
+	}
+
+	@Transient
+	private String nameToShort = null;
+
+	@Access(AccessType.PROPERTY)
+	@Column(name = "name_to_short", columnDefinition = "char(14)")
+	public String getNameToShort() {
+		if (nameToShort == null) {
+			nameToShort = stats.getPair().getStockToShort().getName();
+		}
+		return nameToShort;
+	}
+
+	public void setNameToShort(String nameToShort) {
+		this.nameToShort = nameToShort;
+	}
+
+	@Transient
+	private String nameToLong = null;
+
+	@Access(AccessType.PROPERTY)
+	@Column(name = "name_to_long", columnDefinition = "char(14)")
+	public String getNameToLong() {
+		if (nameToLong == null) {
+			nameToLong = stats.getPair().getStockToLong().getName();
+		}
+		return nameToLong;
+	}
+
+	public void setNameToLong(String nameToLong) {
+		this.nameToLong = nameToLong;
+	}
+
+	public Stock toShort() {
+		return stats.getPair().getStockToShort();
+	}
+
+	public Stock toLong() {
+		return stats.getPair().getStockToLong();
+	}
+
+	public LocalDate trainingStart() {
+		return LocalDate.fromDateFields(stats.getTrainingStart());
+	}
+
+	public LocalDate trainingEnd() {
+		return LocalDate.fromDateFields(stats.getTrainingEnd());
+	}
+
+	public double slope() {
+		return stats.getSlope();
+	}
+
+	public double stdev() {
+		return stats.getStdev();
+	}
+
+	//correlation coefficient obtained during training pass
+	public double correlation() {
+		return stats.getCorrelco();
+	}
+
+	// p value in adf test obtained during training pass
+	public double adf_p() {
+		return stats.getAdfp();
+	}
+
+	public int age (LocalDate now) {
+		if (dateOpened == null) {
+			return 0;
+		}
+		switch (status) {
+			case OPENED:
+			case CLOSED:
+			case FORCED:
+				return Days.daysBetween(LocalDate.fromDateFields(dateOpened), now).getDays();
+			default:
+				return 0;
+		}
+	}
+
+	public int age (DateTime now) {
+		return age (now.toLocalDate());
+	}
+
+	public double profitPercentageEstimate () {
+		try {
+			return (shortOpen - shortClose) / shortOpen + (longClose - longOpen) / longOpen - feeEstimate();
+		} catch (NullPointerException npe) {
+			return 0;
+		}
+	}
+
+	public double feeEstimate() {
+		int age = ageToClosure();
+		double taxShort;
+		double taxLong;
+		String symbolLong = toLong().symbol();
+		if (symbolLong.startsWith("15") || symbolLong.startsWith("5")) {
+			taxLong = 0d;
+		} else {
+			taxLong = 0.001d;
+		}
+		String symbolShort = toShort().symbol();
+		if (symbolShort.startsWith("15") || symbolShort.startsWith("5")) {
+			taxShort = 0d;
+		} else {
+			taxShort = 0.002d;
+		}
+		return taxLong + taxShort + 4 * 0.0005 + (age==0?1:age) * 0.055 / 360;
+	}
+
+	public int ageToClosure() {
+		return age(LocalDate.fromDateFields(dateClosed));
+	}
+
+	//	private double slope = 1/1.04; // calculated by stats, used to adjust short side effective price
+
+	@Transient
+	private HexinOrder openingOrderShort = null;
+	@Transient
+	private HexinOrder openingOrderLong = null;
+	@Transient
+	private HexinOrder closingOrderShort = null;
+	@Transient
+	private HexinOrder closingOrderLong = null;
+	@Transient
+	private Depth depthToShort = null;
+	@Transient
+	private Depth depthToLong = null;
+
+	// Calculated best execution prices
+	@Transient
+	private double actualPriceForShortSide;
+
+	@Transient
+	private double actualPriceForLongSide;
+
+	/**
+	 * Always apply fx to the short side, meaning use fx()*shortSideEffectivePrice for stockToShort
+	 * @return exchange rate, -1 if not available, 1 if the same currency
+	 */
+	private double fx() {
+		Currency currencyShort = toShort().currency();
+		Currency currencyLong = toLong().currency();
+		if (currencyShort.equals(currencyLong)) {
+			return 1;
+		} else if (currencyShort.equals(Currencies.HKD) && currencyLong.equals(Currencies.CNY)) {
+			if (LocalInteractiveBrokers.CNH_HKD_ask > 0 && LocalInteractiveBrokers.CNH_HKD_bid > 0) {
+				return 2/(LocalInteractiveBrokers.CNH_HKD_ask + LocalInteractiveBrokers.CNH_HKD_bid);
+			} else if (LocalInteractiveBrokers.CNH_HKD_last > 0) {
+				return 1/LocalInteractiveBrokers.CNH_HKD_last;
+			} else {
+				return -1;
+			}
+		} else if (currencyShort.equals(Currencies.CNY) && currencyLong.equals(Currencies.HKD)) {
+			LOGGER.warn("\t{}\t: How can you short a CNY stock in Hong Kong Exchange?", this);
+			LOGGER.warn("\t{}\t: Not supported yet: short currency {}", this, currencyShort, currencyLong);
+//			return LocalInteractiveBrokers.CNH_HKD_last;
+			return -1;
+		} else {
+			LOGGER.warn("\t{}\t: Not supported yet: short currency {}", this, currencyShort, currencyLong);
+			return -1;
+		}
+	}
+
+	/**
+	 * @return calculated price delta, null if any of the depth is not available
+	 */
+	private Double residual() {
+		if (depthToShort == null || depthToLong == null) {
+			LOGGER.debug("\t{}\t: depthToShort: {}, depthToLong: {}. At least one of the above is null. Cannot calculate residual.", this, depthToShort, depthToLong);
+			return null;
+		}
+		double fx = fx();
+		if (fx < 0) {
+			LOGGER.debug("\t{}\t: Fx rate not available. Cannot calculate residual.", this);
+			return null;
+		}
+		// fx/dividend/split adjusted prices
+		double effectivePriceForShortSide;
+		double effectivePriceForLongSide;
+
+		switch (status) {
+			case NEW:
+				// use fx to translate the amount limit from hkd to rmb
+				actualPriceForShortSide = depthToShort.bestBid(amountUpperLimit/fx);
+				// and the use fx again to translate the bestBid price calculated from hkd to rmb
+				effectivePriceForShortSide = actualPriceForShortSide*fx;
+				actualPriceForLongSide = effectivePriceForLongSide = depthToLong.bestAsk(amountUpperLimit);
+				if (effectivePriceForLongSide < 0 || effectivePriceForShortSide < 0) {
+					LOGGER.debug("\t{}\t: Short side and/or long side volume on not enough for opening.", this);
+					return null;
+				}
+				break;
+			case OPENING:
+				// use fx to translate the amount limit from hkd to rmb
+				actualPriceForShortSide = depthToShort.bestBid((shortVolumeCalculated-openingOrderShort.filledQuantity())*openingOrderShort.price());
+				// and the use fx again to translate the bestBid price calculated from hkd to rmb
+				effectivePriceForShortSide = actualPriceForShortSide*fx;
+				actualPriceForLongSide = effectivePriceForLongSide = depthToLong.bestAsk(longVolumeCalculated*actualPriceForLongSide);
+				if (effectivePriceForLongSide < 0 || effectivePriceForShortSide < 0) {
+					LOGGER.debug("\t{}\t: Short side and/or long side volume not enough for opening.", this);
+					return null;
+				}
+				break;
+			case OPENED:
+				actualPriceForShortSide = depthToShort.bestBid(shortVolumeHeld*depthToShort.ask(1));
+				effectivePriceForShortSide = actualPriceForShortSide*fx;
+				actualPriceForLongSide = effectivePriceForLongSide = depthToLong.bestBid(longVolumeHeld*depthToLong.bid(1));
+				break;
+			default:
+				LOGGER.debug("\t{}\t: Pair status is {}, no need to continue.", this, status);
+				return null;
+		}
+		LOGGER.debug("\t{}\t: Ratio: {}", this, effectivePriceForLongSide / effectivePriceForShortSide);
+		return effectivePriceForShortSide * slope() / effectivePriceForLongSide - 1;
+	}
+
+	@Override
+	public void onDepthUpdate(DateTime now, com.numericalmethod.algoquant.execution.datatype.depth.Depth depth, MarketCondition mc, TradeBlotter blotter, Broker broker) {
+		try {
+			if (depth.product().equals(toShort())) {
+				depthToShort = (Depth) depth;
+			} else if (depth.product().equals(toLong())) {
+				depthToLong = (Depth) depth;
+			} else {
+				LOGGER.warn("\t{}\t: Irrelevant depth!! {} should not be passed to me!", this, depth);
+				return;
+			}
+		} catch (ClassCastException e) {
+			LOGGER.warn("\t{}\t: Only michael.findata.algoquant.execution.datatype.depth.Depth is supported. Strategy depth update cancelled.", this);
+			return;
+		}
+		double fx = fx();
+		if (fx < 0) {
+			LOGGER.debug("\t{}\t: FX rate not available, returning.", this);
+			return;
+		}
+		LOGGER.debug("\t{}\t: Processing depth: {}", this, depth);
+		//
+		Double residual = residual();
+		if (residual == null) {
+			LOGGER.debug("\t{}\t: Residual not available, returning.", this);
+			return;
+		}
+		if (System.currentTimeMillis() + 1000 * 60 * 3 > CommandCenter.secondHalfEndCN) {
+			LOGGER.debug("\t{}\t: Trading session about to end in less than 3 minutes.", this);
+			switch (status) {
+				case NEW:
+				case CLOSED:
+				case FORCED:
+				case OPENED:
+					LOGGER.debug("\t{}\t: Status is {}, returning...", this, status);
+					return;
+				case OPENING:
+					LOGGER.info("\t{}\t: Status is OPENING when trading session is about to end in less than 3 minutes.", this);
+					if (openingOrderShort == null) {
+						LOGGER.warn("\t{}\t: No short leg opening order while status is OPENING, returning...", this);
+						return;
+					}
+					if (Order.OrderState.UNFILLED.equals(openingOrderShort.state())) {
+						LOGGER.info("\t{}\t: Trying to cancel the short leg since 0% filled.", this, residual, openThreshold);
+						cancelUnfilledOpening(broker);
+						LOGGER.info("\t{}\t: Opening short leg has been cancelled, returning...", this);
+						return;
+					} else if (Order.OrderState.FILLED.equals(openingOrderShort.state())){
+						LOGGER.warn("\t{}\t: Strange: pair status is opening, but short leg has already been fully filled: {}. Returning...", this, openingOrderShort);
+						return;
+					} else {
+						// TODO: 11/20/2016 how to deal with partially filled opening short when today's trading is about to end?
+						LOGGER.info("\t{}\t: TODO: Short leg {}, has been partially filled, when trading session is about to end.", this, openingOrderShort);
+						// if filled portion is > 5000 then cancel the rest and quickly submit the long leg for immediate execution
+
+						// if filled portion is <= 5000 then cancel it and issue a sell order at a price so that we can cover the cost;
+					}
+					return;
+			}
+		}
+		switch (status) {
+			case NEW:
+				if (residual > openThreshold) {
+					LOGGER.info("\t{}\t: Pair is currently NEW. Residual vs OpenThreshold: {} vs {} - above open threshold, trying to open the pair.", this, residual, openThreshold);
+					// Close position:
+					// Calculate suitable volume - it should minimize the amount difference between buy/sell
+					double shortSideAvailableBidVol = depthToShort.totalBidAtOrAbove(actualPriceForShortSide);
+					double longSideAvailableAskVol = depthToLong.totalAskAtOrBelow(actualPriceForLongSide);
+					double[] sellBuyVol = calVolumes(
+							actualPriceForShortSide*fx, shortSideAvailableBidVol, toShort().getLotSize(),
+							actualPriceForLongSide, longSideAvailableAskVol, toLong().getLotSize(),
+							amountUpperLimit, amountLowerLimit, PairStrategyUtil.BalanceOption.CLOSEST_MATCH,
+							0.005, 0.01, 0.02, 0.05);
+					if (sellBuyVol == null) {
+						// unable to find suitable sell/buy volumes
+						LOGGER.info("\t{}\t: Unable to find suitable sell/buy volumes with available bidVol/askVol {}/{}.", this, shortSideAvailableBidVol, longSideAvailableAskVol);
+						return;
+					}
+
+					// Found suitable sell/buy volumes
+					shortVolumeCalculated = sellBuyVol[0];
+					longVolumeCalculated = sellBuyVol[1];
+					LOGGER.info("\t{}\t: Calculated short/long volumes: {}/{} @ short/long prices: {}/{} with fx: {}", this,
+							shortVolumeCalculated, longVolumeCalculated, actualPriceForShortSide, actualPriceForLongSide, fx);
+					LOGGER.info("\t{}\t: Calculated short/long ratio: {}/{}", this,
+							shortVolumeCalculated*actualPriceForShortSide*fx, longVolumeCalculated*actualPriceForLongSide);
+
+					// Executed short order
+					openingOrderShort = new HexinOrder(toShort(), shortVolumeCalculated, actualPriceForShortSide, HexinOrder.HexinType.SIMPLE_SELL);
+					List<HexinOrder> orders = new ArrayList<>(1);
+					orders.add(openingOrderShort);
+					broker.sendOrder(orders);
+					if (!openingOrderShort.submitted()) {
+						// Order has not been submitted, something is wrong
+						LOGGER.warn("\t{}\t: Is this simulated / back test?", this);
+						LOGGER.warn("\t{}\t: If not, then something has gone wrong when submitting order {}", this, openingOrderShort);
+					} else {
+						if (broker instanceof michael.findata.algoquant.execution.component.broker.Broker) {
+							((michael.findata.algoquant.execution.component.broker.Broker) broker).setOrderListener(openingOrderShort, this);
+						}
+					}
+					LOGGER.info("\t{}\t: Short leg opening order submitted: {}", this, openingOrderShort);
+					residualOpen = residual;
+					maxResidual = residual;
+					minResidual = residual;
+					// Save after status change
+					updateStatusAndSave(Status.OPENING);
+				} else {
+					LOGGER.debug("\t{}\t: Pair is currently new. Residual vs OpenThreshold: {} vs {} - still below threshold.", this, residual, openThreshold);
+				}
+				break;
+			case OPENING:
+				if (openingOrderShort == null) {
+					LOGGER.warn("\t{}\t: No short leg opening order while status is OPENING, returning...", this);
+					return;
+				}
+				if (openingOrderShort.state().equals(Order.OrderState.UNFILLED)) {
+					LOGGER.debug("\t{}\t: Pair opening, short leg not filled at all: {}", this, openingOrderShort);
+					if (residual < openThreshold) {
+						LOGGER.info("\t{}\t: Residual vs OpenThreshold: {} vs {} - drops below threshold, trying to cancel the short leg since 0% filled.", this, residual, openThreshold);
+						// cancel opening
+						cancelUnfilledOpening(broker);
+					} else {
+						LOGGER.debug("\t{}\t: Residual vs OpenThreshold: {} vs {} - above open threshold, keep opening...", this, residual, openThreshold);
+						if (openingOrderShort.price() > actualPriceForShortSide) {
+							LOGGER.info("\t{}\t: Best short price dropped, adjusting opening short order price from {} -> {}", this, openingOrderShort.price(), actualPriceForShortSide);
+							// If current top level price is different from original short order price,
+							// Adjust it and updated the short order price
+							List<HexinOrder> orders = new ArrayList<>(1);
+							orders.add(openingOrderShort);
+							openingOrderShort.price(actualPriceForShortSide);
+							broker.sendOrder(orders);
+						} else {
+							LOGGER.debug("\t{}\t: Short price still ok. {} <= {}. Do nothing.", this, openingOrderShort.price(), actualPriceForShortSide);
+						}
+						residualOpen = residual;
+						maxResidual = residual;
+						minResidual = residual;
+					}
+				} else if (openingOrderShort.state().equals(Order.OrderState.PARTIALLY_FILLED)) {
+					LOGGER.debug("\t{}\t: Pair opening, short leg has been partially filled: {}", this, openingOrderShort);
+					if (residual < openThreshold) {
+						// TODO: 11/20/2016 how to deal with partially filled opening short? When residual drop below threshold hold?
+						LOGGER.info("\t{}\t: TODO: Short leg has been partially filled, when residual [{}] dropped below threshold [{}].", this, residual, openThreshold);
+						// if filled portion is > 5000 then cancel the rest and quickly submit the long leg for immediate execution
+						// if filled portion is <= 5000 then cancel it and issue a sell order at a price so that we can cover the cost;
+					} else {
+						LOGGER.debug("\t{}\t: Residual vs OpenThreshold: {} vs {} - above open threshold, keep opening...", this, residual, openThreshold);
+						if (openingOrderShort.price() > actualPriceForShortSide) {
+							// TODO: 11/20/2016 how to deal with partially filled opening short when short side bid(1) has dropped?
+							LOGGER.info("\t{}\t: TODO: Short leg has been partially filled while actual best short price dropped below short price. Adjust opening short order price? from {} -> {}", this, openingOrderShort.price(), actualPriceForShortSide);
+
+							// If current top level price is different from original short order price,
+							// Adjust it and updated the short order price
+//							List<HexinOrder> orders = new ArrayList<>(1);
+//							orders.add(openingOrderShort);
+//							openingOrderShort.price(depth.bid(1));
+//							broker.sendOrder(orders);
+
+						} else {
+							LOGGER.debug("\t{}\t: Short price <= shortDepth.bid (1). {} <= {}. Do nothing.", this, openingOrderShort.price(), actualPriceForShortSide);
+						}
+						residualOpen = residual;
+						maxResidual = residual;
+						minResidual = residual;
+					}
+				} else {
+					LOGGER.warn("\t{}\t: Pair opening, but short leg has already been fully filled: {}", this, openingOrderShort);
+				}
+				break;
+			case OPENED:
+				if (residual > maxResidual) {
+					maxResidual = residual;
+					maxResidualDate = new Timestamp(System.currentTimeMillis());
+				}
+				if (residual < minResidual) {
+					minResidual = residual;
+					minResidualDate = new Timestamp(System.currentTimeMillis());
+				}
+				if (residual < closeThreshold) {
+					LOGGER.info("\t{}\t: Pair already opened. Residual vs CloseThreshold: {} vs {} - below close threshold, trying to close the pair.", this, residual, closeThreshold);
+					if (!dateOpened.toLocalDateTime().toLocalDate().equals(
+							new Timestamp(System.currentTimeMillis()).toLocalDateTime().toLocalDate())) {
+						residualClose = residual;
+						close(broker);
+					} else {
+						LOGGER.info("\t{}\t: Pair opened on the same day, cannot close.", this);
+					}
+				} else {
+					LOGGER.debug("\t{}\t: Pair already opened. Residual vs CloseThreshold: {} vs {} - still above close threshold.", this, residual, closeThreshold);
+				}
+		}
+	}
+
+	private void cancelUnfilledOpening(Broker broker) {
+		List<HexinOrder> orders = new ArrayList<>(1);
+		orders.add(openingOrderShort);
+		broker.cancelOrder(orders);
+		reset(true);
+	}
+
+	/**
+	 * reset to new, waiting to be opened
+	 */
+	private void reset(boolean save) {
+		this.openingOrderShort = null;
+		this.openingOrderLong = null;
+		this.closingOrderShort = null;
+		this.closingOrderLong = null;
+
+		this.shortVolumeHeld = 0d;
+		this.longVolumeHeld = 0d;
+		this.shortOpen = null;
+		this.longOpen = null;
+		this.shortClose = null;
+		this.longClose = null;
+		this.dateOpened = null;
+		this.dateClosed = null;
+		this.maxResidual = null;
+		this.minResidual = null;
+		this.maxResidualDate = null;
+		this.minResidualDate = null;
+		this.shortVolumeCalculated = null;
+		this.longVolumeCalculated = null;
+		this.residualOpen = null;
+		this.residualClose = null;
+		if (save) {
+			updateStatusAndSave(Status.NEW);
+		} else {
+			this.status = Status.NEW;
+		}
+	}
+
+	/**
+	 * closed as expected
+	 */
+	private void close(Broker broker) {
+		// Close position:
+		// Execute short buy back and long sell back
+		closingOrderShort = new HexinOrder(toShort(), shortVolumeHeld, actualPriceForShortSide, HexinOrder.HexinType.SIMPLE_BUY);
+		closingOrderLong = new HexinOrder(toLong(), longVolumeHeld, actualPriceForLongSide, HexinOrder.HexinType.SIMPLE_SELL);
+		List<HexinOrder> orders = new ArrayList<>(2);
+		orders.add(closingOrderShort);
+		orders.add(closingOrderLong);
+		broker.sendOrder(orders);
+		if (!closingOrderShort.submitted()) {
+			// Order has not been submitted, something is wrong
+			LOGGER.warn("\t{}\t: Is this simulated / back test?", this);
+			LOGGER.warn("\t{}\t: If not, then something has gone wrong when submitting order {}", this, closingOrderShort);
+		}
+		if (!closingOrderLong.submitted()) {
+			// Order has not been submitted, something is wrong
+			LOGGER.warn("\t{}\t: Is this simulated / back test?", this);
+			LOGGER.warn("\t{}\t: If not, then something has gone wrong when submitting order {}", this, closingOrderLong);
+		}
+		shortClose = closingOrderShort.price();
+		longClose = closingOrderLong.price();
+		shortVolumeHeld = 0d;
+		longVolumeHeld = 0d;
+		dateClosed = new Timestamp(System.currentTimeMillis());
+		// Save after status change
+		updateStatusAndSave(Status.CLOSED);
+		emailNotification();
+	}
+
+	private void updateStatusAndSave(Status s) {
+		LOGGER.info("\t{}\t: Saving to DB after status changed from {} to {}.", this, status, s);
+		status = s;
+		trySave();
+	}
+
+	/**
+	 * closed forcefully, quite likely making a loss
+	 */
+	private void forceClosure() {
+		this.shortVolumeHeld = 0d;
+		this.longVolumeHeld = 0d;
+		// Save after status change
+		updateStatusAndSave(Status.FORCED);
+		emailNotification();
+	}
+
+	@Override
+	public int compareTo(ShortInHKPairStrategy o) {
+		return 0;
+	}
+
+	@Override
+	public void onStop() {
+		// Save to DB
+		LOGGER.info("\t{}\t: Saving myself to DB and stop.", this);
+		trySave();
+		emailNotification();
+	}
+
+	@Transient
+	private ShortInHkPairStrategyRepository repo;
+
+	@Override
+	public void setRepository(Repository repository) {
+		repo = (ShortInHkPairStrategyRepository) repository;
+	}
+
+	@Override
+	public void trySave() {
+		if (repo != null) {
+			repo.save(this);
+		} else {
+			LOGGER.warn("\t{}\t: Failed to save -- repository is null.", this);
+		}
+	}
+
+	// Used in email notification message body
+	@Override
+	public String notification () {
+		return String.format(
+				"<pre><b>%s</b>\n<b>ID:</b> %d\n<b>Status:</b> %s\n<b>Short-side:</b> %s-%s\n<b>Long-side:</b> %s-%s\n<b>Slope:</b> %.5f\n<b>Open threshold:</b> %.3f\n<b>Close threshold:</b> %.3f\n<b>Date opened:</b> %s\n<b>Date closed:</b> %s\n<b>Short-side open price:</b> %.4f\n<b>Long-side open price:</b> %.4f\n<b>Short-side close price:</b> %.4f\n<b>Long-side close price:</b> %.4f\n<b>Short volume held:</b> %.0f\n<b>Long volume held:</b> %.0f\n<b>Short volume calculated:</b> %.0f\n<b>Long volume calculated:</b> %.0f\n<b>Minimum residual:</b> %.4f\n<b>Maximum Residual:</b> %.4f\n<b>Minimum residual date:</b> %s\n<b>Maximum residual date:</b> %s\n<b>Residual open:</b> %.4f\n<b>Residual close:</b> %.4f\n<b>Openable date:</b> %s\n<b>Force closure date:</b> %s\n<b>Upper limit amount:</b> %.0f\n<b>Lower limit amount:</b> %.0f</pre>",
+				"ShortInHKPairStrategy",
+				id,
+				status,
+				getNameToShort(), getCodeToShort(),
+				getNameToLong(), getCodeToLong(),
+				slope(),
+				openThreshold,
+				closeThreshold,
+				dateOpened,
+				dateClosed,
+				shortOpen,
+				longOpen,
+				shortClose,
+				longClose,
+				shortVolumeHeld,
+				longVolumeHeld,
+				shortVolumeCalculated,
+				longVolumeCalculated,
+				minResidual,
+				maxResidual,
+				minResidualDate,
+				maxResidualDate,
+				residualOpen,
+				residualClose,
+				openableDate,
+				forceClosureDate,
+				amountUpperLimit,
+				amountLowerLimit
+		);
+	}
+
+	@Override
+	public Collection<Stock> getTargetSecurities() {
+		Set<Stock> s = new HashSet<>(1);
+		s.add(toLong());
+		s.add(toShort());
+		return s;
+	}
+
+	@Override
+	public void orderUpdated(Order order, Broker broker) {
+		LOGGER.info("\t{}\t: Order {} updated.", this, order);
+		switch (status) {
+			case NEW:
+				LOGGER.warn("\t{}\t: Strategy status is OPENED when receiving order update.", this);
+				LOGGER.warn("\t{}\t: This should only happen after opening short order is cancelled. And it is very likely caused by unhandled order update message.", this);
+				break;
+			case OPENING:
+				LOGGER.info("\t{}\t: Strategy status is OPENING.", this);
+				if (openingOrderShort.state().equals(Order.OrderState.FILLED)) {
+					LOGGER.info("\t{}\t: Opening short order has just been fully filled, executing opening long order...", this);
+					// If short order is fully filled, execute long order
+					openingOrderLong = new HexinOrder(toLong(), longVolumeCalculated, actualPriceForLongSide, HexinOrder.HexinType.SIMPLE_BUY);
+					List<HexinOrder> orders = new ArrayList<>(1);
+					orders.add(openingOrderLong);
+					broker.sendOrder(orders);
+					if (!openingOrderLong.submitted()) {
+						// Order has not been submitted, something is wrong
+						LOGGER.warn("\t{}\t: Is this simulated / back test?", this);
+						LOGGER.warn("\t{}\t: If not, then something has gone wrong when submitting order {}", this, openingOrderLong);
+					}
+					shortVolumeHeld = shortVolumeCalculated;
+					longVolumeHeld = longVolumeCalculated;
+					shortOpen = openingOrderShort.price();
+					longOpen = openingOrderLong.price();
+					dateOpened = new Timestamp(System.currentTimeMillis());
+					maxResidualDate = dateOpened;
+					minResidualDate = dateOpened;
+					// Save after status change
+					updateStatusAndSave(Status.OPENED);
+					emailNotification();
+				}
+				break;
+			case OPENED:
+				LOGGER.warn("\t{}\t: Strategy status is OPENED when receiving order update.", this);
+				LOGGER.warn("\t{}\t: This should only happen immediately after using IB to open the long leg. And it is very likely caused by unhandled order update message.", this);
+				break;
+			case CLOSED:
+				LOGGER.warn("\t{}\t: Strategy status is CLOSED when receiving order update.", this);
+				LOGGER.warn("\t{}\t: This should only happen immediately after using IB to execute position closing orders. And it is very likely caused by unhandled order update message.", this);
+				break;
+			case FORCED:
+				LOGGER.warn("\t{}\t: Strategy status is FORCED when receiving order update.", this);
+				LOGGER.warn("\t{}\t: This should only happen immediately after using IB to execute position closing orders (forcefully). And it is very likely caused by unhandled order update message.", this);
+				break;
+		}
+	}
+
+	public void emailNotification() {
+		AsyncMailer.instance.email(String.format("Status Report: ShortInHKStrategy %s", this), notification());
+	}
+
+	@Override
+	public void onDividend(DateTime now, Dividend dividend, MarketCondition mc, TradeBlotter blotter, Broker broker) {
+	}
+
+	private enum Status {
+		NEW ("NEW"),
+		OPENING("OPENING"),
+		OPENED("OPENED"),
+		CLOSED("CLOSED"),
+		FORCED ("FORCED");
+		private final String label;
+		Status(String label) {
+			this.label = label;
+		}
+	}
+
+	public String toString () {
+		return String.format("[ID: %d, %s->%s, s:%.3f, o:%.3f, c:%.3f, %s]", id, getNameToShort(), getNameToLong(), slope(), openThreshold, closeThreshold, status);
+	}
+}

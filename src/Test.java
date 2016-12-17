@@ -51,16 +51,15 @@ public class Test {
 		FinDataService fds = (FinDataService) context.getBean("finDataService");
 		DividendService ds = (DividendService) context.getBean("dividendService");
 		ShareNumberChangeService sncs = (ShareNumberChangeService) context.getBean("shareNumberChangeService");
-		SecurityTimeSeriesDataService stsds = (SecurityTimeSeriesDataService) context.getBean("securityTimeSeriesDataService");
+//		SecurityTimeSeriesDataService stsds = (SecurityTimeSeriesDataService) context.getBean("securityTimeSeriesDataService");
 
 		long stamp = System.currentTimeMillis();
 		// The following are used regularly throughout the year
-//		ss.refreshStockCodes();
-//		ss.refreshLatestPriceAndName();
+		ss.refreshStockCodes();
+		ss.refreshLatestPriceAndName();
 		sps.refreshStockPriceHistories();
-//		ds.refreshDividendData();
-//		sncs.refreshNumberOfShares();
-
+		ds.refreshDividendData();
+		sncs.refreshNumberOfShares();
 //		ss.calculateAdjustmentFactor(10);
 
 		// The following are used mainly during and immediately after earnings report seasons

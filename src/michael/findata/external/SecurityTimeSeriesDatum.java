@@ -26,6 +26,18 @@ public class SecurityTimeSeriesDatum extends StockEOM{
 		this.traded = true;
 	}
 
+	public SecurityTimeSeriesDatum (DateTime dateTime, int open, int high, int low, int close, int volume, float amount, boolean traded) {
+		this(open/1000d, high/1000d, low/1000d, close/1000d, volume);
+		this.dateTime = dateTime;
+		this.open = open;
+		this.high = high;
+		this.low = low;
+		this.close = close;
+		this.volume = volume;
+		this.amount = amount;
+		this.traded = traded;
+	}
+
 	// dummy data, meaning the security is not traded at this tick.
 	public SecurityTimeSeriesDatum (DateTime dateTime) {
 		this(0d, 0d, 0d, 0d, 0);

@@ -11,11 +11,15 @@ import michael.findata.util.CalendarUtil;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.slf4j.Logger;
 
 import java.math.BigDecimal;
 import java.util.*;
 
+import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+
 public class TDXClient {
+	private static final Logger LOGGER = getClassLogger();
 	TDXLibrary[] hqLib;
 	String [] ip;
 	String [] name;
@@ -122,12 +126,12 @@ public class TDXClient {
 		for (int i = hqLib.length - 1; i > -1; i--) {
 			if (hqLib[i].TdxHq_Connect(ip[i], port[i], result, errInfo)) {
 				name[i] = Native.toString(result, "GBK").split("\n")[1].split("\t")[0];
-				System.out.println(name[i]+" is now connected.");
+				LOGGER.info(name[i]+" is now connected.");
 				success = true;
 				fault[i] = false;
 			} else {
-				System.out.println(ip[i]+":"+port[i]+" is not working.");
-				System.out.println(Native.toString(errInfo, "GBK"));
+				LOGGER.warn(ip[i]+":"+port[i]+" is not working.");
+				LOGGER.warn(Native.toString(errInfo, "GBK"));
 				fault[i] = true;
 //				success = false;
 			}
@@ -141,12 +145,10 @@ public class TDXClient {
 			lib.TdxHq_Disconnect();
 		}
 		connected = false;
-		StringBuilder sb = new StringBuilder();
-		sb.append("Summary: \n");
+		LOGGER.info("Summary:");
 		for (int i = 0; i < name.length; i++) {
-			sb.append(ip[i]).append(":").append(port[i]).append(fault[i] ? " fault - " : " worked - ").append(name[i]).append("\n");
+			LOGGER.info(new StringBuilder().append(ip[i]).append(":").append(port[i]).append(fault[i] ? " fault - " : " worked - ").append(name[i]).toString());
 		}
-		System.out.println(sb.toString());
 	}
 
 	String [] bulkTemp = null;
@@ -207,6 +209,7 @@ public class TDXClient {
 //					System.out.println("not updated!");
 					continue;
 				}
+//				System.out.println("new!!!");
 				bulkLastTemp = bulkTemp;
 				bulkTemp = raw.split("[\n\t]");
 				int end = bulkTemp.length - 43;

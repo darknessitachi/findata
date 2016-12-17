@@ -19,16 +19,11 @@ import com.numericalmethod.algoquant.execution.performance.report.analyzer.Perfo
 import com.numericalmethod.algoquant.execution.performance.report.analyzer.SimplePerformanceAnalyzer;
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.model.util.returns.ReturnsCalculators;
-import michael.findata.algoquant.strategy.DummyStrategy;
-import michael.findata.data.historicaldata.tdx.TdxMinuteDepthCacheFactory;
 import michael.findata.data.local.LocalDividendCacheFactory;
 import michael.findata.data.local.LocalMinuteDepthCacheFactory;
 import michael.findata.model.Dividend;
 import michael.findata.model.Stock;
-import michael.findata.service.DividendService;
-import michael.findata.service.StockService;
-import michael.findata.spring.data.repository.StockRepository;
-import org.joda.time.DateTime;
+import michael.findata.spring.data.repository.GridStrategyRepository;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.slf4j.Logger;
@@ -93,10 +88,11 @@ public class GridStrategyBackTest {
 
 	public static void main(String[] args) throws IOException {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
-		Interval interval = Interval.parse("2015-12-29T09:10:00/2016-09-17T14:30:00");
+		GridStrategyRepository gridRepo = (GridStrategyRepository) context.getBean("gridStrategyRepository");
+		Interval interval = Interval.parse("2015-12-29T08:59:00/2016-11-04T15:30:00");
 
 		// TODO: 9/14/2016 calculate storage for each of the following:
-		String code = "600266"; // 12000 / 9986 : Data not enough 北京城建
+		String code = "002128"; // 12000 / 9986 :
 
 //		String code = "002328"; // 12000 / 9986 :
 //		String code = "601088"; // 12000 / 9986 : Data not enough
@@ -105,12 +101,17 @@ public class GridStrategyBackTest {
 //		String code = "002419"; // 12000 / 9986 : 1888.00
 
 		Stock s = new Stock(code);
+		s.setLotSize(1000);
+		GridStrategy grid = new GridStrategy(new GridStrategy.Param(
+				12000,
+				5986,
+				0.0035
+		), s);
+		grid.setShareValuation(12.8);
+		grid.setReserveLimitUnderValuation(6600);
+//		grid.setGridInstanceRepository(gridRepo);
 		GridStrategyBackTest demo = new GridStrategyBackTest(
-				new GridStrategy(new GridStrategy.Param(
-						12000,
-						9986,
-						0.0035
-				), s),
+				grid,
 				interval,
 				context,
 				s

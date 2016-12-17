@@ -5,8 +5,6 @@ import com.numericalmethod.algoquant.execution.datatype.product.Product;
 
 public class HexinOrder extends Order {
 
-	private long id;
-
 	private String ack;
 
 	private OrderExecutionType type;
@@ -20,7 +18,7 @@ public class HexinOrder extends Order {
 				quantity, price);
 		this.hexinType = hexinType;
 		this.type = OrderExecutionType.LIMIT_ORDER;
-		this.id = -1;
+		this.id(-1);
 	}
 
 	private HexinType hexinType;
@@ -39,24 +37,16 @@ public class HexinOrder extends Order {
 		return new HexinOrder(product(), quantity(), price(), hexinType().opposite());
 	}
 
-	public String getAck() {
+	public String ack() {
 		return ack;
 	}
 
-	public void setAck(String ack) {
+	public void ack(String ack) {
 		this.ack = ack;
 	}
 
-	public long id() {
-		return id;
-	}
-
-	public void setId(long id) {
-		this.id = id;
-	}
-
 	public boolean submitted () {
-		return id != -1;
+		return id() != -1;
 	}
 
 	public enum HexinType {
@@ -89,5 +79,12 @@ public class HexinOrder extends Order {
 					return SIMPLE_BUY;
 			}
 		}
+	}
+
+	public final String TAG_BROKER = "Broker";
+
+	@Override
+	public int hashCode () {
+		return (int)id();
 	}
 }

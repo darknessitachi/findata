@@ -25,7 +25,7 @@ public class Dividend implements Event {
 
 	private Date announcementDate;
 
-	@Column(name = "announcement_date", nullable = true, insertable = true, updatable = true, length = 10, precision = 0)
+	@Column(name = "announcement_date", length = 10)
 	@Basic
 	public Date getAnnouncementDate() {
 		return announcementDate;

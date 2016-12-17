@@ -12,7 +12,6 @@ import com.numericalmethod.algoquant.execution.datatype.product.fx.Currencies;
 import com.numericalmethod.algoquant.execution.datatype.product.portfolio.Portfolio;
 import com.numericalmethod.algoquant.execution.performance.measure.PerformanceMeasure;
 import com.numericalmethod.algoquant.execution.performance.measure.ProfitLoss;
-import com.numericalmethod.algoquant.execution.performance.measure.ir.InformationRatioForPeriods;
 import com.numericalmethod.algoquant.execution.performance.measure.ir.InformationRatioForTrades;
 import com.numericalmethod.algoquant.execution.performance.measure.ir.InformationRatioForZeroInvestment;
 import com.numericalmethod.algoquant.execution.performance.measure.omega.OmegaForPeriods;
@@ -21,7 +20,7 @@ import com.numericalmethod.algoquant.execution.performance.report.analyzer.Perfo
 import com.numericalmethod.algoquant.execution.performance.report.analyzer.SimplePerformanceAnalyzer;
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.model.util.returns.ReturnsCalculators;
-import michael.findata.data.historicaldata.tdx.TdxMinuteDepthCacheFactory;
+import michael.findata.data.local.LocalMinuteDepthCacheFactory;
 import michael.findata.model.Stock;
 import michael.findata.service.DividendService;
 import michael.findata.service.StockService;
@@ -51,6 +50,7 @@ public class HoppingStrategyBackTest {
 	private final Interval interval;
 	private final Collection<? extends Stock> stocks;
 	private final ExchangeRateTable rates = new SimpleExchangeRateTable(Currencies.CNY);
+	private LocalMinuteDepthCacheFactory cacheFactory;
 
 	HoppingStrategyBackTest(Collection<? extends Stock> stocks, Strategy strategy, Interval interval) {
 		this.stocks = stocks;
@@ -59,11 +59,14 @@ public class HoppingStrategyBackTest {
 	}
 
 	public void run() {
-		TdxMinuteDepthCacheFactory tdx = new TdxMinuteDepthCacheFactory();
+		// TODO: 9/17/2016 something is wrong, depth caches were created successfully, but it seems that the depth update methods were not called.
+//		LocalMinuteDepthCacheFactory cacheFactory = new LocalMinuteDepthCacheFactory();
 		DepthCaches depthCaches = new DepthCaches();
-		tdx.newInstances(stocks, interval).entrySet().forEach(entry ->{
-			depthCaches.addCache(entry.getKey(), entry.getValue());
-		});
+		stocks.forEach(stock -> depthCaches.addCache(stock, cacheFactory.newInstance(stock, interval)));
+//		tdx.newInstance(stocks)
+//		tdx.newInstances(stocks, interval).entrySet().forEach(entry ->{
+//			depthCaches.addCache(entry.getKey(), entry.getValue());
+//		});
 
 		// set up a simulator to host the strategy
 		Simulator simulator = new SimpleSimulatorBuilder()
@@ -104,31 +107,22 @@ public class HoppingStrategyBackTest {
 		PairInstanceRepository pairInstanceRepo = (PairInstanceRepository) context.getBean("pairInstanceRepository");
 		DividendService ds = (DividendService) context.getBean("dividendService");
 		StockService ss = (StockService) context.getBean("stockService");
+		LocalMinuteDepthCacheFactory tdx = (LocalMinuteDepthCacheFactory) context.getBean("localMinuteDepthCacheFactory");
 
 		Portfolio<Stock> portfolio = new Portfolio<>();
-		portfolio.putIfAbsent(stockRepo.findOneByCode("160706"), 36000d);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("510300"), 10000d);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("510310"), 25000d);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("510330"), 10000d);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("510360"), 33000d);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("159919"), 9000d);
-		portfolio.putIfAbsent(stockRepo.findOneByCode("159925"), 25000d);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("160706"), 36000d*2);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("510300"), 10000d*2);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("510310"), 25000d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("510330"), 10000d);
+//		portfolio.putIfAbsent(stockRepo.findOneByCode("510360"), 33000d);
+		portfolio.putIfAbsent(stockRepo.findOneByCode("159919"), 9000d*2);
 
-//		portfolio.putIfAbsent(stockRepo.findOneByCode("510060"), 29100d);
-//		portfolio.putIfAbsent(stockRepo.findOneByCode("510290"), 20800d);
-//		portfolio.putIfAbsent(stockRepo.findOneByCode("159903"), 30200d);
-//		portfolio.putIfAbsent(stockRepo.findOneByCode("159943"), 5300d);
-//		portfolio.putIfAbsent(stockRepo.findOneByCode("512230"), 51800d);
-//		portfolio.putIfAbsent(stockRepo.findOneByCode("512070"), 1100d);
-//		portfolio.putIfAbsent(stockRepo.findOneByCode("160706"), 100d);
-//		portfolio.putIfAbsent(stockRepo.findOneByCode("159938"), 6300d);
+		Set<String> scope = ss.getStockGroup("michael/findata/algoquant/strategy/pair/hopping_strategy_scope.csv");
 
-		Set<String> scope = ss.getStockGroup("michael/findata/algoquant/strategy/pair/group_domestic_bluechip.csv");
-
-		int numRun = 5;
-		int daysPerRun = 32;
+		int numRun = 1;
+		int daysPerRun = 150;
 		// insert strategies
-		DateTime start = DateTime.parse("2016-01-01");
+		DateTime start = DateTime.parse("2016-05-28");
 		DateTime end;
 
 		for (int i = 0; i < numRun; i++) {
@@ -140,6 +134,7 @@ public class HoppingStrategyBackTest {
 					CREDIT_BUY,
 					pairStatsRepo, pairInstanceRepo, ds);
 			HoppingStrategyBackTest demo = new HoppingStrategyBackTest(stockRepo.findByCodeIn(scope), hoppingStrategy, interval);
+			demo.cacheFactory = tdx;
 			demo.run();
 
 			portfolio = hoppingStrategy.getPortfolio();

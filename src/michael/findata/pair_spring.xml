@@ -57,6 +57,7 @@
 			<array>
 				<value>michael.findata.model</value>
 				<value>michael.findata.algoquant.strategy.grid</value>
+				<value>michael.findata.algoquant.strategy.pair.stocks</value>
 			</array>
 		</property>
 		<!-- JpaVendorAdapter implementation for Hibernate EntityManager.

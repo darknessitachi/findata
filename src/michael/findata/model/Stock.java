@@ -3,7 +3,6 @@ package michael.findata.model;
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import com.numericalmethod.algoquant.execution.datatype.product.fx.Currencies;
 import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
-import com.numericalmethod.algoquant.execution.datatype.product.stock.SimpleStock;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
@@ -47,6 +46,16 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 	}
 
 	public void setCode(String code) {
+		// 5 digits for hk stocks
+		// 6 digits for mainland stocks
+		if (code.length() == 5) {
+			this.code = code;
+			symbol = code.substring(1, 5)+".HK";
+			exchange = Exchange.HKEX;
+			currency = Currencies.HKD;
+			_exchange = "HK";
+			return;
+		}
 		this.code = code.substring(0, 6);
 		switch (code.charAt(0)) {
 			case '5':
@@ -54,6 +63,7 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 			case '9':
 				symbol = code+".SS";
 				exchange = Exchange.SHSE;
+				_exchange = "SH";
 				if (code.startsWith("900")) {
 					currency = Currencies.USD;
 				} else {
@@ -63,6 +73,7 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 			default:
 				symbol = code+".SZ";
 				exchange = Exchange.SZSE;
+				_exchange = "SZ";
 				if (code.startsWith("200")) {
 					currency = Currencies.HKD;
 				} else {
@@ -223,17 +234,27 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 		this.spread = spread;
 	}
 
-//	private Collection<StockPrice> stockPrices;
-//
-//	@OneToMany(mappedBy = "stock")
-//	@OrderBy("date desc")
-//	public Collection<StockPrice> getStockPrices () {
-//		return stockPrices;
-//	}
-//
-//	public void setStockPrices (Collection<StockPrice> stockPrices) {
-//		this.stockPrices = stockPrices;
-//	}
+	private Integer lotSize = 100; // default value;
+
+	@Basic
+	@Column(name = "lot_size", columnDefinition = "smallint")
+	public Integer getLotSize () {
+		return lotSize;
+	}
+
+	public void setLotSize (Integer lotSize) {
+		this.lotSize = lotSize;
+	}
+
+	private String _exchange;
+	@Basic
+	@Column(name = "exchange", columnDefinition = "CHAR")
+	private String get_exchange () {
+		return _exchange;
+	}
+	private void set_exchange (String _exchange) {
+		this._exchange = _exchange;
+	}
 
 	@Override
 	public boolean equals(Object o) {
@@ -250,8 +271,7 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 
 	@Override
 	public int hashCode() {
-		int result= (code != null ? code.hashCode() : 0);
-		return result;
+		return code != null ? code.hashCode() : 0;
 	}
 
 	public Stock (String code) {

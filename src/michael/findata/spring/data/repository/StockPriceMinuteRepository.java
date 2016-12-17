@@ -1,6 +1,7 @@
 package michael.findata.spring.data.repository;
 
 import michael.findata.model.StockPriceMinute;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.PagingAndSortingRepository;
 
 import java.sql.Timestamp;
@@ -12,4 +13,5 @@ public interface StockPriceMinuteRepository extends PagingAndSortingRepository<S
 	StockPriceMinute findOneByStock_CodeAndDate(String code, Timestamp date);
 	List<StockPriceMinute> findByDateBetweenAndStock_CodeInOrderByDate(Timestamp start, Timestamp end, Collection<String> codes);
 	List<StockPriceMinute> findByDateBetweenAndStock_CodeInOrderByDate(Timestamp start, Timestamp end, String ... codes);
+	StockPriceMinute findTopByStock_CodeOrderByDateAsc(String code);
 }

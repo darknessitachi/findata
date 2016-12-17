@@ -1,9 +1,12 @@
 package michael.findata.service;
 
+import com.numericalmethod.algoquant.data.calendar.HolidayCalendarFromYahoo;
 import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
+import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
 import com.numericalmethod.suanshu.stats.test.timeseries.adf.AugmentedDickeyFuller;
 import com.numericalmethod.suanshu.zzz.con.prn.aux.nul.D;
 import michael.findata.algoquant.strategy.PairStrategy;
+import michael.findata.algoquant.strategy.pair.stocks.ShortInHKPairStrategy;
 import michael.findata.demo.aparapi.simpleregression.OcRegressionFloat;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.netease.NeteaseInstantSnapshot;
@@ -18,6 +21,7 @@ import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.DoubleArray;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeConstants;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +57,9 @@ public class PairStrategyService {
 	SecurityTimeSeriesDataService stsds;
 
 	@Autowired
+	StockPriceMinuteService spms;
+
+	@Autowired
 	NeteaseInstantSnapshotService niss;
 
 	@Autowired
@@ -63,6 +70,9 @@ public class PairStrategyService {
 
 	@Autowired
 	StockService ss;
+
+	@Autowired
+	ShortInHkPairStrategyRepository shortInHkPairStrategyRepo;
 
 	@Transactional(propagation = Propagation.REQUIRED)
 	public void updatePairs (String ... codes) throws IOException {
@@ -136,7 +146,7 @@ public class PairStrategyService {
 		double [][] result = cointcorrel(
 				trainingStart.toDateTimeAtStartOfDay(),
 				trainingEnd.toDateTimeAtStartOfDay().plusHours(23),
-				pairCodes, 1000000, stsds, sps, true);
+				pairCodes, 1000000, null, spms, sps, true);
 		for (int i = result.length - 1; i > -1; i--) {
 			PairStats stats = new PairStats();
 			stats.setPair(pairs.get(i));
@@ -149,7 +159,7 @@ public class PairStrategyService {
 			stats.setAdfp(result[i][3]);
 			pairStatsRepo.save(stats);
 		}
-		System.out.println("calculateStats total(s): "+(System.currentTimeMillis() - start)/1000d);
+		System.out.println("calculateStats total time (s): "+(System.currentTimeMillis() - start)/1000d);
 	}
 
 	// Step 2: update adf p value moving average
@@ -233,6 +243,7 @@ public class PairStrategyService {
 										String [][] codePairs,
 										int maxSteps,
 										SecurityTimeSeriesDataService stsds,
+								   		StockPriceMinuteService spms,
 										StockPriceService sps,
 										boolean minutesOrDays) {
 		Set<String> codeSet = new HashSet<>();
@@ -266,12 +277,20 @@ public class PairStrategyService {
 		LocalDate endDate = endTraining.toLocalDate();
 		DividendService.PriceAdjuster pa = ds.newPriceAdjuster(startDate, endDate, codes);
 
-		Consumer2<DateTime, HashMap<String, SecurityTimeSeriesDatum>> doTest = (date, data) -> {
+		Consumer2<DateTime, Map<String, SecurityTimeSeriesDatum>> doTest = (date, data) -> {
 			LocalDate curDate = date.toLocalDate();
 			prices.clear();
+			double forexHKD = data.get("HKD").getAmount();
+			double forexUSD = data.get("USD").getAmount();
 			data.forEach((code, datum) -> {
 				if (datum.isTraded() && datum.getClose() > 0) {
-					double adj = pa.adjust(code, startDate, curDate, datum.getClose())/1000d;
+					double adj;
+					if (code.length() == 6) {
+						adj = pa.adjust(code, startDate, curDate, datum.getClose())/1000d;
+					} else {
+						// H share
+						adj = pa.adjust(code, startDate, curDate, datum.getClose()*forexHKD/1000d);
+					}
 //					if (adj <= 0.0) {
 //						System.out.println("Strange");
 //					}
@@ -299,8 +318,10 @@ public class PairStrategyService {
 			} else {
 				stsds.walkDays(startTraining, endTraining, maxSteps, codes, false, doTest);
 			}
+		} else if (spms != null) {
+			spms.walk(startDate, endDate, false, doTest, codes);
 		} else {
-//			sps.walk();
+			sps.walk(startTraining, endTraining, codes, false, doTest);
 		}
 
 		String codeA, codeB;
@@ -316,14 +337,14 @@ public class PairStrategyService {
 
 			// Correlation coefficient
 			double correl = pearsonsCorrelation[i].correlation(priceListA, priceListB);
-			System.out.print(correl);
+			System.out.printf("correl:\t%.5f",correl);
 
 			long ticks = regression[i].getN();
-			System.out.print("\t"+ticks);
+			System.out.printf("\tticks:\t%d",ticks);
 
 			// Regression Parameter slope: pB = slope * pA;
 			double slope = regression[i].getSlope();
-			System.out.print("\t"+slope);
+			System.out.printf("\tslope:\t%.5f",slope);
 
 			// ADF test for regression residuals on previously collected end-of-day / end-of-minute data
 			double [] residuals = new double[priceListA.length];
@@ -342,15 +363,85 @@ public class PairStrategyService {
 //			} catch (Exception e) {
 //				adf_p = 1;
 //			}
-			System.out.print("\t" + adf_p);
+			System.out.printf("\tadf_p:\t%.2f", adf_p);
 
 			// Residual standard deviation
 			double std = new StandardDeviation().evaluate(residuals);
-			System.out.print("\t"+std);
+			System.out.printf("\tstd:\t%.5f", std);
 			System.out.println("\t"+priceListB[0]);
 			result[i] = new double[] {slope, std, correl, adf_p};
 		}
 
 		return result;
+	}
+
+	public void createPair (String codeToShort, String codeToLong) {
+		Stock stockToShort =  stockRepo.findOneByCode(codeToShort);
+		Stock stockToLong = stockRepo.findOneByCode(codeToLong);
+		Pair pair = new Pair();
+		pair.setStockToShort(stockToShort);
+		pair.setStockToLong(stockToLong);
+		pair.setMaxAmountAllowed(100000);
+		pair.setEnabled(true);
+		pairRepo.save(pair);
+	}
+
+	public void inspectPair (String codeToShort, String codeToLong, String startDate, String endDate, double slope) {
+		LocalDate start = LocalDate.parse(startDate);
+		LocalDate end = LocalDate.parse(endDate);
+		spms.walk(start,
+				end,
+				false,
+				(date, data) -> {
+					if (!data.get(codeToShort).isTraded()) {
+						return;
+					} else if (!data.get(codeToLong).isTraded()) {
+						return;
+					}
+					double ex = data.get("HKD").getAmount();
+					System.out.print("Ex:\t" + ex);
+					System.out.print("\tClose:\t" + data.get(codeToShort).isTraded() + "\t"+data.get(codeToShort).close());
+					System.out.print("\tSlope:\t" + slope);
+					System.out.print("\tClose:\t" + data.get(codeToLong).isTraded() + "\t"+data.get(codeToLong).close());
+					System.out.print("\t"+date);
+					System.out.println("\t"+(data.get(codeToShort).close()*slope*ex/data.get(codeToLong).close() - 1));
+				},
+				codeToShort, codeToLong
+		);
+	}
+
+	@Transactional(propagation = Propagation.REQUIRED)
+	public void massCreatePairStatsForExecutionStartRange (String earliestExecutionStart, String latestExecutionStart, int trainingWindowDays) {
+		HolidayCalendarFromYahoo cal = HolidayCalendarFromYahoo.forExchange(Exchange.SHSE);
+		LocalDate simulationStart = LocalDate.parse(earliestExecutionStart);
+		LocalDate lastStart = LocalDate.parse(latestExecutionStart);
+		LocalDate today = new LocalDate();
+		while (!simulationStart.isAfter(lastStart)) {
+			if (simulationStart.getDayOfWeek() != DateTimeConstants.SATURDAY &&
+					simulationStart.getDayOfWeek() != DateTimeConstants.SUNDAY &&
+					((!simulationStart.isBefore(today)) || !cal.isHoliday(simulationStart.toDateTimeAtStartOfDay().plusHours(2)))) {
+				LocalDate trainingEnd = simulationStart.minusDays(1);
+				LocalDate trainingStart = trainingEnd.minusDays(trainingWindowDays);
+				System.out.println("Calculating stats for "+trainingStart+" - "+trainingEnd);
+				calculateStats(trainingStart, trainingEnd, -1, 999999999);
+				System.out.println("Updating Adf P Ma for "+trainingStart+" - "+trainingEnd);
+				updateAdfpMovingAverage(trainingEnd);
+			} else {
+				System.out.println(simulationStart+" is a holiday.");
+			}
+			simulationStart = simulationStart.plusDays(1);
+		}
+	}
+
+	@Transactional(propagation = Propagation.REQUIRED)
+	public void massCreateShortInHKPairStrategyInstancesBasedOnCalculatedStats (String earliestExecutionStart, String latestExecutionStart) {
+		Date trainingEndStart = LocalDate.parse(earliestExecutionStart).minusDays(1).toDate();
+		Date trainingEndEnd = LocalDate.parse(latestExecutionStart).minusDays(1).toDate();
+		List<PairStats> pairStatsList = pairStatsRepo.findByTrainingEndBetween(trainingEndStart, trainingEndEnd);
+		pairStatsList.forEach(pairStats -> {
+			shortInHkPairStrategyRepo.save(new ShortInHKPairStrategy(pairStats));
+			shortInHkPairStrategyRepo.save(new ShortInHKPairStrategy(pairStats));
+			shortInHkPairStrategyRepo.save(new ShortInHKPairStrategy(pairStats));
+		});
 	}
 }

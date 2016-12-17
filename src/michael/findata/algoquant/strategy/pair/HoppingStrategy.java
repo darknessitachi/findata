@@ -19,19 +19,29 @@ import michael.findata.spring.data.repository.PairInstanceRepository;
 import michael.findata.spring.data.repository.PairStatsRepository;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
+import org.springframework.data.repository.Repository;
 
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.*;
+import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolumes;
 
 // This is a variation of the pair strategy.
 // The difference is that it only opens and doesn't need to close.
 // So in effect, it looks like the strategy is hopping from on stock/etf to another very quickly
 public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthHandler {
 
+	@Override
+	public String notification() {
+		return "";
+	}
+
+	@Override
+	public void trySave() {
+
+	}
 	/**
 	 * 510500<->159902: 3dev->1.5dev
 	 * <p>
@@ -299,7 +309,7 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 				// Calculate the most suitable amount:
 				// It should minimize the amount difference between buy/sell
 				double[] sellBuyVol = calVolumes(actualPriceShort,
-						volumeShort, actualPriceLong, volumeLong, BalanceOption.CLOSEST_MATCH,
+						volumeShort, 100, actualPriceLong, volumeLong, 100, 50000, 20000, PairStrategyUtil.BalanceOption.CLOSEST_MATCH,
 						0.005, 0.01, 0.02, 0.05);
 				if (sellBuyVol == null) {
 					// unable to find suitable sell/buy volumes
@@ -363,6 +373,10 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 		refreshShortablePortfolio();
 	}
 
+	@Override
+	public void setRepository(Repository repository) {
+	}
+
 	private void save() {
 		if (pairs == null) return;
 		System.out.println("Saving pair instances.");
@@ -371,60 +385,6 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 				pairInstanceRepo.save(p);
 			} else {
 				pairInstanceRepo.delete(p);
-			}
-		}
-	}
-
-	// Calculate the most suitable long/short volume
-	// to minimize the amount difference between short/long
-	// first number is volume to short
-	// second number is volume to long
-	private static double[] calVolumes(double bidPrice, double bidVol, double askPirce, double askVol, BalanceOption balanceOption, double... maxDeltaPctg) {
-		double v1, v2;
-		double delta;
-		if (bidPrice * bidVol < askPirce * askVol) {
-			double[] result = calVolumes(askPirce, askVol, bidPrice, bidVol, balanceOption.opposite(), maxDeltaPctg);
-			if (result == null) {
-				return null;
-			} else {
-				return new double[]{result[1], result[0]};
-			}
-		} else {
-			for (double maxDelta : maxDeltaPctg) {
-				for (v1 = askVol; v1 > 0; v1 -= 100d) {
-					switch (balanceOption) {
-						case CLOSEST_MATCH:
-							v2 = Math.round(askVol * askPirce / bidPrice / 100) * 100;
-							break;
-						case SHORT_LARGER:
-							v2 = Math.ceil(askVol * askPirce / bidPrice / 100) * 100;
-							break;
-						default:
-							v2 = Math.floor(askVol * askPirce / bidPrice / 100) * 100;
-					}
-					delta = 1 - (askPirce * v1) / (bidPrice * v2);
-					if (delta < maxDelta && delta > -maxDelta && v2 <= bidVol) {
-						return new double[]{v2, v1};
-					}
-				}
-			}
-		}
-		return null;
-	}
-
-	private enum BalanceOption {
-		CLOSEST_MATCH,	// buy more or sell more whichever option makes the most balanced trade
-		SHORT_LARGER,	// always sell a little more than buy
-		LONG_LARGER;	// always buy a little more than sell
-
-		BalanceOption opposite() {
-			switch (this) {
-				case CLOSEST_MATCH:
-					return CLOSEST_MATCH;
-				case SHORT_LARGER:
-					return LONG_LARGER;
-				default:
-					return SHORT_LARGER;
 			}
 		}
 	}

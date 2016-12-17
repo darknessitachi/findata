@@ -1,11 +1,14 @@
 package michael.findata.service;
 
+import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
 import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.tdx.TDXClient;
 import michael.findata.external.tdx.TDXMinuteLine;
+import michael.findata.model.ExchangeRateDaily;
 import michael.findata.model.Stock;
 import michael.findata.model.StockPriceMinute;
+import michael.findata.spring.data.repository.ExchangeRateDailyRepository;
 import michael.findata.spring.data.repository.StockPriceMinuteRepository;
 import michael.findata.spring.data.repository.StockRepository;
 import michael.findata.util.Consumer2;
@@ -38,6 +41,9 @@ public class StockPriceMinuteService {
 	@Autowired
 	private StockService ss;
 
+	@Autowired
+	private ExchangeRateDailyRepository exchangeRateDailyRepo;
+
 	public void updateMinuteData() throws IOException {
 		saveAllMinuteLines("000000", "999999", true);
 	}
@@ -52,6 +58,7 @@ public class StockPriceMinuteService {
 		client1.connect();
 
 		List<Stock> stocks = stockRepo.findByIgnoredAndFundAndCodeBetweenAndLatestSeasonIsNotNullOrderByCodeAsc(false, false, codeStart, codeEnd);
+//		List<Stock> stocks = new ArrayList<>();
 		stocks.addAll(stockRepo.findByIgnoredAndFundAndInterestingOrderByCodeAsc(false, true, true));
 		for (Stock stock : stocks) {
 			try {
@@ -59,7 +66,7 @@ public class StockPriceMinuteService {
 				boolean dup = false;
 				short start = 0, step = 3;
 				// Need to update data in 70 trading days
-				while (start < 70 && !dup) {
+				while (start < 110 && !dup) {
 //					System.out.println(start+" "+dup);
 					dup = saveMinuteLineFromTDXClient(stock, stockPriceMinuteRepo, client1, stopOrContinueOnExistingRecord, start, step);
 					start += step;
@@ -76,11 +83,12 @@ public class StockPriceMinuteService {
 	}
 
 	// return true if any duplicate was met during the update
+	// for mainland china stocks only
 	@Transactional(propagation = Propagation.REQUIRED)
-	private boolean saveMinuteLineFromTDXClient(Stock stock, StockPriceMinuteRepository spmr, TDXClient client1, boolean stopOrContinueOnExistingRecord, short startOnDay, short daysCount) throws ParseException {
+	private boolean saveMinuteLineFromTDXClient(Stock stock, StockPriceMinuteRepository spmr, TDXClient client1,
+												boolean stopOrContinueOnExistingRecord, short startOnDay, short daysCount) throws ParseException {
 		SecurityTimeSeriesData data = client1.getEOMs(stock.getCode(), startOnDay, daysCount);
 
-		long end = new DateTime(new SimpleDateFormat(yyyyMMdd).parse("20150801")).getMillis();
 		StockPriceMinute spm = null;
 		SecurityTimeSeriesDatum minuteDatum;
 		int count = 0, minuteIndex, updateCount = 0;
@@ -138,6 +146,8 @@ public class StockPriceMinuteService {
 						throw e;
 					}
 				}
+				// ignore data earlier than this date, since there shouldn't be any
+				long end = new DateTime(new SimpleDateFormat(yyyyMMdd).parse("20150801")).getMillis();
 				if (spm.getDate().getTime() == end) {
 					System.out.println(stock.getCode()+"\t"+stock.getName()+"\tUpdate count:\t"+updateCount);
 					return dupMet;
@@ -206,6 +216,7 @@ public class StockPriceMinuteService {
 		}
 	}
 
+	// for A share only or H share only, doesn't handle mix
 	public void walk(LocalDate start,
 					 LocalDate end,
 					 boolean log,
@@ -213,34 +224,97 @@ public class StockPriceMinuteService {
 					 String ... codes) {
 		Timestamp tsStart = new Timestamp(start.toDateTimeAtStartOfDay().getMillis());
 		Timestamp tsEnd = new Timestamp(end.toDateTimeAtStartOfDay().getMillis());
-		List<StockPriceMinute> spms = stockPriceMinuteRepo.findByDateBetweenAndStock_CodeInOrderByDate(tsStart, tsEnd, codes);
+		List<StockPriceMinute> spms = stockPriceMinuteRepo.findByDateBetweenAndStock_CodeInOrderByDate(tsStart, tsEnd, Arrays.asList(codes));
+		// exchange rates
+		Map<Timestamp, ExchangeRateDaily> forexHKD = new HashMap<>();
+		Map<Timestamp, ExchangeRateDaily> forexUSD = new HashMap<>();
+		exchangeRateDailyRepo.findByDateBetweenAndCurrency(tsStart, tsEnd, "HKD").forEach(forex -> {
+			forexHKD.put(forex.date(), forex);
+		});
+		exchangeRateDailyRepo.findByDateBetweenAndCurrency(tsStart, tsEnd, "USD").forEach(forex -> {
+			forexUSD.put(forex.date(), forex);
+		});
+		boolean containsHK = false, containsA = false;
+		for (String code: codes) {
+			if (code.length() == 5) {
+				containsHK = true;
+			} else {
+				containsA = true;
+			}
+			if (containsA && containsHK) {
+				break;
+			}
+		}
+		boolean mixed;
+		int var1, var2, var3, noOfMinutes;
+		if (containsA && !containsHK) {
+			var1 = 30;
+			noOfMinutes = 240;
+			var2 = 119;
+			var3 = 91;
+			mixed = false;
+		} else if (containsHK && !containsA) {
+			// H share only
+			var1 = 29;
+			noOfMinutes = 330;
+			var2 = 150;
+			var3 = 61;
+			mixed = false;
+		} else if (containsHK) {
+			// Both A and H stocks are present, mixed)
+			var1 = 30;
+			noOfMinutes = 240;
+			var2 = 119;
+			var3 = 91;
+			mixed = true;
+		} else {
+			return;
+		}
 
 		Map<String, StockPriceMinute> dataPerDay = new HashMap<>();
 		Consumer<DateTime> consumer = d -> {
-			d = d.plusHours(9).plusMinutes(30);
+			// Forex
+			ExchangeRateDaily hkdRate = forexHKD.get(new Timestamp(d.toDate().getTime()));
+			ExchangeRateDaily usdRate = forexUSD.get(new Timestamp(d.toDate().getTime()));
+
+			int minuteIndexHShare, effectiveMinuteIndex;
+			d = d.plusHours(9).plusMinutes(var1);
 			Map<String, SecurityTimeSeriesDatum> datumMap = new HashMap<>();
-			for (int minute = 0; minute < 240; minute++) {
-				if (minute == 119){
-					d = d.plusMinutes(91);
+			for (int minute = 0; minute < noOfMinutes; minute++) {
+				if (minute == var2){
+					d = d.plusMinutes(var3);
 				} else {
 					d = d.plusMinutes(1);
 				}
+				minuteIndexHShare = transformMinuteIndexA2H(minute);
 				datumMap.clear();
 				for (String code : codes) {
 					if (dataPerDay.containsKey(code)) {
 						StockPriceMinute minuteData = dataPerDay.get(code);
-						datumMap.put(code, new SecurityTimeSeriesDatum(
-								d,
-								minuteData.getOpen(minute),
-								minuteData.getHigh(minute),
-								minuteData.getLow(minute),
-								minuteData.getClose(minute),
-								minuteData.getVolum(minute),
-								minuteData.getAmount(minute)
-						));
+						effectiveMinuteIndex = mixed && minuteData.getCountPerDay() == 330? minuteIndexHShare : minute;
+						if (minuteData.getClose(effectiveMinuteIndex) == 0) {
+							datumMap.put(code, new SecurityTimeSeriesDatum(d));
+						} else {
+							datumMap.put(code, new SecurityTimeSeriesDatum(
+									d,
+									minuteData.getOpen(effectiveMinuteIndex),
+									minuteData.getHigh(effectiveMinuteIndex),
+									minuteData.getLow(effectiveMinuteIndex),
+									minuteData.getClose(effectiveMinuteIndex),
+									minuteData.getVolum(effectiveMinuteIndex),
+									minuteData.getAmount(effectiveMinuteIndex)
+							));
+						}
 					} else {
 						datumMap.put(code, new SecurityTimeSeriesDatum(d));
 					}
+				}
+				// exchange rate
+				if (hkdRate != null) {
+					datumMap.put("HKD", new SecurityTimeSeriesDatum(d, 0, 0, 0, 0, 0, (float)hkdRate.close(), false));
+				}
+				if (usdRate != null) {
+					datumMap.put("USD", new SecurityTimeSeriesDatum(d, 0, 0, 0, 0, 0, (float)usdRate.close(), false));
 				}
 				doStuff.apply(d, datumMap);
 				if (log) {
@@ -265,6 +339,14 @@ public class StockPriceMinuteService {
 		// last day
 		if (date != null) {
 			consumer.accept(date);
+		}
+	}
+
+	private int transformMinuteIndexA2H(int minuteIndexAShare) {
+		if (minuteIndexAShare < 119) {
+			return minuteIndexAShare + 1;
+		} else {
+			return minuteIndexAShare + 31;
 		}
 	}
 }

@@ -9,8 +9,12 @@ import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
 import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.execution.strategy.handler.DepthHandler;
 import michael.findata.algoquant.execution.component.broker.LocalHexinBrokerProxy;
+import michael.findata.algoquant.execution.component.broker.MetaBroker;
+import michael.findata.algoquant.execution.listener.DepthListener;
 import michael.findata.algoquant.execution.strategy.handler.DividendHandler;
 import michael.findata.algoquant.execution.strategy.handler.MarketConditionHandler;
+import michael.findata.email.AsyncMailer;
+import michael.findata.external.sina.SinaHkInstantSnapshot;
 import michael.findata.external.tdx.TDXClient;
 import michael.findata.model.Dividend;
 import michael.findata.model.Stock;
@@ -28,7 +32,7 @@ import java.util.stream.Collectors;
 import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
 
 // This is a virtual machine act like a robot that trades based on plug&play trading strategies
-public class CommandCenter {
+public class CommandCenter implements DepthListener {
 
 	private static final Logger LOGGER = getClassLogger();
 
@@ -37,60 +41,100 @@ public class CommandCenter {
 	@Autowired
 	private DividendRepository dividendRepo;
 
+	private HashMap<Stock, List<Strategy>> relevantStrs = new HashMap<>();
 	private Set<Stock> targetSecurities = null;
+
 	private TDXClient shSzClient = null;
 	private TDXClient szClient = null;
 	private TDXClient shClient = null;
+
 	private Broker broker;
 	private List<Strategy> strategies;
-	private Stock [] shSzStocks;
-	private Stock [] shStocks;
-	private Stock [] szStocks;
+	private Stock[] shSzStocks;
+	private Stock[] shStocks;
+	private Stock[] szStocks;
+	private Stock[] hkStocks;
+
 	private TDXPollThread shSzThread = null;
 	private TDXPollThread shThread = null;
 	private TDXPollThread szThread = null;
+	private HkStockPollThread hkThread = null;
+
 //	private boolean shSzStopped = true;
 //	private boolean shStopped = true;
 //	private boolean szStopped = true;
-	private long firstHalfStart;
-	private long firstHalfEnd;
-	private long secondHalfStart;
-	private long secondHalfEnd;
+
+	public static long firstHalfStartCN;
+	public static long firstHalfEndCN;
+	public static long secondHalfStartCN;
+	public static long secondHalfEndCN;
+
+	public static long firstHalfStartHK;
+	public static long firstHalfEndHK;
+	public static long secondHalfStartHK;
+	public static long secondHalfEndHK;
+
 	private boolean locked = false;
+
+//	private Timer saveTimer;
 
 	public CommandCenter () {
 		strategies = new ArrayList<>();
-		setFirstHalfStart(new LocalTime(9, 29, 50));
-		setFirstHalfEnd(new LocalTime(11, 30, 10));
-		setSecondHalfStart(new LocalTime(12, 59, 50));
-		setSecondHalfEnd(new LocalTime(15, 0, 10));
+		setFirstHalfStartCN(new LocalTime(9, 29, 50));
+		setFirstHalfStartHK(new LocalTime(9, 29, 50));
+		setFirstHalfEndCN(new LocalTime(11, 30, 10));
+		setFirstHalfEndHK(new LocalTime(12, 0, 10));
+		setSecondHalfStartCN(new LocalTime(12, 59, 50));
+		setSecondHalfStartHK(new LocalTime(12, 59, 50));
+		setSecondHalfEndCN(new LocalTime(15, 0, 10));
+		setSecondHalfEndHK(new LocalTime(16, 0, 10));
+
+//		saveTimer = new Timer(true); // Daemon timer, stops when command center stops
+//		saveTimer.scheduleAtFixedRate(new TimerTask() {
+//			@Override
+//			public void run() {
+//				// Save strategies
+//			}
+//		}, firstHalfStartCN, 670090); // fix delay: 11 minutes and 16 seconds+
 	}
 
-	// TODO: 9/16/2016 migrate to addTargetSecurities
-	public void setTargetSecurities(Collection<Stock> targetSecurities) {
-		if (this.targetSecurities != null) {
-			LOGGER.warn("Unable to set targetSecurities again, it is already set.");
-			return;
+	public void addTargetSecurities(Collection<Stock> targetSecurities) {
+		if (this.targetSecurities == null) {
+			this.targetSecurities = new HashSet<>();
 		}
-		this.targetSecurities = new HashSet<>();
 		this.targetSecurities.addAll(targetSecurities);
+	}
+
+	// TODO: 9/16/2016 migrate to addTargetSecurities - do this at start ()
+	private void setTargetSecurities() {
+//		if (this.targetSecurities != null) {
+//			LOGGER.warn("Unable to set targetSecurities again, it is already set.");
+//			return;
+//		}
+//		this.targetSecurities = new HashSet<>();
+//		this.targetSecurities.addAll(targetSecurities);
 
 		List<Stock> shStocks = new ArrayList<>();
 		List<Stock> szStocks = new ArrayList<>();
+		List<Stock> hkStocks = new ArrayList<>();
 
 		targetSecurities.forEach(stock -> {
 			if (stock.exchange().equals(Exchange.SHSE)) {
 				shStocks.add(stock);
 			} else if (stock.exchange().equals(Exchange.SZSE)) {
 				szStocks.add(stock);
+			} else if (stock.exchange().equals(Exchange.HKEX)) {
+				hkStocks.add(stock);
 			}
 		});
 		this.shStocks = shStocks.toArray(new Stock [shStocks.size()]);
 		this.szStocks = szStocks.toArray(new Stock [szStocks.size()]);
-		this.shSzStocks = targetSecurities.toArray(new Stock[targetSecurities.size()]);
+		shStocks.addAll(szStocks);
+		this.shSzStocks = shStocks.toArray(new Stock [shStocks.size()]);
+		this.hkStocks = hkStocks.toArray(new Stock [hkStocks.size()]);
 	}
 
-	public void setBroker(Broker broker) {
+	private void setBroker(Broker broker) {
 		this.broker = broker;
 	}
 
@@ -119,36 +163,69 @@ public class CommandCenter {
 	}
 
 	public void addStrategy (Strategy strategy) {
-		LOGGER.info("Adding strategy {}", strategy);
-		strategies.add(strategy);
+		if (strategy instanceof michael.findata.algoquant.execution.strategy.Strategy) {
+			LOGGER.info("Adding strategy {}", strategy);
+			Collection<Stock> stocks = ((michael.findata.algoquant.execution.strategy.Strategy) strategy).getTargetSecurities();
+			stocks.forEach(stock -> {
+				List<Strategy> stras = relevantStrs.getOrDefault(stock, new ArrayList<>());
+				stras.add(strategy);
+				relevantStrs.put(stock, stras);
+			});
+			addTargetSecurities(stocks);
+			strategies.add(strategy);
+		} else {
+			LOGGER.warn("Cannot add {}, because it is not a michael.findata.algoquant.execution.strategy.Strategy.", strategy);
+		}
 	}
 
 	public void start () {
+
+		setTargetSecurities();
+
+		MetaBroker broker = new MetaBroker(hkStocks);
+		setBroker(broker);
+		broker.setDepthListener(this);
+
 		// Update dividends and then start;
 		updateDividendInfo();
 
 		List<Dividend> divs = dividendRepo.findByStock_CodeInOrderByPaymentDate(
 				targetSecurities.stream().map(Stock::getCode).collect(Collectors.toList()));
-		strategies.forEach(strategy -> {
+//		strategies.forEach(strategy -> {
+//			if (strategy instanceof DividendHandler) {
+//				DividendHandler dividendHandler = (DividendHandler) strategy;
+//				divs.forEach(dividend -> dividendHandler.onDividend(
+//						new DateTime(dividend.getPaymentDate().getTime()),
+//						dividend, null, null, null));
+//			}
+//		});
+		divs.forEach(dividend -> relevantStrs.get(dividend.getStock()).forEach(strategy -> {
 			if (strategy instanceof DividendHandler) {
-				DividendHandler dividendHandler = (DividendHandler) strategy;
-				divs.forEach(dividend -> dividendHandler.onDividend(
-						new DateTime(dividend.getPaymentDate().getTime()),
-						dividend, null, null, null));
+				((DividendHandler) strategy).onDividend(new DateTime(dividend.getPaymentDate().getTime()),
+						dividend, null, null, null);
 			}
-		});
-		if (shClient != null) {
-			shThread = new TDXPollThread("Shanghai Poller", shClient, 4500, shStocks);
-			shThread.start();
-		}
-		if (szClient != null) {
-			szThread = new TDXPollThread("Shenzhen Poller", szClient, 2500, szStocks);
-			szThread.start();
-		}
-		if (shSzClient != null) {
-			shSzThread = new TDXPollThread("Poller", shSzClient, 5000, shSzStocks);
+		}));
+
+		if (shSzClient != null && shSzStocks.length > 0) {
+			shSzThread = new TDXPollThread("SH&SZ Poller", shSzClient, 0, firstHalfStartCN, firstHalfEndCN, secondHalfStartCN, secondHalfEndCN, shSzStocks);
 			shSzThread.start();
 		}
+
+		// disabled shClient
+//		if (shClient != null && shStocks.length > 0) {
+//			shThread = new TDXPollThread("Shanghai Poller", shClient, 0, firstHalfStartCN, firstHalfEndCN, secondHalfStartCN, secondHalfEndCN, shStocks);
+//			shThread.start();
+//		}
+		// disabled szClient
+//		if (szClient != null && szStocks.length > 0) {
+//			szThread = new TDXPollThread("Shenzhen Poller", szClient, 0, firstHalfStartCN, firstHalfEndCN, secondHalfStartCN, secondHalfEndCN, szStocks);
+//			szThread.start();
+//		}
+		// disabled hkThread
+//		if (hkStocks.length > 0) {
+//			hkThread = new HkStockPollThread("HK Poller", 11000, firstHalfStartHK, firstHalfEndHK, secondHalfStartHK, secondHalfEndHK, hkStocks);
+//			hkThread.start();
+//		}
 	}
 
 	private void updateDividendInfo() {
@@ -166,8 +243,10 @@ public class CommandCenter {
 		tdxClient.connect();
 		Collection<Stock> interestingFunds = targetSecurities;
 		for (Stock stock : interestingFunds) {
-			LOGGER.info("Refreshing dividend for stock/fund: "+ stock.getCode()+" "+ stock.getName());
-			dividendService.refreshDividendDataForFund(stock.getCode(), tdxClient);
+			if (stock.exchange() == Exchange.SHSE || stock.exchange() == Exchange.SZSE) {
+				LOGGER.info("Refreshing dividend for stock/fund: "+ stock.getCode()+" "+ stock.getName());
+				dividendService.refreshDividendDataForFund(stock.getCode(), tdxClient);
+			}
 		}
 		tdxClient.disconnect();
 	}
@@ -176,22 +255,39 @@ public class CommandCenter {
 		if (shThread != null) shThread.notifyStop();
 		if (szThread != null) szThread.notifyStop();
 		if (shSzThread != null) shSzThread.notifyStop();
+		if (hkThread != null) hkThread.notifyStop();
 	}
 
-	public void setFirstHalfStart(LocalTime firstHalfStart) {
-		this.firstHalfStart = firstHalfStart.toDateTimeToday().getMillis();
+	public void setFirstHalfStartCN(LocalTime firstHalfStartCN) {
+		this.firstHalfStartCN = firstHalfStartCN.toDateTimeToday().getMillis();
 	}
 
-	public void setFirstHalfEnd(LocalTime firstHalfEnd) {
-		this.firstHalfEnd = firstHalfEnd.toDateTimeToday().getMillis();
+	public void setFirstHalfEndCN(LocalTime firstHalfEndCN) {
+		this.firstHalfEndCN = firstHalfEndCN.toDateTimeToday().getMillis();
 	}
 
-	public void setSecondHalfStart(LocalTime secondHalfStart) {
-		this.secondHalfStart = secondHalfStart.toDateTimeToday().getMillis();
+	public void setSecondHalfStartCN(LocalTime secondHalfStartCN) {
+		this.secondHalfStartCN = secondHalfStartCN.toDateTimeToday().getMillis();
 	}
 
-	public void setSecondHalfEnd(LocalTime secondHalfEnd) {
-		this.secondHalfEnd = secondHalfEnd.toDateTimeToday().getMillis();
+	public void setSecondHalfEndCN(LocalTime secondHalfEndCN) {
+		this.secondHalfEndCN = secondHalfEndCN.toDateTimeToday().getMillis();
+	}
+
+	public void setFirstHalfStartHK(LocalTime firstHalfStartHK) {
+		this.firstHalfStartHK = firstHalfStartHK.toDateTimeToday().getMillis();
+	}
+
+	public void setFirstHalfEndHK(LocalTime firstHalfEndHK) {
+		this.firstHalfEndHK = firstHalfEndHK.toDateTimeToday().getMillis();
+	}
+
+	public void setSecondHalfStartHK(LocalTime secondHalfStartHK) {
+		this.secondHalfStartHK = secondHalfStartHK.toDateTimeToday().getMillis();
+	}
+
+	public void setSecondHalfEndHK(LocalTime secondHalfEndHK) {
+		this.secondHalfEndHK = secondHalfEndHK.toDateTimeToday().getMillis();
 	}
 
 	private boolean obtainLock() {
@@ -201,70 +297,89 @@ public class CommandCenter {
 			return false;
 		} else {
 			// not blocked yet? block it and return true,
-			// meaning: 1. lock obtained; 2. do stuff; and 3. don't for get to unblock after completing
+			// meaning: 1. lock obtained; 2. do stuff; and 3. don't forget to unblock after completing
 			locked = true;
 			return true;
 		}
 	}
 
+	private void releaseLock () {
+		locked = false;
+	}
+
 	private synchronized void onStop () {
 		if ((shSzThread == null || shSzThread.isStopped()) &&
 				(shThread == null || shThread.isStopped()) &&
-				(szThread == null || szThread.isStopped())) {
-			LOGGER.info("Command Center Stopped");
+				(szThread == null || szThread.isStopped()) &&
+				(hkThread == null || hkThread.isStopped())) {
+
+			LOGGER.info("Command Center Stopping.");
 			strategies.forEach(strategy -> {
 				if (strategy instanceof michael.findata.algoquant.execution.strategy.Strategy) {
 					((michael.findata.algoquant.execution.strategy.Strategy) strategy).onStop();
 				}
 			});
+			if (broker instanceof michael.findata.algoquant.execution.component.broker.Broker) {
+				((michael.findata.algoquant.execution.component.broker.Broker) broker).stop();
+			}
+			AsyncMailer.instance.stop();
+			LOGGER.info("Command Center Stopped.");
 		}
+	}
+
+	public void depthUpdated (Depth depth) {
+		DateTime now = new DateTime();
+		relevantStrs.get(depth.product()).forEach(strategy -> {
+			if (strategy instanceof DepthHandler) {
+				((DepthHandler) strategy).onDepthUpdate(now, depth, null, null, broker);
+			}
+		});
 	}
 
 	private void depthsUpdated(Map<Product, Depth> depths) {
-		// start a new thread to do update
-		Thread t = new Thread(() -> {
-			// Construct market condition and pass it to MarketConditionHandler
-			MarketCondition condition = new SimpleMarketCondition(depths);
-
-			DateTime now = new DateTime();
-			strategies.forEach(strategy -> {
+		// MarketCondition handlers
+		// Note: no point to use relevantStrs. just blindly invoke every MarketCondition handler on this
+		// Construct market condition and pass it to MarketConditionHandler
+		MarketCondition condition = new SimpleMarketCondition(depths);
+		DateTime now = new DateTime();
+		strategies.forEach(strategy -> {
 //				DateTime now = new DateTime();
-				if (strategy instanceof MarketConditionHandler) {
-					MarketConditionHandler mch = (MarketConditionHandler) strategy;
-					mch.onMarketConditionUpdate(now, condition, null, broker);
-				}
+			if (strategy instanceof MarketConditionHandler) {
+				MarketConditionHandler mch = (MarketConditionHandler) strategy;
+				mch.onMarketConditionUpdate(now, condition, null, broker);
+			}
+		});
+
+		// Depth handlers
+		for (Map.Entry<Product, Depth> entry : depths.entrySet()) {
+			relevantStrs.get(entry.getKey()).forEach(strategy -> {
 				if (strategy instanceof DepthHandler) {
-					DepthHandler dh = (DepthHandler) strategy;
-					for (Depth dpt : depths.values()) {
-						dh.onDepthUpdate(now, dpt, condition, null, broker);
-					}
+					((DepthHandler) strategy).onDepthUpdate(now, entry.getValue(), condition, null, broker);
 				}
 			});
-			locked = false;
-			System.out.println(now+" lock released.");
-		});
-		// t.start() // do it with a new thread
-		t.run(); // do it within the same thread
+		}
 	}
 
-	private class TDXPollThread extends Thread {
+	private abstract class PollThread extends Thread {
 		private final Logger threadLOGGER = getClassLogger();
-		private String name;
-		private boolean stopSignal;
-		private TDXClient client;
-		private long heartbeatInterval;
-		private String [] codes;
-		private HashMap<String, Stock> codeProductMap;
+		protected String name;
+		protected String [] codes;
+		HashMap<String, Stock> codeProductMap;
 		private boolean stopped = true;
+		private boolean stopSignal;
+		private long heartbeatInterval;
+		private long firstHalfStart;
+		private long firstHalfEnd;
+		private long secondHalfStart;
+		private long secondHalfEnd;
 
-		private void notifyStop () {
-			stopSignal = true;
-		}
-
-		private TDXPollThread (String name, TDXClient client, long heartbeatInterval, Stock ... stocks) {
+		PollThread (String name, long heartbeatInterval, long firstHalfStart, long firstHalfEnd, long secondHalfStart, long secondHalfEnd, Stock ... stocks) {
 			this.name = name;
-			this.client = client;
 			this.heartbeatInterval = heartbeatInterval;
+			this.firstHalfStart = firstHalfStart;
+			this.firstHalfEnd = firstHalfEnd;
+			this.secondHalfStart = secondHalfStart;
+			this.secondHalfEnd = secondHalfEnd;
 			this.stopSignal = false;
 			codes = new String [stocks.length];
 			codeProductMap = new HashMap<>();
@@ -274,8 +389,21 @@ public class CommandCenter {
 			}
 		}
 
+		void notifyStop() {
+			stopSignal = true;
+		}
+
+		boolean isStopped() {
+			return stopped;
+		}
+
+		abstract void beforeStopOrPause ();
+
+		abstract Map<Product, Depth> poll ();
+
 		@Override
 		public void run() {
+			Map<Product, Depth> pollResult;
 			stopped = false;
 			long now;
 			long lastPrint = System.currentTimeMillis();
@@ -287,64 +415,117 @@ public class CommandCenter {
 				}
 				now = System.currentTimeMillis();
 				if (now < firstHalfStart || // before daily session
-					(firstHalfEnd < now && now < secondHalfStart)) {// lunch time break
-					if (client.isConnected()) {
-						client.disconnect();
-					}
+						(firstHalfEnd < now && now < secondHalfStart)) {// lunch time break
+					beforeStopOrPause();
 					if (now - lastPrint > 300000) {
 						threadLOGGER.debug("{}: {} daily session not started or during lunch break, do nothing ...",LocalDateTime.now(), name);
 						lastPrint = now;
 					}
-					if (heartbeatInterval > 0) {
-						try {
-							threadLOGGER.debug("{} heartbeat completed, sleeping ...", name);
-							Thread.sleep(heartbeatInterval);
-						} catch (InterruptedException e) {
-							threadLOGGER.debug("{} Interrupt: ", name);
-						}
+					try {
+						threadLOGGER.info("{} heartbeat completed, sleeping ...", name);
+						Thread.sleep(13000);
+					} catch (InterruptedException e) {
+						threadLOGGER.debug("{} interrupted.", name);
 					}
 				} else if (secondHalfEnd < now ) { // after daily session
 					threadLOGGER.info("{} daily session ended, stopping ...", name);
 					break;
 				} else {
-					if (!client.isConnected()) {
-						threadLOGGER.debug("{} connecting ...", name);
-						client.connect();
+					threadLOGGER.info("{} active, doing stuff ...\n", name);
+					pollResult = poll();
+					if (pollResult.isEmpty()) {
+						threadLOGGER.info("{}: empty result.", name);
+					} else {
+						threadLOGGER.info("{}: non-empty result.", name);
+//						System.out.println(name+" try obtaining lock. @\t"+System.currentTimeMillis());
+						if (obtainLock()) {
+							LOGGER.info("{}: lock obtained.", name);
+//							System.out.println(name+" locked obtained. @\t"+System.currentTimeMillis());
+
+							// Multi-threaded version
+							// do it with a new thread
+//							Thread t = new Thread(() -> {
+//								depthsUpdated(pollResult);
+//							});t.start();
+
+							// Single-threaded version
+							// do it within the same thread
+							depthsUpdated(pollResult);
+							releaseLock();
+							LOGGER.info("{}: lock released.", name);
+						} else {
+							// System.out.println("synchronized code section executed in(ms) "+(System.currentTimeMillis() - start));
+							// if this command center is blocked by broker when executing an order, there is not point notify about the change
+							// already blocked, do nothing
+//						System.out.println(name+" no lock available. @\t"+System.currentTimeMillis());
+//						return;
+						}
 					}
-					System.out.printf("%s active, doing stuff ...\n", name);
-					poll();
+					threadLOGGER.info("{} heartbeat completed.", name);
+					if (heartbeatInterval > 0) {
+						try {
+							threadLOGGER.info("{} sleeping ...", name);
+							Thread.sleep(heartbeatInterval);
+						} catch (InterruptedException e) {
+							threadLOGGER.warn("{} interrupted.", name);
+						}
+					}
 				}
 			}
-			if (client.isConnected()) {
-				client.disconnect();
-			}
+			beforeStopOrPause();
 			if (broker != null && broker instanceof LocalHexinBrokerProxy) {
 				((LocalHexinBrokerProxy) broker).stop();
 			}
 			stopped = true;
 			onStop();
 		}
+	}
 
-		private void poll () {
-			Map<Product, Depth> result = client.pollQuotes(100, 20L, codeProductMap, codes);
-			if (result.isEmpty()) {
-				threadLOGGER.info("{}: empty result.", name);
-				return;
-			}
-//			System.out.println(name+" try obtaining lock. @\t"+System.currentTimeMillis());
-			if (!obtainLock()) {
-				// System.out.println("synchronized code section executed in(ms) "+(System.currentTimeMillis() - start));
-				// if this command center is blocked by broker when executing an order, there is not point notify about the change
-				// already blocked, do nothing
-//				System.out.println(name+" no lock available. @\t"+System.currentTimeMillis());
-				return;
-			}
-//			System.out.println(name+" locked obtained. @\t"+System.currentTimeMillis());
-			depthsUpdated(result);
+	private class TDXPollThread extends PollThread {
+		private final Logger threadLOGGER = getClassLogger();
+
+		private TDXClient client;
+
+//		private String name;
+//		private boolean stopSignal;
+//		private long heartbeatInterval;
+//		private String [] codes;
+//		private HashMap<String, Stock> codeProductMap;
+//		private boolean stopped = true;
+
+		TDXPollThread (String name, TDXClient client, long heartbeatInterval, long firstHalfStart, long firstHalfEnd, long secondHalfStart, long secondHalfEnd, Stock ... stocks) {
+			super(name, heartbeatInterval, firstHalfStart, firstHalfEnd, secondHalfStart, secondHalfEnd, stocks);
+			this.client = client;
 		}
 
-		public boolean isStopped() {
-			return stopped;
+		void beforeStopOrPause() {
+			if (client.isConnected()) {
+				client.disconnect();
+			}
+		}
+
+		Map<Product, Depth> poll () {
+			if (!client.isConnected()) {
+				threadLOGGER.debug("{} connecting ...", name);
+				client.connect();
+			}
+			return client.pollQuotes(100, 20L, codeProductMap, codes);
+		}
+	}
+
+	private class HkStockPollThread extends PollThread {
+		private final Logger threadLOGGER = getClassLogger();
+
+		private HkStockPollThread(String name, long heartbeatInterval, long firstHalfStart, long firstHalfEnd, long secondHalfStart, long secondHalfEnd, Stock... stocks) {
+			super(name, heartbeatInterval, firstHalfStart, firstHalfEnd, secondHalfStart, secondHalfEnd, stocks);
+		}
+
+		void beforeStopOrPause() {
+		}
+
+		Map<Product, Depth> poll () {
+			threadLOGGER.debug("{} polling ...", name);
+			return new SinaHkInstantSnapshot(codes).depths();
 		}
 	}
 }

@@ -38,7 +38,7 @@ public class CommandCenterTest {
 		HexinType sellOrderType = SIMPLE_SELL;
 		HexinType buyOrderType = SIMPLE_BUY;
 
-		cc.setBroker(new LocalTdxBrokerProxy(10001));
+//		cc.setBroker(new LocalTdxBrokerProxy(10001));
 		cc.setShSzHqClient(new TDXClient(TDXClient.TDXClientConfigs));
 
 //		// Calculate pairStats
@@ -50,9 +50,9 @@ public class CommandCenterTest {
 
 		// Set up command center
 //		int minute = 37;
-//		cc.setFirstHalfEnd(new LocalTime(11, minute, 10));
-//		cc.setSecondHalfStart(new LocalTime(11, minute, 30));
-//		cc.setSecondHalfEnd(new LocalTime(11, minute, 40));
+//		cc.setFirstHalfEndCN(new LocalTime(11, minute, 10));
+//		cc.setSecondHalfStartCN(new LocalTime(11, minute, 30));
+//		cc.setSecondHalfEndCN(new LocalTime(11, minute, 40));
 
 		// Construct portfolio
 		// TODO: 2016/5/22 automatically pick up from where it was left the day before
@@ -70,7 +70,7 @@ public class CommandCenterTest {
 				pairStatsRepo, pairInstanceRepo, ds);
 
 		cc.addStrategy(hoppingStrategy);
-		cc.setTargetSecurities(hoppingStrategy.getTargetSecurities());
+//		cc.addTargetSecurities(hoppingStrategy.getTargetSecurities());
 		cc.start();
 	}
 }

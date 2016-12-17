@@ -15,7 +15,7 @@ import org.joda.time.LocalDate;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import java.util.HashMap;
+import java.util.Map;
 
 public class KalmanFilterTest {
 	public static void main (String [] args) {
@@ -57,7 +57,7 @@ public class KalmanFilterTest {
 
 		RandomGenerator rand = new JDKRandomGenerator();
 
-		Consumer2<DateTime, HashMap<String, SecurityTimeSeriesDatum>> doTest = (date, data) -> {
+		Consumer2<DateTime, Map<String, SecurityTimeSeriesDatum>> doTest = (date, data) -> {
 			SecurityTimeSeriesDatum datumA = data.get("160706");
 			SecurityTimeSeriesDatum datumB = data.get("159919");
 			if (datumA.isTraded() && datumB.isTraded()) {

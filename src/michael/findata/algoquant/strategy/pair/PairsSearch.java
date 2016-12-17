@@ -7,7 +7,6 @@ import michael.findata.algoquant.strategy.ETFPair;
 import michael.findata.algoquant.strategy.Pair;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.hexun2008.Hexun2008Constants;
-import michael.findata.external.netease.NeteaseInstantSnapshot;
 import michael.findata.external.shse.SHSEShortableStockList;
 import michael.findata.external.szse.SZSEShortableStockList;
 import michael.findata.service.*;
@@ -36,7 +35,7 @@ import java.util.stream.Stream;
 
 import static michael.findata.algoquant.strategy.Pair.PairStatus.*;
 import static michael.findata.algoquant.strategy.Pair.PairStatus.OPENED;
-import static michael.findata.util.FinDataConstants.yyyyMMDDHHmmss;
+import static michael.findata.util.FinDataConstants.yyyyMMddHHmmss;
 import static michael.findata.util.FinDataConstants.yyyyMMdd;
 
 public class PairsSearch {
@@ -183,7 +182,7 @@ public class PairsSearch {
 	public static SortedMap<String, Counts> counts = new TreeMap<>();
 	public static Consumer<Pair> pairConsumer = pair1 -> {
 		int age;
-		SimpleDateFormat sdfDisplay = new SimpleDateFormat(yyyyMMDDHHmmss);
+		SimpleDateFormat sdfDisplay = new SimpleDateFormat(yyyyMMddHHmmss);
 		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
 		DecimalFormat df = new DecimalFormat(Hexun2008Constants.ACCURATE_DECIMAL_FORMAT);
 		System.out.print(pair1.toShort.symbol().substring(0, 6) + "->" + pair1.toLong.symbol().substring(0, 6) + "\tslope: " + df.format(pair1.slope) + " stdev: " + df.format(pair1.stdev) + " correl: " + df.format(pair1.correlco) + " adf_p: " + df.format(pair1.adf_p));
@@ -350,7 +349,7 @@ public class PairsSearch {
 
 		LocalDate adjStartDate = adjStart.toLocalDate();
 		DividendService.PriceAdjuster pa = ds.newPriceAdjuster(adjStartDate, endSim.toLocalDate(), codes);
-		Consumer2<DateTime, HashMap<String, SecurityTimeSeriesDatum>>
+		Consumer2<DateTime, Map<String, SecurityTimeSeriesDatum>>
 				tickOp = (dateTime, snapshots) -> {
 			LocalDate curDate = dateTime.toLocalDate();
 			String codeShort;
@@ -659,6 +658,7 @@ public class PairsSearch {
 	 *	Return value: if fail test - null
 	 *				  if pass test - [slope, stdev]
 	 */
+	@Deprecated
 	public static double[] cointcorrel (DateTime startTraining,
 										DateTime endTraining,
 										String codeA,

@@ -3,6 +3,8 @@ package michael.findata.external.tdx.test;
 import com.numericalmethod.algoquant.data.cache.SequentialCache;
 import michael.findata.algoquant.execution.component.broker.LocalTdxBrokerProxy;
 import michael.findata.algoquant.execution.datatype.StockEOM;
+import michael.findata.algoquant.strategy.TestStrategy;
+import michael.findata.commandcenter.CommandCenter;
 import michael.findata.data.local.LocalEOMCacheFactory;
 import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
@@ -12,9 +14,12 @@ import michael.findata.model.StockPriceMinute;
 import michael.findata.service.DividendService;
 import michael.findata.service.StockPriceMinuteService;
 import michael.findata.service.StockService;
+import michael.findata.spring.data.repository.ShortInHkPairStrategyRepository;
+import michael.findata.spring.data.repository.StockRepository;
 import org.apache.xerces.impl.xs.SchemaSymbols;
 import org.joda.time.Interval;
 import org.joda.time.LocalDate;
+import org.joda.time.LocalTime;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -43,6 +48,12 @@ public class FindataTests extends AbstractTestNGSpringContextTests {
 
 	@Autowired
 	private TDXClient client;
+
+	@Autowired
+	private CommandCenter cc;
+
+	@Autowired
+	private StockRepository stockRepo;
 
 	private long timestamp;
 
@@ -126,33 +137,23 @@ public class FindataTests extends AbstractTestNGSpringContextTests {
 	}
 
 	@Test
-	public void test_LocalTdxBrokerProxyTest() {
-		new LocalTdxBrokerProxy(10001);
-	}
+	public void test_MetaBroker() {
+//		GridStrategyRepository gridRepo = (GridStrategyRepository) context.getBean("gridInstanceRepository");
+//		StockRepository stockRepo = (StockRepository) context.getBean("stockRepository");
+		cc.setShSzHqClient(new TDXClient(TDXClient.TDXClientConfigs));
 
-	@Test
-	public void test_LocalEOMCacheFactory () {
-		SequentialCache<StockEOM> cache = localEOMCacheFactory.newInstance(new Stock("000338"),
-				Interval.parse("2016-08-01T08:00:00/2016-08-08T15:30:00"));
-		cache.forEach(entry -> {
-			System.out.println(entry.time());
-		});
-	}
+		cc.addStrategy(new TestStrategy(stockRepo));
 
-	@Test
-	public void test_StockPriceMinuteService () {
-		LocalDate start = new LocalDate(2016, 8, 4);
-		LocalDate end = new LocalDate(2016, 8, 5);
-		DividendService.PriceAdjuster pa = ds.newPriceAdjuster(start, end, "601009", "000568", "510300");
-		stockPriceMinuteService.walk(start,
-				end,
-				false,
-				(date, data) -> {
-					System.out.print(date);
-					System.out.print("\tAdjusted:\t" + pa.adjust("601009", start, date.toLocalDate(), data.get("601009").getClose()/1000d));
-					System.out.print("\tAdjusted:\t" + pa.adjust("000568", start, date.toLocalDate(), data.get("000568").getClose()/1000d));
-					System.out.println("\tAdjusted:\t" + pa.adjust("510300", start, date.toLocalDate(), data.get("510300").getClose()/1000d));},
-				"601009", "000568", "510300"
-		);
+		// Set up command center
+		int hour = 18;
+		int minute = 35;
+		cc.setFirstHalfEndCN(new LocalTime(hour, minute, 10));
+		cc.setSecondHalfStartCN(new LocalTime(hour, minute, 25));
+		cc.setSecondHalfEndCN(new LocalTime(hour, minute, 59));
+		cc.setFirstHalfEndHK(new LocalTime(hour, minute, 10));
+		cc.setSecondHalfStartHK(new LocalTime(hour, minute, 30));
+		cc.setSecondHalfEndHK(new LocalTime(hour, minute, 55));
+
+		cc.start();
 	}
 }

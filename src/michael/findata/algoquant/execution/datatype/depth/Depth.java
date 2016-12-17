@@ -152,6 +152,7 @@ public class Depth extends com.numericalmethod.algoquant.execution.datatype.dept
 		StringBuilder sb = new StringBuilder();
 		int nlevels = nLevels();
 		sb.append(product()).append("\n");
+		sb.append("Traded: ").append(isTraded()).append("\n");
 		if (nlevels >= 5) sb.append("ask5 ").append(ask(5)).append('\t').append(askVol(5)).append('\n');
 		if (nlevels >= 4) sb.append("ask4 ").append(ask(4)).append('\t').append(askVol(4)).append('\n');
 		if (nlevels >= 3) sb.append("ask3 ").append(ask(3)).append('\t').append(askVol(3)).append('\n');

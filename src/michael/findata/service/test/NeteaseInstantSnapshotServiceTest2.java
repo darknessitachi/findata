@@ -18,7 +18,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 
-import static michael.findata.util.FinDataConstants.yyyyMMDDHHmmss;
+import static michael.findata.util.FinDataConstants.yyyyMMddHHmmss;
 import static michael.findata.util.FinDataConstants.yyyyMMdd;
 
 public class NeteaseInstantSnapshotServiceTest2 {
@@ -50,7 +50,7 @@ public class NeteaseInstantSnapshotServiceTest2 {
 	public static SortedMap<String, Counts> counts = new TreeMap<>();
 	public static Consumer<PairInstance> showResults = pair1 -> {
 		int age;
-		SimpleDateFormat sdfDisplay = new SimpleDateFormat(yyyyMMDDHHmmss);
+		SimpleDateFormat sdfDisplay = new SimpleDateFormat(yyyyMMddHHmmss);
 		SimpleDateFormat sdf = new SimpleDateFormat(yyyyMMdd);
 		DecimalFormat df = new DecimalFormat(Hexun2008Constants.ACCURATE_DECIMAL_FORMAT);
 		System.out.print(pair1.toShort().symbol().substring(0, 6) + "->" + pair1.toLong().symbol().substring(0, 6) + "\tslope: " + df.format(pair1.slope()) + " stdev: " + df.format(pair1.stdev()) + " correl: " + df.format(pair1.correlco()) + " adf_p: " + df.format(pair1.adf_p()));

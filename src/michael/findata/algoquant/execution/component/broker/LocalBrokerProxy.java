@@ -1,6 +1,5 @@
 package michael.findata.algoquant.execution.component.broker;
 
-import com.numericalmethod.algoquant.execution.component.broker.Broker;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.model.Stock;
@@ -15,7 +14,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 
-abstract class LocalBrokerProxy implements Broker{
+abstract class LocalBrokerProxy implements Broker {
 	private final DecimalFormat chinaStockPriceFormat = new DecimalFormat("#.###");
 	private final DecimalFormat chinaStockQuantityFormat = new DecimalFormat("#");
 
@@ -53,7 +52,7 @@ abstract class LocalBrokerProxy implements Broker{
 			for (int i = orders.size() - 1; i > -1; i--) {
 				if (orders.get(i) instanceof HexinOrder) {
 					hxOrder = ((HexinOrder) orders.get(i));
-					hxOrder.setAck(results[i]);
+					hxOrder.ack(results[i]);
 				}
 			}
 		} catch (IOException e) {
@@ -105,14 +104,14 @@ abstract class LocalBrokerProxy implements Broker{
 			for (int i = orders.size() - 1; i > -1; i--) {
 				if (orders.get(i) instanceof HexinOrder) {
 					hxOrder = ((HexinOrder) orders.get(i));
-					hxOrder.setAck(results[i]);
-					hxOrder.setId(Integer.parseInt(results[i].substring(results[i].indexOf("{=") + 2, results[i].length() - 1)));
+					hxOrder.ack(results[i]);
+					hxOrder.id(Integer.parseInt(results[i].substring(results[i].indexOf("{=") + 2, results[i].length() - 1)));
 				}
 			}
 //			if (line.length() > 0) {
 ////					results.put(oArray[count].id(), line);
 //				if (oArray[count] instanceof HexinOrder) {
-//					((HexinOrder) oArray[count]).setAck(line);
+//					((HexinOrder) oArray[count]).ack(line);
 //				}
 //				count++;
 //			}

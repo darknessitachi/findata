@@ -69,7 +69,7 @@ public class BasicOrderDescription {
 	private final Product product;
 	private final Side side;
 	private final double quantity;
-	private final double price;
+	private double price;
 	private final Map<String, Object> tags;
 
 	public BasicOrderDescription(Product product, Side side, double quantity, double price) {
@@ -119,6 +119,14 @@ public class BasicOrderDescription {
 
 	public double price() {
 		return price;
+	}
+
+	/**
+	 * Update price
+	 * @param price updated price
+	 */
+	public void price(double price) {
+		this.price = price;
 	}
 
 	@Override

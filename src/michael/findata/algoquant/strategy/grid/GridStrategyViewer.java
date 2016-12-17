@@ -1,6 +1,6 @@
 package michael.findata.algoquant.strategy.grid;
 
-import michael.findata.spring.data.repository.GridInstanceRepository;
+import michael.findata.spring.data.repository.GridStrategyRepository;
 import michael.findata.spring.data.repository.StockRepository;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -8,7 +8,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 public class GridStrategyViewer {
 	public static void main (String args []) {
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
-		GridInstanceRepository gridRepo = (GridInstanceRepository)context.getBean("gridInstanceRepository");
+		GridStrategyRepository gridRepo = (GridStrategyRepository)context.getBean("gridStrategyRepository");
 		StockRepository stockRepo = (StockRepository)context.getBean("stockRepository");
 		System.out.printf("Stock\t\t\tBsln\tPk\t\tBtm\t\tTotal\tSellable\tActive\n");
 		gridRepo.findAll().forEach(gridStrategy -> {

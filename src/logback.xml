@@ -4,11 +4,11 @@
 		<!-- encoders are assigned the type
 		ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
 		<encoder>
-			<pattern>%d{HH:mm:ss.SSS} [%thread] %-2level %logger{16},%line - %msg%n</pattern>
+			<pattern>%d{yyyy-MMM-dd HH:mm:ss.SSS} [%thread] %-2level %logger{0},%line- %msg%n</pattern>
 		</encoder>
-		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-			<level>INFO</level>
-		</filter>
+		<!--<filter class="ch.qos.logback.classic.filter.ThresholdFilter">-->
+			<!--<level>INFO</level>-->
+		<!--</filter>-->
 	</appender>
 
 	<!--
@@ -17,32 +17,112 @@
 	-->
 	<timestamp key="bySecond" datePattern="yyyy'.'MM'.'dd','HH'.'mm'.'ss" />
 	<property name="logs.folder" value="log"/>
-	<property name="log.file.prefix" value="algoquant"/>
+	<property name="log.folder.strategy" value="strategy"/>
 
 	<!--<appender name="FILE1" class="ch.qos.logback.core.rolling.RollingFileAppender">-->
-		<!--<file>${logs.folder}/${log.file.prefix}.${bySecond}.log</file>-->
-		<!--<rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">-->
-			<!--<fileNamePattern>${logs.folder}/${log.file.prefix}.${bySecond}.%i.log.zip</fileNamePattern>-->
-			<!--&lt;!&ndash;-->
-			<!--Given that the fixed window rolling policy requires as many file renaming operations as the window size, large window sizes are strongly discouraged. When large values are specified by the user, the current implementation will automatically reduce the window size to 12.-->
-			<!--&ndash;&gt;-->
-			<!--<minIndex>1</minIndex>-->
-			<!--<maxIndex>12</maxIndex>-->
-		<!--</rollingPolicy>-->
-		<!--<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">-->
-			<!--<maxFileSize>200MB</maxFileSize>-->
-		<!--</triggeringPolicy>-->
-		<!--<encoder>-->
-			<!--<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36},%line - %msg%n</pattern>-->
-		<!--</encoder>-->
-		<!--<filter class="ch.qos.logback.classic.filter.ThresholdFilter">-->
-			<!--<level>DEBUG</level>-->
-		<!--</filter>-->
+	<!--<file>${logs.folder}/${log.file.prefix}.${bySecond}.log</file>-->
+	<!--<rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">-->
+	<!--<fileNamePattern>${logs.folder}/${log.file.prefix}.${bySecond}.%i.log.zip</fileNamePattern>-->
+	<!--&lt;!&ndash;-->
+	<!--Given that the fixed window rolling policy requires as many file renaming operations as the window size, large window sizes are strongly discouraged. When large values are specified by the user, the current implementation will automatically reduce the window size to 12.-->
+	<!--&ndash;&gt;-->
+	<!--<minIndex>1</minIndex>-->
+	<!--<maxIndex>12</maxIndex>-->
+	<!--</rollingPolicy>-->
+	<!--<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">-->
+	<!--<maxFileSize>200MB</maxFileSize>-->
+	<!--</triggeringPolicy>-->
+	<!--<encoder>-->
+	<!--<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{0},%line- %msg%n</pattern>-->
+	<!--</encoder>-->
+	<!--<filter class="ch.qos.logback.classic.filter.ThresholdFilter">-->
+	<!--<level>DEBUG</level>-->
+	<!--</filter>-->
 	<!--</appender>-->
 
+	<appender name="GridStrategyAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${logs.folder}/${log.folder.strategy}/grid/grid.log</file>
+
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- daily rollover -->
+			<fileNamePattern>${logs.folder}/${log.folder.strategy}/grid/grid.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<!-- keep 30 days' worth of history capped at 3GB total size -->
+			<maxHistory>180</maxHistory>
+			<totalSizeCap>3GB</totalSizeCap>
+		</rollingPolicy>
+
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{0},%line- %msg%n</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>INFO</level>
+		</filter>
+	</appender>
+	<logger name="michael.findata.algoquant.strategy.grid.GridStrategy" level="DEBUG" additivity="false">
+		<appender-ref ref="GridStrategyAppender"/>
+	</logger>
+
+	<appender name="ShortInHKPairStrategyAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${logs.folder}/${log.folder.strategy}/shortinhk/shortinhk.log</file>
+
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- daily rollover -->
+			<fileNamePattern>${logs.folder}/${log.folder.strategy}/shortinhk/shortinhk.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<!-- keep 30 days' worth of history capped at 3GB total size -->
+			<maxHistory>180</maxHistory>
+			<totalSizeCap>3GB</totalSizeCap>
+		</rollingPolicy>
+
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{0},%line- %msg%n</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>DEBUG</level>
+		</filter>
+	</appender>
+	<appender name="ShortInHKPairStrategyAppender_INFO" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${logs.folder}/${log.folder.strategy}/shortinhk/shortinhk.info.log</file>
+
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- daily rollover -->
+			<fileNamePattern>${logs.folder}/${log.folder.strategy}/shortinhk/shortinhk.%d{yyyy-MM-dd}.info.log</fileNamePattern>
+			<!-- keep 30 days' worth of history capped at 3GB total size -->
+			<maxHistory>180</maxHistory>
+			<totalSizeCap>3GB</totalSizeCap>
+		</rollingPolicy>
+
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{0},%line- %msg%n</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>INFO</level>
+		</filter>
+	</appender>
+	<logger name="michael.findata.algoquant.strategy.pair.stocks.ShortInHKPairStrategy" level="DEBUG" additivity="false">
+		<appender-ref ref="ShortInHKPairStrategyAppender"/>
+		<appender-ref ref="ShortInHKPairStrategyAppender_INFO"/>
+	</logger>
+
+	<appender name="CommandCenterAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${logs.folder}/command_center/cc.log</file>
+
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- daily rollover -->
+			<fileNamePattern>${logs.folder}/command_center/cc.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<!-- keep 30 days' worth of history capped at 3GB total size -->
+			<maxHistory>180</maxHistory>
+			<totalSizeCap>3GB</totalSizeCap>
+		</rollingPolicy>
+
+		<encoder>
+			<pattern>%d{yyyy-MMM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{20},%line- %msg%n</pattern>
+		</encoder>
+		<!--<filter class="ch.qos.logback.classic.filter.ThresholdFilter">-->
+		<!--<level>DEBUG</level>-->
+		<!--</filter>-->
+	</appender>
 	<root level="INFO">
 		<appender-ref ref="STDOUT"/>
-		<!--<appender-ref ref="FILE1"/>-->
+		<appender-ref ref="CommandCenterAppender"/>
 	</root>
-
 </configuration>

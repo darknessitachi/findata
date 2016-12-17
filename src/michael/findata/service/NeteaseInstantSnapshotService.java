@@ -23,7 +23,7 @@ public class NeteaseInstantSnapshotService extends JdbcDaoSupport {
 	private static final String storageFileNameFormat = "yyyy_MM_dd";
 
 	public List<MarketCondition> getDailyData (LocalDate date) throws FileNotFoundException {
-		DateTimeFormatter formatter = DateTimeFormat.forPattern(FinDataConstants.yyyyMMDDHHmmss);
+		DateTimeFormatter formatter = DateTimeFormat.forPattern(FinDataConstants.yyyyMMddHHmmss);
 		BufferedReader br;
 		br = new BufferedReader(new FileReader(getStorageFileName(date)));
 		String line;
@@ -53,7 +53,7 @@ public class NeteaseInstantSnapshotService extends JdbcDaoSupport {
 					 Consumer3<DateTime,
 							Map<String, Depth>,
 							HashMap<String, Function<Integer, Integer>>> doStuff) {
-		DateTimeFormatter formatter = DateTimeFormat.forPattern(FinDataConstants.yyyyMMDDHHmmss);
+		DateTimeFormatter formatter = DateTimeFormat.forPattern(FinDataConstants.yyyyMMddHHmmss);
 
 		Map<String, Stack<AdjFunction<Integer, Integer>>> adjFctTemp;
 		try {
@@ -121,7 +121,7 @@ public class NeteaseInstantSnapshotService extends JdbcDaoSupport {
 		long secondHalfStart = startTrading.withHourOfDay(13).withMinuteOfHour(0).getMillis();
 		long stopTrading = startTrading.withHourOfDay(15).withMinuteOfHour(0).getMillis();
 
-		SimpleDateFormat tickFormat = new SimpleDateFormat(FinDataConstants.yyyyMMDDHHmmss);
+		SimpleDateFormat tickFormat = new SimpleDateFormat(FinDataConstants.yyyyMMddHHmmss);
 		FileWriter fw = new FileWriter(getStorageFileName(now), true);
 		final long[] currentMillis = new long[1];
 		Timer timer = new Timer(false);

@@ -132,38 +132,41 @@ public class SecurityTimeSeriesDataService extends JdbcDaoSupport {
 	}
 
 	// Walk through a group of stocks
+	@Deprecated
 	public void walkDays(DateTime start,
 					 DateTime end,
 					 int maxTicks,
 					 String[] codes,
 					 boolean log,
 					 Consumer2<DateTime,
-							 HashMap<String, SecurityTimeSeriesDatum>> doStuff) {
+							 Map<String, SecurityTimeSeriesDatum>> doStuff) {
 		SecurityTimeSeriesData[] serieses = Arrays.stream(codes).map(TDXFileBasedPriceHistory::new).toArray(TDXFileBasedPriceHistory[]::new);
 		walk(start, end, maxTicks, serieses, codes, log, doStuff);
 	}
 
 	// Walk through a group of stocks
+	@Deprecated
 	public void walkMinutes(DateTime start,
 							DateTime end,
 							int maxTicks,
 							String[] codes,
 							boolean log,
 							Consumer2<DateTime,
-									HashMap<String, SecurityTimeSeriesDatum>> doStuff) {
+									Map<String, SecurityTimeSeriesDatum>> doStuff) {
 		SecurityTimeSeriesData[] serieses = Arrays.stream(codes).map(TDXMinuteLine::new).toArray(TDXMinuteLine[]::new);
 		walk(start, end, maxTicks, serieses, codes, log, doStuff);
 	}
 
 	// Walk through a group of stocks
 	// Serieses must be from the same concrete class
+	@Deprecated
 	private void walk(DateTime start,
 					 DateTime end,
 					 int maxTicks,
 					 SecurityTimeSeriesData[] serieses,
 					 String[] codes,
 					 boolean log,
-					 Consumer2<DateTime, HashMap<String, SecurityTimeSeriesDatum>> doStuff) {
+					 Consumer2<DateTime, Map<String, SecurityTimeSeriesDatum>> doStuff) {
 //		Map<String, Stack<AdjFunction<Integer, Integer>>> adjFct;
 //		try {
 //			adjFct = DividendService.getAdjFunctions(adjStart.toLocalDate(), end.toLocalDate(), codes, getJdbcTemplate());
