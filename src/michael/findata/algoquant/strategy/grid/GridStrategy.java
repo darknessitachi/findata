@@ -266,8 +266,6 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 		HexinOrder.HexinType type;
 		List<HexinOrder> orders = new ArrayList<>(1);
 
-		// If you use depth.mid, depth like the following will cause disaster!!
-
 		double baselineAmount;
 		// Can we sell?
 		baselineAmount = tradeAmountBaseline(depth.bid(1));
@@ -287,9 +285,9 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 			// we can sell
 			LOGGER.info("\t{}\t: Calculated baselineAmount {} with depth.bid(1) {}. Looks like we can can do a sell.", this, baselineAmount, depth.bid(1));
 		}
+
 		double volume;
 		double effectivePrice;
-
 		String brokerTag;
 		if (baselineAmount > 0) {
 			// sell
