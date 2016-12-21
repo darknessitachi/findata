@@ -281,7 +281,7 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 				// we can buy
 				LOGGER.info("\t{}\t: Calculated baselineAmount {} with depth.ask(1) {}. Looks like we can do a buy.", this, baselineAmount, depth.ask(1));
 			} else {
-				LOGGER.debug("\t{}\t: Calculated baselineAmount {} with depth.ask(1) {}. Not enough do a buy.", this, baselineAmount, depth.ask(1));
+				LOGGER.debug("\t{}\t: Calculated baselineAmount {} with depth.ask(1) {}. Not enough to do a buy.", this, baselineAmount, depth.ask(1));
 				// drop not enough for buy
 				// We can neither buy or sell
 				return;
