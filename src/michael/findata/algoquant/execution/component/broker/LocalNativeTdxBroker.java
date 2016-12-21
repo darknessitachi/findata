@@ -1,8 +1,6 @@
 package michael.findata.algoquant.execution.component.broker;
 
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
-import com.numericalmethod.nmutils.designpattern.TypeComposition;
-//import com.sun.java.util.jar.pack.Package;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
@@ -10,7 +8,6 @@ import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
 import java.util.Collection;
 
 import static com.numericalmethod.nmutils.NMUtils.getClassLogger;

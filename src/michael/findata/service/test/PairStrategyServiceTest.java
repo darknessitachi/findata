@@ -37,7 +37,7 @@ public class PairStrategyServiceTest {
 	}
 
 	public static void main (String args []) throws IOException {
-		String date = "2016-12-14";
+		String date = "2016-12-21";
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/app_context_no_tdx_client.xml");
 		PairStrategyService pss = (PairStrategyService) context.getBean("pairStrategyService");
 		pss.massCreatePairStatsForExecutionStartRange(date, date, FinDataConstants.STRATEGY_PAIR_TRAINING_WINDOW_DAYS);

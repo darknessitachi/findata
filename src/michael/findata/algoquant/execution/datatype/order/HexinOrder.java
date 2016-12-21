@@ -10,14 +10,18 @@ public class HexinOrder extends Order {
 	private OrderExecutionType type;
 
 	public HexinOrder(Product product, double quantity, double price, HexinType hexinType) {
+		this(product, quantity, price, hexinType, OrderExecutionType.LIMIT_ORDER);
+	}
+
+	public HexinOrder(Product product, double quantity, double price, HexinType hexinType, OrderExecutionType executionType) {
 		super(product,
 				hexinType == HexinType.SIMPLE_BUY ||
-				hexinType == HexinType.CREDIT_BUY ||
-				hexinType == HexinType.PAIR_OPEN_LONG ||
-				hexinType == HexinType.PAIR_CLOSE_SHORT_BUY_BACK ? Side.BUY : Side.SELL,
+						hexinType == HexinType.CREDIT_BUY ||
+						hexinType == HexinType.PAIR_OPEN_LONG ||
+						hexinType == HexinType.PAIR_CLOSE_SHORT_BUY_BACK ? Side.BUY : Side.SELL,
 				quantity, price);
 		this.hexinType = hexinType;
-		this.type = OrderExecutionType.LIMIT_ORDER;
+		this.type = executionType;
 		this.id(-1);
 	}
 
@@ -80,8 +84,6 @@ public class HexinOrder extends Order {
 			}
 		}
 	}
-
-	public final String TAG_BROKER = "Broker";
 
 	@Override
 	public int hashCode () {

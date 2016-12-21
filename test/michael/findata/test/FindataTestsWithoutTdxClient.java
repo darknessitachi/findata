@@ -34,6 +34,8 @@ import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.*;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_BUY;
@@ -129,6 +131,7 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 		snapshot.depths().values().forEach(System.out::println);
 	}
 
+	@Test
 	public void test_MataBroker () throws InterruptedException {
 		MetaBroker broker = new MetaBroker();
 		Thread.currentThread().sleep(5000l);
@@ -155,6 +158,7 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 		broker.stop();
 	}
 
+	@Test
 	public void test_LocalInteractiveBrokers () {
 		LocalInteractiveBrokers broker = new LocalInteractiveBrokers(4001, stockRepo.findByCodeIn("00914", "03606").toArray(new Stock [2]));
 //		ArrayList<HexinOrder> orderList = new ArrayList<>();
@@ -180,6 +184,7 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 		}
 	}
 
+	@Test
 	public void test_PairStrategyUtil () {
 		double p1 = 19.31*1.1385;
 		double p2 = 12.46;
@@ -197,11 +202,13 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 		Assert.assertNull(result);
 	}
 
+	@Test
 	public void test_ShortInHKPairStrategy () {
 		ShortInHKPairStrategy pairStrategy = new ShortInHKPairStrategy(pairStatsRepo.findOne(1176732));
 		shortInHkPairStrategyRepo.save(pairStrategy);
 	}
 
+	@Test
 	public void test_PairStrategyService_CreatePair () {
 //		pairStrategyService.createPair("06030", "600030");
 //		pairStrategyService.createPair("01398", "601398");
@@ -212,10 +219,11 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 //		pairStrategyService.createPair("02338", "000338");
 	}
 
+	@Test
 	public void test_HistoricalData () throws InterruptedException {
 //		historicalData.update(false);
-		historicalData.update(false, 6818, 6837, 358, 2318, 2338, 3606, 914, 177, 386, 1398, 939, 6030, 3328, 3968, 2800, 2828, 3147, 2823, 2822, 3188);
-//		historicalData.update(true, 6818);
+		historicalData.update(false, 6818, 6837, 358, 2318, 2338, 3606, 914, 177, 386, 1398, 939, 6030, 3328, 3968, 2800, 2828, 3147, 2823, 2822, 3188, 2333);
+//		historicalData.update(true, 2333);
 	}
 
 	@Test
@@ -292,7 +300,7 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 //		ds.addDividend("02338", "2012-06-30", 0.1f, 0f, "2012-09-17");
 //		ds.addDividend("02338", "2012-12-31", 0.23f, 0f, "2013-07-25");
 //		ds.addDividend("02338", "2013-06-30", 0.1f, 0f, "2013-09-18");
-//		ds.addDividend("02338", "2013-12-31", 0.15f,0f, "2014-07-30");
+//		ds.addDividend("02338", "2013-12-31", 0.15f, 0f, "2014-07-30");
 //		ds.addDividend("02338", "2014-06-30", 0.1f, 0f, "2014-09-29");
 //		ds.addDividend("02338", "2014-12-31", 0.15f, 1f, "2015-07-16");
 //		ds.addDividend("02338", "2015-06-30", 0.1f, 0f, "2015-09-21");
@@ -352,11 +360,23 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 //		ds.addDividend("00386", "2006-12-31",0.04f,0f,"2006-09-11");
 //		ds.addDividend("00386", "2005-12-31",0.04f,0f,"2005-09-12");
 
+		// 长城汽车
+		ds.addDividend("02333", "2015-12-31", 0.19f, 0f, "2016-05-23");
+		ds.addDividend("02333", "2015-06-30", 0.25f, 2f, "2015-09-30");
+		ds.addDividend("02333", "2014-12-31", 0.8f, 0f, "2015-05-14");
+		ds.addDividend("02333", "2013-12-31", 0.82f, 0f, "2014-05-13");
+		ds.addDividend("02333", "2012-12-31", 0.57f, 0f, "2013-05-14");
+		ds.addDividend("02333", "2011-12-31", 0.3f, 0f, "2012-05-09");
+		ds.addDividend("02333", "2010-12-31", 0.2f, 0f, "2011-03-28");
+		ds.addDividend("02333", "2009-12-31", 0.25f, 0f, "2010-04-15");
+		ds.addDividend("02333", "2008-12-31", 0.15f, 0f, "2009-05-04");
+
 //		ds.addDividend("", "", f, f, "");
 //		ds.addDividend("", "", f, f, "");
 //		ds.addDividend("", "", f, f, "");
 	}
 
+	@Test
 	public void test_PairStrategyService_cointcorrel () {
 //		double [][] result = pss.cointcorrel(
 //				DateTime.parse("2016-04-03").withTimeAtStartOfDay(),
@@ -364,9 +384,9 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 //				new String [][] {{"160706","510300"}}, OPENCL_REGRESSION_SIZE, null, spms, null, true);
 
 		double [][] result = pairStrategyService.cointcorrel(
-				DateTime.parse("2016-07-11").withTimeAtStartOfDay(),
-				DateTime.parse("2016-07-26").withTimeAtStartOfDay().plusHours(23),
-				new String [][] {{"01398","601398"}}, OPENCL_REGRESSION_SIZE, null, stockPriceMinuteService, null, true);
+				DateTime.parse("2015-09-29").withTimeAtStartOfDay(),
+				DateTime.parse("2015-10-13").withTimeAtStartOfDay().plusHours(23),
+				new String [][] {{"02333","601633"}}, OPENCL_REGRESSION_SIZE, null, stockPriceMinuteService, null, true);
 
 //		double [][] result = pairStrategyService.cointcorrel(
 //				DateTime.parse("2016-10-16").withTimeAtStartOfDay(),
@@ -419,6 +439,7 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 		pairStrategyService.inspectPair("01398", "601398", "2016-07-11", "2016-12-02", 1.148928);
 	}
 
+	@Test
 	public void test_PairStrategyService_inspect() {
 
 		// 宁沪高速
@@ -460,18 +481,38 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 //		pairStrategyService.inspectPair(codeHK, codeA, "2016-07-11", "2016-12-02", result[0][0]);
 	}
 
+	@Test
 	public void test_AsyncMailer_mail() {
 		AsyncMailer asyncMailer = new AsyncMailer();
 		asyncMailer.email("Try mail", "This is another test!!!!", "8122850@qq.com", "michael.tang@anz.com");
 	}
 
+	@Test
 	public void test_ShortInHKPairStrategy_emailNotification () {
-		shortInHkPairStrategyRepo.findByOpenableDate(LocalDate.now().minusDays(1).toDate()).forEach(ShortInHKPairStrategy::emailNotification);
+		shortInHkPairStrategyRepo.findByOpenableDate(LocalDate.now().minusDays(1).toDate()).forEach(strategy -> {
+			strategy.emailNotification("Test");
+		});
 		AsyncMailer.instance.stop();
 	}
 
+	@Test
 	public void test_GridStrategy_emailNotification () {
-		gridStrategyRepo.findByActive(true).forEach(GridStrategy::emailNotification);
+		List<GridStrategy> strategies = gridStrategyRepo.findByActive(true);
+		strategies.get(0).emailNotification("Test 1");
+		strategies.get(1).emailNotification("Test 2");
+		try {
+			Thread.sleep(300000L);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		AsyncMailer.instance.stop();
+	}
+
+	@Test
+	public void test_Repo () {
+		Stock s = new Stock("000123");
+		System.out.println(s.getId());
+		stockRepo.save(s);
+		System.out.println(s.getId());
 	}
 }

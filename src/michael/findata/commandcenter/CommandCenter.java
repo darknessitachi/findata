@@ -20,6 +20,7 @@ import michael.findata.model.Dividend;
 import michael.findata.model.Stock;
 import michael.findata.service.DividendService;
 import michael.findata.spring.data.repository.DividendRepository;
+import michael.findata.util.DBUtil;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDateTime;
 import org.joda.time.LocalTime;
@@ -179,13 +180,16 @@ public class CommandCenter implements DepthListener {
 	}
 
 	public void start () {
-
+		// Caution: better put this line as the first statement in this method, quite a
+		// number of statements depend on it!
 		setTargetSecurities();
 
+		// Caution: this has to be put after setTargetSecurities!
 		MetaBroker broker = new MetaBroker(hkStocks);
 		setBroker(broker);
 		broker.setDepthListener(this);
 
+		// Caution: this has to be put after setTargetSecurities!
 		// Update dividends and then start;
 		updateDividendInfo();
 
@@ -323,6 +327,7 @@ public class CommandCenter implements DepthListener {
 				((michael.findata.algoquant.execution.component.broker.Broker) broker).stop();
 			}
 			AsyncMailer.instance.stop();
+			DBUtil.tryToStopDB();
 			LOGGER.info("Command Center Stopped.");
 		}
 	}
@@ -431,15 +436,15 @@ public class CommandCenter implements DepthListener {
 					threadLOGGER.info("{} daily session ended, stopping ...", name);
 					break;
 				} else {
-					threadLOGGER.info("{} active, doing stuff ...\n", name);
+					threadLOGGER.debug("{} active, doing stuff ...\n", name);
 					pollResult = poll();
 					if (pollResult.isEmpty()) {
-						threadLOGGER.info("{}: empty result.", name);
+						threadLOGGER.debug("{}: empty result.", name);
 					} else {
-						threadLOGGER.info("{}: non-empty result.", name);
+						threadLOGGER.debug("{}: non-empty result.", name);
 //						System.out.println(name+" try obtaining lock. @\t"+System.currentTimeMillis());
 						if (obtainLock()) {
-							LOGGER.info("{}: lock obtained.", name);
+							LOGGER.debug("{}: lock obtained.", name);
 //							System.out.println(name+" locked obtained. @\t"+System.currentTimeMillis());
 
 							// Multi-threaded version
@@ -452,7 +457,7 @@ public class CommandCenter implements DepthListener {
 							// do it within the same thread
 							depthsUpdated(pollResult);
 							releaseLock();
-							LOGGER.info("{}: lock released.", name);
+							LOGGER.debug("{}: lock released.", name);
 						} else {
 							// System.out.println("synchronized code section executed in(ms) "+(System.currentTimeMillis() - start));
 							// if this command center is blocked by broker when executing an order, there is not point notify about the change
@@ -461,7 +466,7 @@ public class CommandCenter implements DepthListener {
 //						return;
 						}
 					}
-					threadLOGGER.info("{} heartbeat completed.", name);
+					threadLOGGER.debug("{} heartbeat completed.", name);
 					if (heartbeatInterval > 0) {
 						try {
 							threadLOGGER.info("{} sleeping ...", name);

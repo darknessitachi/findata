@@ -7,6 +7,7 @@ import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import com.numericalmethod.algoquant.execution.datatype.product.fx.Currencies;
 import com.numericalmethod.algoquant.execution.strategy.handler.DepthHandler;
 import michael.findata.algoquant.execution.component.broker.LocalInteractiveBrokers;
+import michael.findata.algoquant.execution.component.broker.MetaBroker;
 import michael.findata.algoquant.execution.datatype.depth.Depth;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.algoquant.execution.listener.OrderListener;
@@ -20,17 +21,20 @@ import michael.findata.model.Dividend;
 import michael.findata.model.PairStats;
 import michael.findata.model.Stock;
 import michael.findata.spring.data.repository.ShortInHkPairStrategyRepository;
+import michael.findata.util.DBUtil;
 import org.hibernate.annotations.GenericGenerator;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
 import org.slf4j.Logger;
 import org.springframework.data.repository.Repository;
+import scala.util.regexp.Base;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
 import java.util.*;
 
+import static com.numericalmethod.algoquant.execution.datatype.order.Order.OrderExecutionType.*;
 import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
 import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolumes;
 
@@ -49,30 +53,6 @@ import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolume
  * Closing the position, meaning the following is executed when we already have our position opened.
  * 4. If position already opened, check price delta;
  * 5. If price delta < close threshold, buy back short and sell back long - strategyStatus = CLOSED;
- *
- * 经验参数：
- * 1. 中国平安：02318->601318
- * 0.01		-	-0.005
- * 0.02		-	0.005
- * 0.025	-	0.005
- *
- * 2. 潍柴动力：02338->000338
- * 0.025	-	0.005
- * 0.04		-	0.02
- * 0.045	-	0.02
- *
- * 3. 海螺水泥：00914->600585
- * 0.012	-	0
- * 0.022	-	0
- * 0.032	-	0
- *
- * 4. 福耀玻璃：03606->600660
- * 0.016	-	0
- * 0.024	-	0
- * 0.034	-	0
- *
- * 5.
- *
  */
 @Entity
 @Table(name = "strategy_instance_pair")
@@ -80,13 +60,62 @@ import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolume
 public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHandler, DividendHandler, Comparable<ShortInHKPairStrategy> {
 	private static final Logger LOGGER = getClassLogger();
 
+	//经验参数：
+	public static Map<String, Param> paramMap = new HashMap<>();
+	static {
+		//中国平安：02318->601318
+		// 0.01		-	-0.005
+		// 0.02		-	0.005
+		// 0.025	-	0.005
+		paramMap.put("02318->601318 1", new Param(0.01, -0.005, 57000, 37000));
+		paramMap.put("02318->601318 2", new Param(0.02, 0.005, 57000, 37000));
+		paramMap.put("02318->601318 3", new Param(0.025, 0.005, 57000, 37000));
+
+		// 潍柴动力：02338->000338
+		// 0.025	-	0.005
+		// 0.04		-	0.02
+		// 0.045	-	0.02
+		paramMap.put("02338->000338 1", new Param(0.025, 0.005, 57000, 37000));
+		paramMap.put("02338->000338 2", new Param(0.04, 0.02, 57000, 37000));
+		paramMap.put("02338->000338 3", new Param(0.045, 0.002, 57000, 37000));
+
+		// 海螺水泥：00914->600585
+		// 0.012	-	0
+		// 0.022	-	0
+		// 0.032	-	0
+		paramMap.put("00914->600585 1", new Param(0.020, 0, 57000, 37000));
+		paramMap.put("00914->600585 2", new Param(0.025, 0, 57000, 37000));
+		paramMap.put("00914->600585 3", new Param(0.035, 0, 57000, 37000));
+
+		// 福耀玻璃：03606->600660
+		// 0.016	-	0
+		// 0.024	-	0
+		// 0.034	-	0
+		paramMap.put("03606->600660 1", new Param(0.016, 0, 57000, 37000));
+		paramMap.put("03606->600660 2", new Param(0.024, 0, 57000, 37000));
+		paramMap.put("03606->600660 3", new Param(0.034, 0, 57000, 37000));
+	}
+
 	// for hibernate use only
 	protected ShortInHKPairStrategy() {
-		openThreshold = 0.03; // todo might need to be customized with stdev
-		closeThreshold = .013; // todo might need to be customized with stdev
+		openThreshold = 0.03;
+		closeThreshold = .013;
 		amountUpperLimit = 57000; // default in RMB!!!
 		amountLowerLimit = 37000; // default in RMB!!!
 		reset(false);
+	}
+
+	public static class Param implements Strategy.Param {
+		private double openThreshold;
+		private double closeThreshold;
+		private double amountUpperLimit;
+		private double amountLowerLimit;
+		public Param (double openThreshold, double closeThreshold, double amountUpperLimit, double amountLowerLimit) {
+			this.openThreshold = openThreshold;
+			this.closeThreshold = closeThreshold;
+			this.amountUpperLimit = amountUpperLimit;
+			this.amountLowerLimit = amountLowerLimit;
+		}
 	}
 
 	public ShortInHKPairStrategy(PairStats stats) {
@@ -95,10 +124,28 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		stats(stats);
 	}
 
-	public ShortInHKPairStrategy(PairStats stats, double amountLowerLimit, double amountUpperLimit) {
-		this(stats);
+	public ShortInHKPairStrategy(PairStats stats, Param param) {
+		this();
+		openableDate = LocalDate.fromDateFields(stats.getTrainingEnd()).plusDays(1).toDate();
+		stats(stats);
+		this.openThreshold = param.openThreshold;
+		this.closeThreshold = param.closeThreshold;
+		this.amountUpperLimit = param.amountUpperLimit;
+		this.amountLowerLimit = param.amountLowerLimit;
+	}
+
+	public ShortInHKPairStrategy(PairStats stats, Param param, double amountLowerLimit, double amountUpperLimit) {
+		this(stats, param);
 		this.amountLowerLimit = amountLowerLimit;
 		this.amountUpperLimit = amountUpperLimit;
+	}
+
+	public ShortInHKPairStrategy(PairStats stats, double openThreshold, double closeThreshold, double amountLowerLimit, double amountUpperLimit) {
+		this(stats);
+		this.openThreshold = openThreshold;
+		this.closeThreshold = closeThreshold;
+		this.amountUpperLimit = amountUpperLimit;
+		this.amountLowerLimit = amountLowerLimit;
 	}
 
 	@Id
@@ -107,7 +154,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 	private int id;
 
 	@Basic
-	@Column(name = "status",columnDefinition="char(20) not null")
+	@Column(name = "status",columnDefinition="CHAR(10) not null")
 	@Enumerated(EnumType.STRING)
 	private Status status;
 
@@ -210,6 +257,14 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 	@Basic
 	@Column(name = "force_closure_on_or_after")
 	private Date forceClosureDate;
+
+	@Basic
+	@Column(name = "short_side_broker", columnDefinition = "CHAR(10)")
+	private String shortSideBrokerTag = "";
+
+	@Basic
+	@Column(name = "long_side_broker", columnDefinition = "CHAR(10)")
+	private String longSideBrokerTag = "";
 
 	@Transient
 	private String codeToShort = null;
@@ -426,40 +481,46 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		// fx/dividend/split adjusted prices
 		double effectivePriceForShortSide;
 		double effectivePriceForLongSide;
+		double bestShortSide;
+		double bestLongSide;
 
 		switch (status) {
 			case NEW:
 				// use fx to translate the amount limit from hkd to rmb
-				actualPriceForShortSide = depthToShort.bestBid(amountUpperLimit/fx);
-				// and the use fx again to translate the bestBid price calculated from hkd to rmb
-				effectivePriceForShortSide = actualPriceForShortSide*fx;
-				actualPriceForLongSide = effectivePriceForLongSide = depthToLong.bestAsk(amountUpperLimit);
-				if (effectivePriceForLongSide < 0 || effectivePriceForShortSide < 0) {
-					LOGGER.debug("\t{}\t: Short side and/or long side volume on not enough for opening.", this);
-					return null;
-				}
+				bestShortSide = depthToShort.bestBid(amountUpperLimit/fx);
+				bestLongSide = depthToLong.bestAsk(amountUpperLimit);
 				break;
 			case OPENING:
 				// use fx to translate the amount limit from hkd to rmb
-				actualPriceForShortSide = depthToShort.bestBid((shortVolumeCalculated-openingOrderShort.filledQuantity())*openingOrderShort.price());
-				// and the use fx again to translate the bestBid price calculated from hkd to rmb
-				effectivePriceForShortSide = actualPriceForShortSide*fx;
-				actualPriceForLongSide = effectivePriceForLongSide = depthToLong.bestAsk(longVolumeCalculated*actualPriceForLongSide);
-				if (effectivePriceForLongSide < 0 || effectivePriceForShortSide < 0) {
-					LOGGER.debug("\t{}\t: Short side and/or long side volume not enough for opening.", this);
-					return null;
-				}
+				bestShortSide = depthToShort.bestBid((shortVolumeCalculated-openingOrderShort.filledQuantity())*openingOrderShort.price());
+				bestLongSide = depthToLong.bestAsk(longVolumeCalculated*actualPriceForLongSide);
 				break;
 			case OPENED:
-				actualPriceForShortSide = depthToShort.bestBid(shortVolumeHeld*depthToShort.ask(1));
-				effectivePriceForShortSide = actualPriceForShortSide*fx;
-				actualPriceForLongSide = effectivePriceForLongSide = depthToLong.bestBid(longVolumeHeld*depthToLong.bid(1));
+				bestShortSide = depthToShort.bestAsk(shortVolumeHeld*depthToShort.ask(1));
+				bestLongSide = depthToLong.bestBid(longVolumeHeld*depthToLong.bid(1));
 				break;
 			default:
 				LOGGER.debug("\t{}\t: Pair status is {}, no need to continue.", this, status);
 				return null;
 		}
+
+		if (bestShortSide < 0 || bestLongSide < 0) {
+			LOGGER.debug("\t{}\t: Short side {} and/or long side {} volume not enough, no need to continue.", this, bestShortSide, bestLongSide);
+			return null;
+		}
+
+		actualPriceForShortSide = bestShortSide;
+		// and the use fx again to translate the bestBid price calculated from hkd to rmb
+		effectivePriceForShortSide = actualPriceForShortSide*fx;
+		effectivePriceForLongSide = actualPriceForLongSide = bestLongSide;
+
 		LOGGER.debug("\t{}\t: Ratio: {}", this, effectivePriceForLongSide / effectivePriceForShortSide);
+		if (effectivePriceForLongSide < 0 || effectivePriceForShortSide < 0) {
+			LOGGER.debug("\t{}\t: Negative ratio is invalid! effectivePriceForLongSide={} / effectivePriceForShortSide={} / fx={}", this, effectivePriceForLongSide, effectivePriceForShortSide, fx);
+			LOGGER.debug("\t{}\t: Investigation: depthToShort.bestBid(shortVolumeHeld*depthToShort.ask(1))={}", this, depthToShort.bestBid(shortVolumeHeld*depthToShort.ask(1)));
+			LOGGER.debug("\t{}\t: Investigation: depthToLong.bestBid(longVolumeHeld*depthToLong.bid(1))={}", this, depthToLong.bestBid(longVolumeHeld*depthToLong.bid(1)));
+			return null;
+		}
 		return effectivePriceForShortSide * slope() / effectivePriceForLongSide - 1;
 	}
 
@@ -552,6 +613,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 
 					// Executed short order
 					openingOrderShort = new HexinOrder(toShort(), shortVolumeCalculated, actualPriceForShortSide, HexinOrder.HexinType.SIMPLE_SELL);
+					openingOrderShort.addTag(MetaBroker.ORDER_TAG_BROKER, shortSideBrokerTag);
 					List<HexinOrder> orders = new ArrayList<>(1);
 					orders.add(openingOrderShort);
 					broker.sendOrder(orders);
@@ -647,7 +709,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 					if (!dateOpened.toLocalDateTime().toLocalDate().equals(
 							new Timestamp(System.currentTimeMillis()).toLocalDateTime().toLocalDate())) {
 						residualClose = residual;
-						close(broker);
+						close(broker, now, false);
 					} else {
 						LOGGER.info("\t{}\t: Pair opened on the same day, cannot close.", this);
 					}
@@ -697,13 +759,17 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 	}
 
 	/**
+	 * forcefully = true: closed forcefully, quite likely making a loss
 	 * closed as expected
 	 */
-	private void close(Broker broker) {
+	private void close(Broker broker, DateTime now, boolean forcefully) {
 		// Close position:
 		// Execute short buy back and long sell back
 		closingOrderShort = new HexinOrder(toShort(), shortVolumeHeld, actualPriceForShortSide, HexinOrder.HexinType.SIMPLE_BUY);
-		closingOrderLong = new HexinOrder(toLong(), longVolumeHeld, actualPriceForLongSide, HexinOrder.HexinType.SIMPLE_SELL);
+		closingOrderShort.addTag(MetaBroker.ORDER_TAG_BROKER, shortSideBrokerTag);
+		// Minus 5 cents to sell order to make sure it fills.
+		closingOrderLong = new HexinOrder(toLong(), longVolumeHeld, actualPriceForLongSide-0.05, HexinOrder.HexinType.SIMPLE_SELL, MARKET_ORDER);
+		closingOrderLong.addTag(MetaBroker.ORDER_TAG_BROKER, longSideBrokerTag);
 		List<HexinOrder> orders = new ArrayList<>(2);
 		orders.add(closingOrderShort);
 		orders.add(closingOrderLong);
@@ -720,12 +786,17 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		}
 		shortClose = closingOrderShort.price();
 		longClose = closingOrderLong.price();
-		shortVolumeHeld = 0d;
-		longVolumeHeld = 0d;
+//		shortVolumeHeld = 0d;
+//		longVolumeHeld = 0d;
 		dateClosed = new Timestamp(System.currentTimeMillis());
 		// Save after status change
-		updateStatusAndSave(Status.CLOSED);
-		emailNotification();
+		updateStatusAndSave(forcefully ? Status.FORCED : Status.CLOSED);
+		ShortInHKPairStrategy archive = archive();
+		archive.emailNotification(forcefully ? "Pair Forcefully Closed" : "Pair Closed");
+		openableDate = now.toLocalDate().toDate();
+		reset(true);
+		emailNotification("Pair Reset");
+//		stats = ;
 	}
 
 	private void updateStatusAndSave(Status s) {
@@ -734,15 +805,44 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		trySave();
 	}
 
-	/**
-	 * closed forcefully, quite likely making a loss
-	 */
-	private void forceClosure() {
-		this.shortVolumeHeld = 0d;
-		this.longVolumeHeld = 0d;
-		// Save after status change
-		updateStatusAndSave(Status.FORCED);
-		emailNotification();
+	private ShortInHKPairStrategy archive () {
+		ShortInHKPairStrategy archive = new ShortInHKPairStrategy(stats);
+
+		archive.stats(stats);
+		archive.status = status;
+		archive.openThreshold = openThreshold;
+		archive.closeThreshold = closeThreshold;
+		archive.amountUpperLimit = amountUpperLimit;
+		archive.amountLowerLimit = amountLowerLimit;
+		archive.dateOpened = dateOpened;
+		archive.dateClosed = dateClosed;
+		archive.longOpen = longOpen;
+		archive.longClose = longClose;
+		archive.shortOpen = shortOpen;
+		archive.shortClose = shortClose;
+		archive.maxResidual = maxResidual;
+		archive.minResidual = minResidual;
+		archive.maxResidualDate = maxResidualDate;
+		archive.minResidualDate = minResidualDate;
+		archive.shortVolumeCalculated = shortVolumeCalculated;
+		archive.longVolumeCalculated = longVolumeCalculated;
+		archive.shortVolumeHeld = shortVolumeHeld;
+		archive.longVolumeHeld = longVolumeHeld;
+		archive.residualOpen = residualOpen;
+		archive.residualClose = residualClose;
+		archive.openableDate = openableDate;
+		archive.forceClosureDate = forceClosureDate;
+		archive.shortSideBrokerTag = shortSideBrokerTag;
+		archive.longSideBrokerTag = longSideBrokerTag;
+		archive.repo = repo;
+
+		if (repo != null) {
+			repo.save(archive);
+			LOGGER.info("\t{}\t: Archived myself to {}", this, archive);
+		} else {
+			LOGGER.warn("\t{}\t: Repo is null, cannot archive myself.", this);
+		}
+		return archive;
 	}
 
 	@Override
@@ -755,7 +855,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		// Save to DB
 		LOGGER.info("\t{}\t: Saving myself to DB and stop.", this);
 		trySave();
-		emailNotification();
+		emailNotification("Trading Ended");
 	}
 
 	@Transient
@@ -769,7 +869,13 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 	@Override
 	public void trySave() {
 		if (repo != null) {
-			repo.save(this);
+			try {
+				repo.save(this);
+			} catch (Exception ex) {
+				LOGGER.warn("\t{}\t: Failed to save -- exception {} caught", this, ex.getClass());
+				ex.printStackTrace();
+				DBUtil.dealWithDBAccessError(ex);
+			}
 		} else {
 			LOGGER.warn("\t{}\t: Failed to save -- repository is null.", this);
 		}
@@ -831,8 +937,10 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 				LOGGER.info("\t{}\t: Strategy status is OPENING.", this);
 				if (openingOrderShort.state().equals(Order.OrderState.FILLED)) {
 					LOGGER.info("\t{}\t: Opening short order has just been fully filled, executing opening long order...", this);
-					// If short order is fully filled, execute long order
-					openingOrderLong = new HexinOrder(toLong(), longVolumeCalculated, actualPriceForLongSide, HexinOrder.HexinType.SIMPLE_BUY);
+					// If short order is fully filled, execute long order.
+					// Add 5 cents to buy order to make sure it fills.
+					openingOrderLong = new HexinOrder(toLong(), longVolumeCalculated, actualPriceForLongSide+0.05, HexinOrder.HexinType.SIMPLE_BUY);
+					openingOrderLong.addTag(MetaBroker.ORDER_TAG_BROKER, longSideBrokerTag);
 					List<HexinOrder> orders = new ArrayList<>(1);
 					orders.add(openingOrderLong);
 					broker.sendOrder(orders);
@@ -850,7 +958,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 					minResidualDate = dateOpened;
 					// Save after status change
 					updateStatusAndSave(Status.OPENED);
-					emailNotification();
+					emailNotification("Pair Opened");
 				}
 				break;
 			case OPENED:
@@ -868,27 +976,40 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		}
 	}
 
-	public void emailNotification() {
-		AsyncMailer.instance.email(String.format("Status Report: ShortInHKStrategy %s", this), notification());
+	public void emailNotification(String titlePrefix) {
+		AsyncMailer.instance.email(String.format("%s: ShortInHKStrategy %s", titlePrefix, this), notification());
 	}
 
 	@Override
 	public void onDividend(DateTime now, Dividend dividend, MarketCondition mc, TradeBlotter blotter, Broker broker) {
 	}
 
-	private enum Status {
-		NEW ("NEW"),
+	public enum Status {
+		NEW("NEW"),
 		OPENING("OPENING"),
 		OPENED("OPENED"),
 		CLOSED("CLOSED"),
-		FORCED ("FORCED");
+		FORCED("FORCED");
 		private final String label;
 		Status(String label) {
 			this.label = label;
 		}
 	}
 
+	@Override
 	public String toString () {
 		return String.format("[ID: %d, %s->%s, s:%.3f, o:%.3f, c:%.3f, %s]", id, getNameToShort(), getNameToLong(), slope(), openThreshold, closeThreshold, status);
+	}
+
+	@Override
+	public int hashCode() {
+		return id;
+	}
+
+	@Override
+	public boolean equals(Object another) {
+		return another != null
+				&& another instanceof ShortInHKPairStrategy
+				&& id == ((ShortInHKPairStrategy) another).id;
 	}
 }

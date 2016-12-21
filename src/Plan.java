@@ -1,42 +1,40 @@
 import michael.findata.algoquant.strategy.TestStrategy;
-import michael.findata.algoquant.strategy.grid.GridStrategy;
-import michael.findata.algoquant.strategy.pair.stocks.ShortInHKPairStrategy;
 import michael.findata.commandcenter.CommandCenter;
-import michael.findata.email.AsyncMailer;
 import michael.findata.external.tdx.TDXClient;
-import michael.findata.spring.data.repository.GridStrategyRepository;
-import michael.findata.spring.data.repository.ShortInHkPairStrategyRepository;
 import michael.findata.spring.data.repository.StockRepository;
-import org.apache.commons.beanutils.converters.IntegerConverter;
-import org.apache.commons.mail.EmailException;
-import org.joda.time.LocalDate;
+import michael.findata.util.DBUtil;
 import org.joda.time.LocalTime;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataAccessResourceFailureException;
 
 import java.io.IOException;
 
+import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_BUY;
+import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_SELL;
+
 public class Plan {
-	public static void main (String args []) throws IOException, EmailException {
-		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
-		StockRepository stockRepo = (StockRepository) context.getBean("stockRepository");
-		CommandCenter cc = (CommandCenter) context.getBean("commandCenter");
-		cc.setShSzHqClient(new TDXClient(TDXClient.TDXClientConfigs));
+	public static void main (String args []) throws IOException {
 
-		cc.addStrategy(new TestStrategy(stockRepo));
+		DBUtil.tryToStopDB();
 
-		// Set up command center
-		int hour = 21;
-		int minute = 40;
-		cc.setFirstHalfEndCN(new LocalTime(hour, minute, 10));
-		cc.setSecondHalfStartCN(new LocalTime(hour, minute, 25));
-		cc.setSecondHalfEndCN(new LocalTime(hour, minute, 59));
-		cc.setFirstHalfEndHK(new LocalTime(hour, minute, 10));
-		cc.setSecondHalfStartHK(new LocalTime(hour, minute, 30));
-		cc.setSecondHalfEndHK(new LocalTime(hour, minute, 55));
-
-		cc.start();
-
+//		CommandCenter cc = (CommandCenter) context.getBean("commandCenter");
+//		cc.setShSzHqClient(new TDXClient(TDXClient.TDXClientConfigs));
+//
+//		cc.addStrategy(new TestStrategy(stockRepo));
+//
+//		// Set up command center
+//		int hour = 21;
+//		int minute = 40;
+//		cc.setFirstHalfEndCN(new LocalTime(hour, minute, 10));
+//		cc.setSecondHalfStartCN(new LocalTime(hour, minute, 25));
+//		cc.setSecondHalfEndCN(new LocalTime(hour, minute, 59));
+//		cc.setFirstHalfEndHK(new LocalTime(hour, minute, 10));
+//		cc.setSecondHalfStartHK(new LocalTime(hour, minute, 30));
+//		cc.setSecondHalfEndHK(new LocalTime(hour, minute, 55));
+//
+//		cc.start();
 	}
 }
 
@@ -45,52 +43,56 @@ public class Plan {
  * format(max_res/stdev,2) ratio, pctg(adf_p_ma) adf_p_ma
  * from pair_instance pi, pair_stats ps
  * where pi.pair_stats_id = ps.id and max_res > 0.01 and max_res/stdev > 1.5 order by max_res desc;
- * <p>
  * select * from pair_stats where adf_p_ma < 0.07 and adf_p < 0.011 and training_end = date(now()) and code_to_short in ('510060', '510070', '159943');
- * <p>
+
  * select * from pair_stats where concat(code_to_short,'->',code_to_long)='601398->600016' order by training_end;
- * <p>
+
  * select count(*), training_end from pair_stats group by training_end having count(*) <> 5740;
  * select count(*), training_end from pair_stats group by training_end order by training_end;
- * <p>
+
  * select * from pair_stats where code_to_short = 510300 and code_to_long = 510160 order by training_end desc limit 10;
- * <p>
+
  * delete from pair_instance where max_res is null;
- * <p>
+
  * select count(*) from pair_instance where max_res is not null;
- * <p>
+
  * select max_res, code_to_short, code_to_long from pair_instance where max_res is not null and openable_on = '2016-06-08' order by max_res desc;
- * <p>
+
  * select * from stock where id in (select stock_id from dividend where payment_date is null and announcement_date < '2016-01-01');
- * <p>
- * <p>
+
  * PairStrategy需要动态仓位管理
  * HoppingStrategy不需要动态仓位管理
- * <p>
+
  * 0。
  * 利用融券ETF，对广泛ETF进行 隔日统计配对
  * 策略1：只适用于流动性良好的不多的20-30多只ETF，还是要坚持把这个策略做下去。需要对这些高流动性etf重新进行回测。
- * <p>
+
  * Step 1: update A share historical Data up to today
  * Step 2: update H share historical Data up to today
  * Step 3: Calculate stats and Create strategy for tomorrow
  *
+ * 0. ShortInHK to handle shorting during the last three minutes of HK daily session, when the most profitable moments usually happens
+ * 0. ShortInHK to handle short in A too.
+ * 0. 2333 as an example, IB historical data has been adjusted with split but not dividend, how to handle?
+ * 0. Residual calc to take into account split/dividend
+ * 1. test correlation calculation with dividend taken into consideration
+ * 2. ratio calculation in pair strategy needs to use the pairopendate as the reference date
+ * 0. Test A/H pair strategy with dividends, do not rush, since dividend season is far down the road
  * 0. Order's "rejected" status
- * 0. How to stop depth like this to be fired?
+ * 0. How to avoid depth like this being fired?
  * 2016-Dec-17 21:27:23.658 [Thread-3] INFO LocalInteractiveBrokers,306- Depth updated: 00966 中国太平(HK)
  * Traded: true
  * ask1 -1.0	0
  * bid1 -1.0	0
-
- * 0. Email notification for GridStrategy
- * 0. Use inspectpair to find shortinA opportunities and try to create a stremlined semi auto process
+ *
+ * 0. Use disruptor to implement all brokers so that they function like IB
+ * 0. Use inspectpair to find shortinA opportunities and try to create a streamlined semi-auto process
  * 0. Learn from ETFnStockBasketTest
- * 0. ShortInHKPairStrategy has three outstanding issues, but it can already be used.
- * 0. automatic 股东代码 matching in NativeTdx
- * 0. Test A/H pair stra with dividends, do not rush, since dividend season is far down the road
  * 0. HKstock minute / daily prices / dividend split
  * 0. Use Kalman Filter or Regression for H->A arb?
- * <p>
+ * 0. automatic 股东代码 matching in NativeTdx
+ * 0. ShortInHKPairStrategy has three outstanding issues, but it can already be used.
+
  * 盈富基金(02800) (恒生指数) VS 恒生ETF(SZ159920)
  * 02828.HK 恆生H股 VS 150175+150176
  * 02828.HK 恆生H股 VS 510900, H股ETF
@@ -107,6 +109,8 @@ public class Plan {
  * [Done] Test dividend update routine to make sure the removal of split column is ok.
  * [Done] Carelessly executed this: DELETE FROM stock_price_minute WHERE stock_id IN (1592), now need to make up for 潍柴动力's minute data
 
+ negative ratio?!!!!!!!!!!!!!
+ 0. grid debug log file
  * 0. 在年底要再做一次adjustment factor recalc for all stocks/interesting funds
  * 1. market order on hexin broker: this can be achieved with limit order: just relax the price much more
  * 0. Update the list of all AH stocks and able to update their price, so that our spread comparison can automatically include them
@@ -118,37 +122,37 @@ public class Plan {
  * 8. Backup my tdx stock data mysql db data
  * 10. C# Need to monitor a) positions b) order executions
  * 0. OLMAR on more diversified chinese stocks: prepare getting stock data from my own local mysql
- * <p>
+ *
  * 测试 java.sql.Timestamp, java.sql.Date 和 java.util.Date 在存储后，提取后的值有无变化
  * 测试结果：由于各处（包括数据库）的缺省时区是东八区，所以各时间格式可以互换。
  * 用TDXClient驱动PairStrategy
  * Completed: 第二步自动下单：测试同市场同时下单能否成功，测试不同市场下两单的时候，最小延迟要多久。
  * 普通账户一个单子0.6-0.8s，
  * 信用账户一个单子1.1s
- * <p>
+ *
  * ETF对冲策略人工维护项目：
  * 1. 可融券标的券
- * <p>
+ *
  * ETF对冲策略自动维护项目：
  * 1. 更新分红，分拆数据
  * 2. 测试行情服务器可用性
- * <p>
+ *
  * 策略2：
  * 自持H股ETF（510900）、恒生H股（160717）, 恒生ETF(159920)，对t+0 ETF 进行日内统计配对
  * 可行,主要难点：1自持股比重分配以便达到最大利用率
- * <p>
+ *
  * todo: select max(fin_date) from report_pub_dates where fin_year = 2012 and fin_season = 3
  * todo: select max(fin_date) from report_pub_dates where fin_year = 2012 and fin_season = 2
  * todo: find out what's wrong with the above
- * <p>
- * <p>
+ *
+ *
  * !! todo missing fin_data that can't be obtained from any source. please try harder!!
  * 000939 凯迪电力 2005 1 balance_sheet_nf missing
  * 000939 凯迪电力 2007 1 balance_sheet_nf missing
  * 000939 凯迪电力 2005 1 cash_flow_nf missing
  * todo missing report publication dates that can't be obtained from any source. please try harder!!
  * Missing: 000620 新华联 2008 3
- * <p>
+ *
  * Missing: 000001 平安银行 1988 2
  * Missing: 000001 平安银行 1989 2
  * Missing: 000001 平安银行 1990 2
@@ -214,14 +218,14 @@ public class Plan {
  * Missing: 900901 仪电Ｂ股 1991 2
  * Missing: 900901 仪电Ｂ股 1992 2
  * Missing: 900922 三毛Ｂ股 1998 2
- * <p>
+ *
  * !! todo missing fin_data that can't be obtained from any source. please try harder!!
  * 000939 凯迪电力 2005 1 balance_sheet_nf missing
  * 000939 凯迪电力 2007 1 balance_sheet_nf missing
  * 000939 凯迪电力 2005 1 cash_flow_nf missing
  * todo missing report publication dates that can't be obtained from any source. please try harder!!
  * Missing: 000620 新华联 2008 3
- * <p>
+ *
  * Missing: 000001 平安银行 1988 2
  * Missing: 000001 平安银行 1989 2
  * Missing: 000001 平安银行 1990 2

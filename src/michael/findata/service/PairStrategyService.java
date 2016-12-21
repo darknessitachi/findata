@@ -35,6 +35,9 @@ import java.sql.SQLSyntaxErrorException;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.function.Function;
+
+import static michael.findata.algoquant.strategy.pair.stocks.ShortInHKPairStrategy.paramMap;
+
 @Service
 public class PairStrategyService {
 
@@ -285,12 +288,16 @@ public class PairStrategyService {
 			data.forEach((code, datum) -> {
 				if (datum.isTraded() && datum.getClose() > 0) {
 					double adj;
+//					System.out.printf("%s\t%s\t", datum.getDateTime(), code);
 					if (code.length() == 6) {
+//						System.out.printf("%f\t\t", datum.getClose()/1000d);
 						adj = pa.adjust(code, startDate, curDate, datum.getClose())/1000d;
 					} else {
 						// H share
+//						System.out.printf("%f\t%f\t", datum.getClose()*forexHKD/1000d, datum.getClose()/1000d);
 						adj = pa.adjust(code, startDate, curDate, datum.getClose()*forexHKD/1000d);
 					}
+					System.out.printf("%f\t%f\n", adj, forexHKD);
 //					if (adj <= 0.0) {
 //						System.out.println("Strange");
 //					}
@@ -439,9 +446,9 @@ public class PairStrategyService {
 		Date trainingEndEnd = LocalDate.parse(latestExecutionStart).minusDays(1).toDate();
 		List<PairStats> pairStatsList = pairStatsRepo.findByTrainingEndBetween(trainingEndStart, trainingEndEnd);
 		pairStatsList.forEach(pairStats -> {
-			shortInHkPairStrategyRepo.save(new ShortInHKPairStrategy(pairStats));
-			shortInHkPairStrategyRepo.save(new ShortInHKPairStrategy(pairStats));
-			shortInHkPairStrategyRepo.save(new ShortInHKPairStrategy(pairStats));
+			shortInHkPairStrategyRepo.save(new ShortInHKPairStrategy(pairStats, paramMap.get(pairStats.getCodeToShort()+"->"+pairStats.getCodeToLong()+" 1")));
+			shortInHkPairStrategyRepo.save(new ShortInHKPairStrategy(pairStats, paramMap.get(pairStats.getCodeToShort()+"->"+pairStats.getCodeToLong()+" 2")));
+			shortInHkPairStrategyRepo.save(new ShortInHKPairStrategy(pairStats, paramMap.get(pairStats.getCodeToShort()+"->"+pairStats.getCodeToLong()+" 3")));
 		});
 	}
 }

@@ -37,6 +37,7 @@ public class MetaBroker implements Broker, OrderListener, DepthListener, DepthPr
 		brokerMap.put("IB", iBrokers);
 		brokerMap.put("Huatai", tdxBroker);
 		brokerMap.put("Zhongxin", zhongxinBrokers);
+		iBrokers.setDepthListener(this);
 	}
 
 	@Override

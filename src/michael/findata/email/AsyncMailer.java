@@ -18,9 +18,9 @@ public class AsyncMailer {
 
 	private int port = 25;
 	private String hostName = "smtp.sina.com";
-	private String userName = "yjtang8122850";
-	private String password = "108129";
-	private String from = "yjtang8122850@sina.com";
+	private String userName = "8122850yjtang";
+	private String password = "108129yao";
+	private String from = "8122850yjtang@sina.com";
 	private boolean sslOnConnect = false;
 	private Disruptor<EmailEvent> disruptor;
 //	private ExecutorService executor;
@@ -71,11 +71,9 @@ public class AsyncMailer {
 		LOGGER.info("Email queued.");
 	}
 
-//	private void sendEMail (String subject, String message) {
-//		sendEMail(subject, message, "8122850@qq.com", "michael.tang@anz.com");
-//	}
-
 	private void sendEMail(String subject, String message, String ... to) {
+		userName = "8122850yjtang";
+		from = "8122850yjtang@sina.com";
 		new Thread() {
 			@Override
 			public void run() {
@@ -87,21 +85,22 @@ public class AsyncMailer {
 				try {
 					email.setFrom(from);
 					email.setSubject(subject);
-//					email.setMsg(message);
 					email.setContent(message, "text/html; charset=utf-8");
 					for (String t : to) {
 						email.addTo(t);
 					}
+					LOGGER.info("Sending email: hostName={} / port={} / userName={} / password={} / sslOnConnect={} / from={} / subject={}", hostName, port, userName, password, sslOnConnect, from, subject);
 					email.send();
+					LOGGER.info("Email titled: {} sent.", subject);
 				} catch (EmailException e) {
 					LOGGER.warn("Exception {} when sending email. Subject: {}\nMessage: {}", e.getMessage(), subject, message);
 					e.printStackTrace();
 				}
 			}
 		}.start();
-		LOGGER.info("Email sent.");
+		LOGGER.info("Email job fired.");
 		try {
-			Thread.sleep(2000);
+			Thread.sleep(47000); // delay for 47 seconds so that we don't trigger email server jam protection
 		} catch (InterruptedException e) {
 			LOGGER.warn("Exception {} when sleeping.", e.getMessage());
 			e.printStackTrace();

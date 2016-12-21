@@ -66,8 +66,9 @@ public class TDXClient {
 			"182.131.7.145:7709",    // 华西E5
 			"182.131.7.146:7709",    // 华西E6
 			"182.131.7.147:7709",    // 华西E7
-			"182.131.7.148:7709",    // 华西E8
-			"182.131.3.245:7709",    // 上证云行情J330 - 9ms)
+//			"182.131.7.148:7709",    // 华西E8
+			"182.131.3.245:7709",    // 上证云行情J439 - 9ms
+			"218.6.170.55:7709",     // 中信证券云行情成都电信 上证云行情J052
 			"221.237.158.106:7709",    // 西南证券金点子成都电信主站1
 			"221.237.158.107:7709",    // 西南证券金点子成都电信主站2
 			"221.237.158.108:7709",    // 西南证券金点子成都电信主站3
@@ -196,8 +197,8 @@ public class TDXClient {
 			success = hqLib[index].TdxHq_GetSecurityQuotes(market, codes, resultCount, result, errInfo);
 //			System.out.println("Time taken(ms) for this round: "+(System.currentTimeMillis() - start));
 			if (!success) {
-				System.out.println(ip[index]+":"+port[index]+" is not working.");
-				System.out.println(Native.toString(errInfo, "GBK"));
+				LOGGER.warn(ip[index]+":"+port[index]+" is not working.");
+				LOGGER.warn(Native.toString(errInfo, "GBK"));
 				fault[index] = true;
 			} else {
 //				System.out.println(count+"---------------");
@@ -408,8 +409,8 @@ public class TDXClient {
 		for (int i = codes.length - 1; i > -1; i --) {
 			success = hqLib[i%hqLib.length].TdxHq_GetXDXRInfo(market[i], codes[i], result, errInfo);
 			if (!success) {
-				System.out.println(ip[i%hqLib.length]+":"+port[i%hqLib.length]+" is not working.");
-				System.out.println(Native.toString(errInfo, "GBK"));
+				LOGGER.warn(ip[i%hqLib.length]+":"+port[i%hqLib.length]+" is not working.");
+				LOGGER.warn(Native.toString(errInfo, "GBK"));
 				return null;
 			} else {
 				String [] lines = Native.toString(result, "GBK").split("\n");

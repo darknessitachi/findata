@@ -26,7 +26,7 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 	private static int CNH_HKD_TICKER_ID = 1001;
 	public static double CNH_HKD_ask = -1;
 	public static double CNH_HKD_bid = -1;
-	public static double CNH_HKD_last = 1.12325;
+	public static double CNH_HKD_last = 1.1180;
 
 	private Map<Long, Order> orderMap;
 	private Map<Long, OrderListener> orderListenerMap;
@@ -269,6 +269,9 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 	@Override
 	public void tickPrice(int tickerId, int field, double price, int canAutoExecute) {
 //		LOGGER.info("Tick Price. Ticker Id: {}, Field: {}, Price: {}, CanAutoExecute: {}", tickerId, field, price, canAutoExecute);
+		if (price <= 0) {
+			return;
+		}
 		if (tickerId == CNH_HKD_TICKER_ID) {
 			switch (field) {
 				case 1:
@@ -310,11 +313,16 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 			default:
 				return;
 		}
+		if (dd.bidPrc[0] <= 0f || dd.askPrc[0] <= 0f) {
+			return;
+		}
 		Depth d = new Depth(dd.lastPrc, subscribed.get(tickerId), true, dd.bidPrc[0], dd.askPrc[0]);
 		d.setVols(dd.bidVol[0], dd.askVol[0]);
 		LOGGER.info("Depth updated: {} ", d);
 		if (depthListener != null) {
 			depthListener.depthUpdated(d);
+		} else {
+			LOGGER.info("depthListener is null!!");
 		}
 	}
 
@@ -326,7 +334,7 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 	 */
 	@Override
 	public void tickSize(int tickerId, int field, int size) {
-		LOGGER.info("Tick Size. Ticker Id:" + tickerId + ", Field: " + field + ", Size: " + size);
+//		LOGGER.info("Tick Size. Ticker Id:" + tickerId + ", Field: " + field + ", Size: " + size);
 		if (tickerId == CNH_HKD_TICKER_ID) {
 			return;
 		}

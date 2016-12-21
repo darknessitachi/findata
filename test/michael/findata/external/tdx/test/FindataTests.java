@@ -156,4 +156,10 @@ public class FindataTests extends AbstractTestNGSpringContextTests {
 
 		cc.start();
 	}
+
+	public void test_TDXClientConfig () {
+		TDXClient client = new TDXClient(TDXClient.TDXClientConfigs);
+		client.connect();
+		client.disconnect();
+	}
 }

@@ -28,17 +28,14 @@ public class TestStrategy implements Strategy, DepthHandler, OrderListener {
 	private StockRepository stockRepo;
 	@Override
 	public void onStop() {
-
 	}
 
 	@Override
 	public void setRepository(Repository repository) {
-
 	}
 
 	@Override
 	public void trySave() {
-
 	}
 
 	@Override

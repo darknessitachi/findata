@@ -13,6 +13,7 @@ import michael.findata.email.AsyncMailer;
 import michael.findata.model.Dividend;
 import michael.findata.model.Stock;
 import michael.findata.spring.data.repository.GridStrategyRepository;
+import michael.findata.util.DBUtil;
 import org.apache.commons.math3.util.FastMath;
 import org.hibernate.annotations.GenericGenerator;
 import org.joda.time.DateTime;
@@ -147,11 +148,11 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 	private Integer reserveLimitUnderValuation;
 
 	@Basic
-	@Column(name = "sell_side")
+	@Column(name = "sell_side_broker", columnDefinition = "CHAR(10)")
 	private String sellSideBrokerTag;
 
 	@Basic
-	@Column(name = "buy_side")
+	@Column(name = "buy_side_broker", columnDefinition = "CHAR(10)")
 	private String buySideBrokerTag;
 
 	// set this field to have actions saved
@@ -206,16 +207,24 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 
 		LOGGER.debug("\t{}\t: Processing depth: {}", this, depth);
 		if (getCurrentPeak() == null) {
-			setCurrentPeak(depth.mid());
+			setCurrentPeak(depth.bid(1));
 		}
 		if (getCurrentBottom() == null) {
-			if(depth.mid() == 0f) {
-				LOGGER.warn("\t{}\t: [1]Changing currentButton from {} to {}", this, currentBottom, depth.mid());
+			if(depth.ask(1) <= 0f) {
+				LOGGER.warn("\t{}\t: [1] Invalid bottom price: trying to chang currentButton from {} to {}", this, currentBottom, depth.ask(1));
+			} else {
+				setCurrentBottom(depth.ask(1));
 			}
-			setCurrentBottom(depth.mid());
 		}
 		if (getCurrentBaseline() == null) {
-			setCurrentBaseline(depth.mid());
+			LOGGER.warn("\t{}\t: There is no current baseline price. This is very dangerous!!!", this);
+			if (depth instanceof michael.findata.algoquant.execution.datatype.depth.Depth) {
+				setCurrentBaseline(((michael.findata.algoquant.execution.datatype.depth.Depth) depth).spotPrice());
+				LOGGER.warn("\t{}\t: Use last spot price {} as current baseline price.", this, currentBaseline);
+			} else {
+				setCurrentBaseline(depth.mid());
+				LOGGER.warn("\t{}\t: Use depth.mid {} as current baseline price.", this, currentBaseline);
+			}
 		}
 		if (getReferenceDate() == null) {
 			setReferenceDate(new Timestamp(now.withTimeAtStartOfDay().getMillis()));
@@ -230,13 +239,20 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 			setPositionSellable(0);
 		}
 		if (depth.ask(1) < getCurrentBottom()) {
-			if(depth.ask(1) == 0f) {
-				LOGGER.warn("\t{}\t: [2]Changing currentButton from {} to {}", this, currentBottom, depth.ask(1));
+			if(depth.ask(1) <= 0f) {
+				LOGGER.warn("\t{}\t: [2] Invalid bottom price: trying to change currentButton from {} to {}", this, currentBottom, depth.ask(1));
+			} else {
+				setCurrentBottom(depth.ask(1));
+				LOGGER.info("\t{}\t: Saving to DB after bottom updated.", this);
+				trySave();
+				emailNotification("New Bottom");
 			}
-			setCurrentBottom(depth.ask(1));
 		}
 		if (depth.bid(1) > getCurrentPeak()) {
 			setCurrentPeak(depth.bid(1));
+			LOGGER.info("\t{}\t: Saving to DB after peak updated.", this);
+			trySave();
+			emailNotification("New Peak");
 		}
 		if (depth.ask(1)/getCurrentBottom() < 1+getPeakBottomThreshold()) {
 			// too close to bottom. We won't consider buying, no matter what -- there could be possible new bottom incoming
@@ -249,13 +265,31 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 
 		HexinOrder.HexinType type;
 		List<HexinOrder> orders = new ArrayList<>(1);
-		double baselineAmount = tradeAmountBaseline(depth.mid());
-		double volume, actualAmount;
-		double effectivePrice;
-		if (FastMath.abs(baselineAmount) < buySellAmountThreshold) {
-			// drop/climb not enough for buy/sell
-			return;
+
+		// If you use depth.mid, depth like the following will cause disaster!!
+
+		double baselineAmount;
+		// Can we sell?
+		baselineAmount = tradeAmountBaseline(depth.bid(1));
+		if (baselineAmount > buySellAmountThreshold) {
+			// climb not enough for sell
+			// can we buy?
+			baselineAmount = tradeAmountBaseline(depth.ask(1));
+			if (baselineAmount < -buySellAmountThreshold) {
+				// drop not enough for buy
+				// We can neither buy or sell
+				return;
+			} else {
+				// we can buy
+				LOGGER.info("\t{}\t: Calculated baselineAmount {} with depth.ask(1) {}. Looks like we can can do a buy.", this, baselineAmount, depth.ask(1));
+			}
+		} else {
+			// we can sell
+			LOGGER.info("\t{}\t: Calculated baselineAmount {} with depth.bid(1) {}. Looks like we can can do a sell.", this, baselineAmount, depth.bid(1));
 		}
+		double volume;
+		double effectivePrice;
+
 		String brokerTag;
 		if (baselineAmount > 0) {
 			// sell
@@ -313,8 +347,8 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 		LOGGER.info("\t{}\t: At {}, submitting order {}", this, now, order);
 		broker.sendOrder(orders);
 		LOGGER.info("\t{}\t: CurrentBaseline/CurrentBottom/CurrentPeak before adjustment: {}/{}/{} ->", this, getCurrentBaseline(), getCurrentBottom(), getCurrentPeak());
-		if(effectivePrice == 0f) {
-			LOGGER.warn("\t{}\t: [3]Changing currentButton from {} to {}", this, currentBottom, effectivePrice);
+		if(effectivePrice <= 0f) {
+			LOGGER.warn("\t{}\t: [3] Invalid bottom price: trying to change currentButton from {} to {}", this, currentBottom, effectivePrice);
 		}
 		setCurrentBottom(effectivePrice);
 		setCurrentPeak(effectivePrice);
@@ -342,11 +376,12 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 		LOGGER.debug("\t{}\t: End. ------------------------------------------------------------------", this);
 		LOGGER.info("\t{}\t: Saving to DB after buy/sell.", this);
 		trySave(); // only save when there is an action.
-		emailNotification();
+		String emailTitle = String.format(type == SIMPLE_BUY ? "Buy Order %.0f@%.3f" : "Sell Order %.0f@%.3f", volume, effectivePrice);
+		emailNotification(emailTitle);
 	}
 
-	public void emailNotification() {
-		AsyncMailer.instance.email(String.format("Status Report: %s", this), notification());
+	public void emailNotification(String titlePrefix) {
+		AsyncMailer.instance.email(String.format("%s: %s", titlePrefix, this), notification());
 	}
 
 	@Override
@@ -379,9 +414,9 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 			setPositionTotal((int)(getPositionTotal() * (1+dividend.getBonus())));
 			setPositionSellable((int)(getPositionSellable() * (1+dividend.getBonus())));
 			LOGGER.info("\t{}\t: CurrentBaseline/CurrentBottom/CurrentPeak after adjustment: {}/{}/{}", this, getCurrentBaseline(), getCurrentBottom(), getCurrentPeak());
+			LOGGER.info("\t{}\t: Saving to DB after dealing with dividends.", this);
+			trySave(); // save after dealing with dividends, max once per day.
 		}
-		LOGGER.info("\t{}\t: Saving to DB after dealing with dividends.", this);
-		trySave(); // save after dealing with dividends, max once per day.
 	}
 
 	// Date updated, meaning a new day has arrived
@@ -425,11 +460,18 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 		// Save to DB
 		LOGGER.info("\t{}\t: Saving to DB and stop.", this);
 		trySave();
+		emailNotification("Trading Ended");
 	}
 
 	public void trySave() {
 		if (gridRepo != null) {
-			gridRepo.save(this);
+			try {
+				gridRepo.save(this);
+			} catch (Exception ex) {
+				LOGGER.warn("\t{}\t: Failed to save -- exception {} caught", this, ex.getClass());
+				ex.printStackTrace();
+				DBUtil.dealWithDBAccessError(ex);
+			}
 		} else {
 			LOGGER.warn("\t{}\t: Failed to save -- repository is null.", this);
 		}

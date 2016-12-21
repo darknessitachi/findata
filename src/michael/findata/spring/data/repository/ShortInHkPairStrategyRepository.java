@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface ShortInHkPairStrategyRepository extends PagingAndSortingRepository<ShortInHKPairStrategy, Integer> {
 	List<ShortInHKPairStrategy> findByOpenableDate (Date openableOn);
+	List<ShortInHKPairStrategy> findByStatusIn (ShortInHKPairStrategy.Status ... status);
 }
