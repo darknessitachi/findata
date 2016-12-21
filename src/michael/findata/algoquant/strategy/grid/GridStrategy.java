@@ -270,20 +270,22 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 		// Can we sell?
 		baselineAmount = tradeAmountBaseline(depth.bid(1));
 		if (baselineAmount > buySellAmountThreshold) {
+			// we can sell
+			LOGGER.info("\t{}\t: Calculated baselineAmount {} with depth.bid(1) {}. Looks like we can do a sell.", this, baselineAmount, depth.bid(1));
+		} else {
+			LOGGER.debug("\t{}\t: Calculated baselineAmount {} with depth.bid(1) {}. Not enough to do a sell.", this, baselineAmount, depth.bid(1));
 			// climb not enough for sell
 			// can we buy?
 			baselineAmount = tradeAmountBaseline(depth.ask(1));
 			if (baselineAmount < -buySellAmountThreshold) {
+				LOGGER.debug("\t{}\t: Calculated baselineAmount {} with depth.ask(1) {}. Not enough do a buy.", this, baselineAmount, depth.ask(1));
 				// drop not enough for buy
 				// We can neither buy or sell
 				return;
 			} else {
 				// we can buy
-				LOGGER.info("\t{}\t: Calculated baselineAmount {} with depth.ask(1) {}. Looks like we can can do a buy.", this, baselineAmount, depth.ask(1));
+				LOGGER.info("\t{}\t: Calculated baselineAmount {} with depth.ask(1) {}. Looks like we can do a buy.", this, baselineAmount, depth.ask(1));
 			}
-		} else {
-			// we can sell
-			LOGGER.info("\t{}\t: Calculated baselineAmount {} with depth.bid(1) {}. Looks like we can can do a sell.", this, baselineAmount, depth.bid(1));
 		}
 
 		double volume;
