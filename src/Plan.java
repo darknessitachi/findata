@@ -1,6 +1,9 @@
+import com.numericalmethod.algoquant.execution.datatype.order.Order;
+import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.algoquant.strategy.TestStrategy;
 import michael.findata.commandcenter.CommandCenter;
 import michael.findata.external.tdx.TDXClient;
+import michael.findata.model.Stock;
 import michael.findata.spring.data.repository.StockRepository;
 import michael.findata.util.DBUtil;
 import org.joda.time.LocalTime;
@@ -10,31 +13,20 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_BUY;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_SELL;
 
 public class Plan {
 	public static void main (String args []) throws IOException {
-
-		DBUtil.tryToStopDB();
-
-//		CommandCenter cc = (CommandCenter) context.getBean("commandCenter");
-//		cc.setShSzHqClient(new TDXClient(TDXClient.TDXClientConfigs));
+//		Map<Long, Order> orderMap = new HashMap<>();
 //
-//		cc.addStrategy(new TestStrategy(stockRepo));
-//
-//		// Set up command center
-//		int hour = 21;
-//		int minute = 40;
-//		cc.setFirstHalfEndCN(new LocalTime(hour, minute, 10));
-//		cc.setSecondHalfStartCN(new LocalTime(hour, minute, 25));
-//		cc.setSecondHalfEndCN(new LocalTime(hour, minute, 59));
-//		cc.setFirstHalfEndHK(new LocalTime(hour, minute, 10));
-//		cc.setSecondHalfStartHK(new LocalTime(hour, minute, 30));
-//		cc.setSecondHalfEndHK(new LocalTime(hour, minute, 55));
-//
-//		cc.start();
+//		Order a = new HexinOrder(new Stock("600585"), 12000, 12d, SIMPLE_SELL);
+//		orderMap.put(a.id(), a);
+//		System.out.println(orderMap.containsValue(a));
+//		DBUtil.tryToStopDB();
 	}
 }
 
@@ -71,6 +63,8 @@ public class Plan {
  * Step 2: update H share historical Data up to today
  * Step 3: Calculate stats and Create strategy for tomorrow
  *
+ * 0. localbrokerproxy line 115 hxOrder.ack(results[i]); if index out of bound occurs here, whole command center will pause, handle exception gracefully,
+ * try to separate those orders which have issue from those don't
  * 0. ShortInHK to handle shorting during the last three minutes of HK daily session, when the most profitable moments usually happens
  * 0. ShortInHK to handle short in A too.
  * 0. 2333 as an example, IB historical data has been adjusted with split but not dividend, how to handle?

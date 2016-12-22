@@ -201,15 +201,14 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 			if (order instanceof HexinOrder) {
 				if (orderMap.containsKey(order.id())) {
 					m_s.placeOrder((int)order.id(), contractStock, OrderSamples.LimitOrder(buyOrSell, order.quantity(), order.price()));
-//					m_s.placeOrder((int)order.id(), contractStock, OrderSamples.MarketOrder(buyOrSell, order.quantity()));// TODO: 11/16/2016 change it back!!!
 					LOGGER.info("Updated order [{}].", order);
 				} else {
-					m_s.placeOrder((int) validId, contractStock, OrderSamples.LimitOrder(buyOrSell, order.quantity(), order.price()));
-//					m_s.placeOrder((int) validId, contractStock, OrderSamples.MarketOrder(buyOrSell, order.quantity()));// TODO: 11/16/2016 change it back!!!
-					((HexinOrder) order).id(validId);
-					LOGGER.info("Placed order [{}].", order);
+					int vId = (int) validId;
 					validId ++;
-					orderMap.put(order.id(), order);
+					m_s.placeOrder(vId, contractStock, OrderSamples.LimitOrder(buyOrSell, order.quantity(), order.price()));
+					order.id(vId);
+					orderMap.put((long)vId, order);
+					LOGGER.info("Placed order [{}].", order);
 				}
 			}
 		}
@@ -225,9 +224,7 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 
 	@Override
 	public void setOrderListener (Order order, OrderListener listener) {
-		if (orderMap.containsValue(order)) {
-			orderListenerMap.put(order.id(), listener);
-		}
+		orderListenerMap.put(order.id(), listener);
 	}
 
 	@Override
@@ -672,6 +669,12 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 
 	@Override
 	public void softDollarTiers(int reqId, SoftDollarTier[] tiers) {
+	}
+
+	public void printListeners() {
+		orderListenerMap.entrySet().forEach(entry -> {
+			System.out.printf("IB: %s -> %s\n", entry.getKey(), entry.getValue());
+		});
 	}
 }
 

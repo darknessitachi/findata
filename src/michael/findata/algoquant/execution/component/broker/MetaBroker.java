@@ -2,12 +2,12 @@ package michael.findata.algoquant.execution.component.broker;
 
 import com.numericalmethod.algoquant.execution.datatype.depth.Depth;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
-import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
 import michael.findata.algoquant.execution.component.depthprovider.DepthProvider;
 import michael.findata.algoquant.execution.listener.DepthListener;
 import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
 import org.slf4j.Logger;
+import scala.util.regexp.Base;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,26 +18,26 @@ import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
 
 public class MetaBroker implements Broker, OrderListener, DepthListener, DepthProvider{
 	private static final Logger LOGGER = getClassLogger();
-	private LocalTdxBrokerProxy tdxBroker;
-	private LocalInteractiveBrokers iBrokers;
-	private LocalNativeTdxBroker zhongxinBrokers;
-	private Map<Long, Order> orderMap;
+	private LocalTdxBrokerProxy defaultABroker;
+	private LocalInteractiveBrokers defaultHBroker;
+//	private LocalNativeTdxBroker zhongxinBrokers;
+//	private Map<Long, Order> orderMap;
 	private Map<Long, OrderListener> orderListenerMap;
 	private Map<String, Broker> brokerMap;
 	private DepthListener depthListener;
 	public static final String ORDER_TAG_BROKER = "Broker";
 
 	public MetaBroker (Stock ... subscriptions) {
-		tdxBroker = new LocalTdxBrokerProxy(10001);
-		iBrokers = new LocalInteractiveBrokers(4001, subscriptions);
-		zhongxinBrokers = new LocalNativeTdxBroker("180.153.18.180", (short)7708, (short)2, "8009145070", "8009145070", "495179", "495179");
-		orderMap = new HashMap<>();
+		defaultABroker = new LocalTdxBrokerProxy(10001);
+		defaultHBroker = new LocalInteractiveBrokers(4001, subscriptions);
+		LocalNativeTdxBroker zhongxinBroker = new LocalNativeTdxBroker("180.153.18.180", (short)7708, (short)2, "8009145070", "8009145070", "495179", "495179");
+//		orderMap = new HashMap<>();
 		orderListenerMap = new HashMap<>();
 		brokerMap = new HashMap<>();
-		brokerMap.put("IB", iBrokers);
-		brokerMap.put("Huatai", tdxBroker);
-		brokerMap.put("Zhongxin", zhongxinBrokers);
-		iBrokers.setDepthListener(this);
+		brokerMap.put("IB", defaultHBroker);
+		brokerMap.put("Huatai", defaultABroker);
+		brokerMap.put("Zhongxin", zhongxinBroker);
+		defaultHBroker.setDepthListener(this);
 	}
 
 	@Override
@@ -47,17 +47,22 @@ public class MetaBroker implements Broker, OrderListener, DepthListener, DepthPr
 		Map<String, Collection<Order>> splittedOrders = new HashMap<>();
 		splitOrders(orders, ordersAShare, ordersHKShare, splittedOrders);
 		for(Map.Entry<String, Collection<Order>> entry : splittedOrders.entrySet()) {
-			brokerMap.get(entry.getKey()).sendOrder(entry.getValue());
+			Broker broker = brokerMap.get(entry.getKey());
+			Collection<Order> odrs = entry.getValue();
+			broker.sendOrder(odrs);
+			odrs.forEach(order -> broker.setOrderListener(order, MetaBroker.this));
 		}
 		if (!ordersAShare.isEmpty()) {
-			tdxBroker.sendOrder(ordersAShare);
+			defaultABroker.sendOrder(ordersAShare);
+			ordersAShare.forEach(order -> defaultABroker.setOrderListener(order, MetaBroker.this));
 		}
 		if (!ordersHKShare.isEmpty()) {
-			iBrokers.sendOrder(ordersHKShare);
-			for (Order o : orders) {
-				orderMap.put(o.id(), o);
-			}
+			defaultHBroker.sendOrder(ordersHKShare);
+			ordersHKShare.forEach(order -> defaultHBroker.setOrderListener(order, MetaBroker.this));
 		}
+//		for (Order o : orders) {
+//			orderMap.put(o.id(), o);
+//		}
 	}
 
 	@Override
@@ -70,10 +75,10 @@ public class MetaBroker implements Broker, OrderListener, DepthListener, DepthPr
 			brokerMap.get(entry.getKey()).cancelOrder(entry.getValue());
 		}
 		if (!ordersAShare.isEmpty()) {
-			tdxBroker.cancelOrder(ordersAShare);
+			defaultABroker.cancelOrder(ordersAShare);
 		}
 		if (!ordersHKShare.isEmpty()) {
-			iBrokers.cancelOrder(ordersHKShare);
+			defaultHBroker.cancelOrder(ordersHKShare);
 		}
 	}
 
@@ -117,16 +122,19 @@ public class MetaBroker implements Broker, OrderListener, DepthListener, DepthPr
 	}
 
 	public void stop () {
-		iBrokers.stop();
-		tdxBroker.stop();
+		brokerMap.values().forEach(Broker::stop);
 	}
 
 	@Override
 	public void setOrderListener(Order o, OrderListener listener) {
-		if (orderMap.containsValue(o)) {
-			orderListenerMap.put(o.id(), listener);
-			iBrokers.setOrderListener(o, this);
-		}
+		orderListenerMap.put(o.id(), listener);
+	}
+
+	public void printListeners() {
+		orderListenerMap.entrySet().forEach(entry -> {
+			System.out.printf("Meta broker: %s -> %s\n", entry.getKey(), entry.getValue());
+		});
+		defaultHBroker.printListeners();
 	}
 
 	@Override

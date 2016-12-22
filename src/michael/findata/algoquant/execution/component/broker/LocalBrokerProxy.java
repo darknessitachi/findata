@@ -3,6 +3,7 @@ package michael.findata.algoquant.execution.component.broker;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.model.Stock;
+import org.slf4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,7 +15,10 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+
 abstract class LocalBrokerProxy implements Broker {
+	private static Logger LOGGER = getClassLogger();
 	private final DecimalFormat chinaStockPriceFormat = new DecimalFormat("#.###");
 	private final DecimalFormat chinaStockQuantityFormat = new DecimalFormat("#");
 
@@ -22,20 +26,23 @@ abstract class LocalBrokerProxy implements Broker {
 		if (ordrs.size() == 0) {
 			return;
 		}
-		ArrayList<Order> orders;
-		if (ordrs instanceof ArrayList) {
-			orders = (ArrayList<Order>) ordrs;
-		} else {
-			orders = new ArrayList<>();
+		ArrayList<Order> orders = new ArrayList<>();
+		for (Order o : ordrs) {
+			if (o.id() == -1) {
+				LOGGER.warn("Order {} is very likely not submitted yet. So we shouldn't cancel it.", o);
+			} else {
+				orders.add(o);
+			}
+		}
+		if (orders.size() == 0) {
+			return;
 		}
 		Socket s;
 		try {
 			s = new Socket(InetAddress.getByName("127.0.0.1"), port);
 			OutputStream ops = s.getOutputStream();
 			for (Order o : orders) {
-				ops.write("Cancel|".getBytes());
-				ops.write(Long.toString(o.id()).getBytes());
-				ops.write('\n');
+				ops.write(("Cancel|"+o.id()+'\n').getBytes());
 			}
 			ops.flush();
 			BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
@@ -94,13 +101,14 @@ abstract class LocalBrokerProxy implements Broker {
 			String line;
 			StringBuilder sb1 = new StringBuilder();
 			while (null != (line = br.readLine())) {
-				System.out.println(line);
+				LOGGER.info(line);
 				sb1.append(line);
 			}
 			ops.close();
 			s.close();
 			String [] results = sb1.toString().split("\\|");
 			HexinOrder hxOrder;
+
 			for (int i = orders.size() - 1; i > -1; i--) {
 				if (orders.get(i) instanceof HexinOrder) {
 					hxOrder = ((HexinOrder) orders.get(i));

@@ -238,6 +238,11 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 	@Column(name = "res_close")
 	private Double residualClose; // done
 
+	// This is for logging purpose only, don't use it in stategy execution
+	@Basic
+	@Column(name = "res_latest")
+	private Double residualLatest;
+
 	@ManyToOne
 	@JoinColumn(name = "pair_stats_id", nullable = false, insertable = true, updatable = false)
 	private PairStats stats;
@@ -521,7 +526,8 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 			LOGGER.debug("\t{}\t: Investigation: depthToLong.bestBid(longVolumeHeld*depthToLong.bid(1))={}", this, depthToLong.bestBid(longVolumeHeld*depthToLong.bid(1)));
 			return null;
 		}
-		return effectivePriceForShortSide * slope() / effectivePriceForLongSide - 1;
+		residualLatest = effectivePriceForShortSide * slope() / effectivePriceForLongSide - 1;
+		return residualLatest;
 	}
 
 	@Override
@@ -641,58 +647,65 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 					LOGGER.warn("\t{}\t: No short leg opening order while status is OPENING, returning...", this);
 					return;
 				}
-				if (openingOrderShort.state().equals(Order.OrderState.UNFILLED)) {
-					LOGGER.debug("\t{}\t: Pair opening, short leg not filled at all: {}", this, openingOrderShort);
-					if (residual < openThreshold) {
-						LOGGER.info("\t{}\t: Residual vs OpenThreshold: {} vs {} - drops below threshold, trying to cancel the short leg since 0% filled.", this, residual, openThreshold);
-						// cancel opening
-						cancelUnfilledOpening(broker);
-					} else {
-						LOGGER.debug("\t{}\t: Residual vs OpenThreshold: {} vs {} - above open threshold, keep opening...", this, residual, openThreshold);
-						if (openingOrderShort.price() > actualPriceForShortSide) {
-							LOGGER.info("\t{}\t: Best short price dropped, adjusting opening short order price from {} -> {}", this, openingOrderShort.price(), actualPriceForShortSide);
-							// If current top level price is different from original short order price,
-							// Adjust it and updated the short order price
-							List<HexinOrder> orders = new ArrayList<>(1);
-							orders.add(openingOrderShort);
-							openingOrderShort.price(actualPriceForShortSide);
-							broker.sendOrder(orders);
+				switch (openingOrderShort.state()) {
+					case UNFILLED:
+						LOGGER.debug("\t{}\t: Pair opening, short leg not filled at all: {}", this, openingOrderShort);
+						if (residual < openThreshold) {
+							LOGGER.info("\t{}\t: Residual vs OpenThreshold: {} vs {} - drops below threshold, trying to cancel the short leg since 0% filled.", this, residual, openThreshold);
+							// cancel opening
+							cancelUnfilledOpening(broker);
 						} else {
-							LOGGER.debug("\t{}\t: Short price still ok. {} <= {}. Do nothing.", this, openingOrderShort.price(), actualPriceForShortSide);
+							LOGGER.debug("\t{}\t: Residual vs OpenThreshold: {} vs {} - above open threshold, keep opening...", this, residual, openThreshold);
+							if (openingOrderShort.price() > actualPriceForShortSide) {
+								LOGGER.info("\t{}\t: Best short price dropped, adjusting opening short order price from {} -> {}", this, openingOrderShort.price(), actualPriceForShortSide);
+								// If current top level price is different from original short order price,
+								// Adjust it and updated the short order price
+								List<HexinOrder> orders = new ArrayList<>(1);
+								orders.add(openingOrderShort);
+								openingOrderShort.price(actualPriceForShortSide);
+								broker.sendOrder(orders);
+							} else {
+								LOGGER.debug("\t{}\t: Short price still ok. {} <= {}. Do nothing.", this, openingOrderShort.price(), actualPriceForShortSide);
+							}
+							residualOpen = residual;
+							maxResidual = residual;
+							minResidual = residual;
 						}
-						residualOpen = residual;
-						maxResidual = residual;
-						minResidual = residual;
-					}
-				} else if (openingOrderShort.state().equals(Order.OrderState.PARTIALLY_FILLED)) {
-					LOGGER.debug("\t{}\t: Pair opening, short leg has been partially filled: {}", this, openingOrderShort);
-					if (residual < openThreshold) {
-						// TODO: 11/20/2016 how to deal with partially filled opening short? When residual drop below threshold hold?
-						LOGGER.info("\t{}\t: TODO: Short leg has been partially filled, when residual [{}] dropped below threshold [{}].", this, residual, openThreshold);
-						// if filled portion is > 5000 then cancel the rest and quickly submit the long leg for immediate execution
-						// if filled portion is <= 5000 then cancel it and issue a sell order at a price so that we can cover the cost;
-					} else {
-						LOGGER.debug("\t{}\t: Residual vs OpenThreshold: {} vs {} - above open threshold, keep opening...", this, residual, openThreshold);
-						if (openingOrderShort.price() > actualPriceForShortSide) {
-							// TODO: 11/20/2016 how to deal with partially filled opening short when short side bid(1) has dropped?
-							LOGGER.info("\t{}\t: TODO: Short leg has been partially filled while actual best short price dropped below short price. Adjust opening short order price? from {} -> {}", this, openingOrderShort.price(), actualPriceForShortSide);
+						break;
+					case PARTIALLY_FILLED:
+						LOGGER.debug("\t{}\t: Pair opening, short leg has been partially filled: {}", this, openingOrderShort);
+						if (residual < openThreshold) {
+							// TODO: 11/20/2016 how to deal with partially filled opening short? When residual drop below threshold hold?
+							LOGGER.info("\t{}\t: TODO: Short leg has been partially filled, when residual [{}] dropped below threshold [{}].", this, residual, openThreshold);
+							// if filled portion is > 5000 then cancel the rest and quickly submit the long leg for immediate execution
+							// if filled portion is <= 5000 then cancel it and issue a sell order at a price so that we can cover the cost;
+						} else {
+							LOGGER.debug("\t{}\t: Residual vs OpenThreshold: {} vs {} - above open threshold, keep opening...", this, residual, openThreshold);
+							if (openingOrderShort.price() > actualPriceForShortSide) {
+								// TODO: 11/20/2016 how to deal with partially filled opening short when short side bid(1) has dropped?
+								LOGGER.info("\t{}\t: TODO: Short leg has been partially filled while actual best short price dropped below short price. Adjust opening short order price? from {} -> {}", this, openingOrderShort.price(), actualPriceForShortSide);
 
-							// If current top level price is different from original short order price,
-							// Adjust it and updated the short order price
+								// If current top level price is different from original short order price,
+								// Adjust it and updated the short order price
 //							List<HexinOrder> orders = new ArrayList<>(1);
 //							orders.add(openingOrderShort);
 //							openingOrderShort.price(depth.bid(1));
 //							broker.sendOrder(orders);
 
-						} else {
-							LOGGER.debug("\t{}\t: Short price <= shortDepth.bid (1). {} <= {}. Do nothing.", this, openingOrderShort.price(), actualPriceForShortSide);
+							} else {
+								LOGGER.debug("\t{}\t: Short price <= shortDepth.bid (1). {} <= {}. Do nothing.", this, openingOrderShort.price(), actualPriceForShortSide);
+							}
+							residualOpen = residual;
+							maxResidual = residual;
+							minResidual = residual;
 						}
-						residualOpen = residual;
-						maxResidual = residual;
-						minResidual = residual;
-					}
-				} else {
-					LOGGER.warn("\t{}\t: Pair opening, but short leg has already been fully filled: {}", this, openingOrderShort);
+						break;
+					case FILLED:
+						LOGGER.warn("\t{}\t: Pair opening, but short leg has already been fully filled: {}", this, openingOrderShort);
+						break;
+					default:
+						LOGGER.warn("\t{}\t: Pair opening, unhandled order status: {}", this, openingOrderShort);
+						break;
 				}
 				break;
 			case OPENED:
@@ -885,13 +898,14 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 	@Override
 	public String notification () {
 		return String.format(
-				"<pre><b>%s</b>\n<b>ID:</b> %d\n<b>Status:</b> %s\n<b>Short-side:</b> %s-%s\n<b>Long-side:</b> %s-%s\n<b>Slope:</b> %.5f\n<b>Open threshold:</b> %.3f\n<b>Close threshold:</b> %.3f\n<b>Date opened:</b> %s\n<b>Date closed:</b> %s\n<b>Short-side open price:</b> %.4f\n<b>Long-side open price:</b> %.4f\n<b>Short-side close price:</b> %.4f\n<b>Long-side close price:</b> %.4f\n<b>Short volume held:</b> %.0f\n<b>Long volume held:</b> %.0f\n<b>Short volume calculated:</b> %.0f\n<b>Long volume calculated:</b> %.0f\n<b>Minimum residual:</b> %.4f\n<b>Maximum Residual:</b> %.4f\n<b>Minimum residual date:</b> %s\n<b>Maximum residual date:</b> %s\n<b>Residual open:</b> %.4f\n<b>Residual close:</b> %.4f\n<b>Openable date:</b> %s\n<b>Force closure date:</b> %s\n<b>Upper limit amount:</b> %.0f\n<b>Lower limit amount:</b> %.0f</pre>",
+				"<pre><b>%s</b>\n<b>ID:</b> %d\n<b>Status:</b> %s\n<b>Short-side:</b> %s-%s\n<b>Long-side:</b> %s-%s\n<b>Slope:</b> %.5f\n<b>Residual latest:</b> %.3f\n<b>Open threshold:</b> %.3f\n<b>Close threshold:</b> %.3f\n<b>Date opened:</b> %s\n<b>Date closed:</b> %s\n<b>Short-side open price:</b> %.4f\n<b>Long-side open price:</b> %.4f\n<b>Short-side close price:</b> %.4f\n<b>Long-side close price:</b> %.4f\n<b>Short volume held:</b> %.0f\n<b>Long volume held:</b> %.0f\n<b>Short volume calculated:</b> %.0f\n<b>Long volume calculated:</b> %.0f\n<b>Minimum residual:</b> %.4f\n<b>Maximum Residual:</b> %.4f\n<b>Minimum residual date:</b> %s\n<b>Maximum residual date:</b> %s\n<b>Residual open:</b> %.4f\n<b>Residual close:</b> %.4f\n<b>Openable date:</b> %s\n<b>Force closure date:</b> %s\n<b>Upper limit amount:</b> %.0f\n<b>Lower limit amount:</b> %.0f</pre>",
 				"ShortInHKPairStrategy",
 				id,
 				status,
 				getNameToShort(), getCodeToShort(),
 				getNameToLong(), getCodeToLong(),
 				slope(),
+				residualLatest,
 				openThreshold,
 				closeThreshold,
 				dateOpened,
