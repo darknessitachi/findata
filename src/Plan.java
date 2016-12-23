@@ -63,6 +63,9 @@ public class Plan {
  * Step 2: update H share historical Data up to today
  * Step 3: Calculate stats and Create strategy for tomorrow
  *
+ * 0. use exchange rate in db to init in memory exchange rate
+ * 0. Use disruptor to implement all brokers so that they function like IB
+ * 0. use min residual as another indicator for pair trading
  * 0. localbrokerproxy line 115 hxOrder.ack(results[i]); if index out of bound occurs here, whole command center will pause, handle exception gracefully,
  * try to separate those orders which have issue from those don't
  * 0. ShortInHK to handle shorting during the last three minutes of HK daily session, when the most profitable moments usually happens
@@ -73,13 +76,7 @@ public class Plan {
  * 2. ratio calculation in pair strategy needs to use the pairopendate as the reference date
  * 0. Test A/H pair strategy with dividends, do not rush, since dividend season is far down the road
  * 0. Order's "rejected" status
- * 0. How to avoid depth like this being fired?
- * 2016-Dec-17 21:27:23.658 [Thread-3] INFO LocalInteractiveBrokers,306- Depth updated: 00966 中国太平(HK)
- * Traded: true
- * ask1 -1.0	0
- * bid1 -1.0	0
  *
- * 0. Use disruptor to implement all brokers so that they function like IB
  * 0. Use inspectpair to find shortinA opportunities and try to create a streamlined semi-auto process
  * 0. Learn from ETFnStockBasketTest
  * 0. HKstock minute / daily prices / dividend split
@@ -102,6 +99,11 @@ public class Plan {
  * [Done] Examine what's saved in place of empty data: zeros - 0
  * [Done] Test dividend update routine to make sure the removal of split column is ok.
  * [Done] Carelessly executed this: DELETE FROM stock_price_minute WHERE stock_id IN (1592), now need to make up for 潍柴动力's minute data
+ * [Done] How to avoid depth like this being fired?
+ * 2016-Dec-17 21:27:23.658 [Thread-3] INFO LocalInteractiveBrokers,306- Depth updated: 00966 中国太平(HK)
+ * Traded: true
+ * ask1 -1.0	0
+ * bid1 -1.0	0
 
  negative ratio?!!!!!!!!!!!!!
  0. grid debug log file

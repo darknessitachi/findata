@@ -428,7 +428,7 @@ public class CommandCenter implements DepthListener {
 					}
 					try {
 						threadLOGGER.info("{} heartbeat completed, sleeping ...", name);
-						Thread.sleep(13000);
+						Thread.sleep(13000); // the gap between every poll() is 1.3 second
 					} catch (InterruptedException e) {
 						threadLOGGER.debug("{} interrupted.", name);
 					}
@@ -514,7 +514,7 @@ public class CommandCenter implements DepthListener {
 				threadLOGGER.debug("{} connecting ...", name);
 				client.connect();
 			}
-			return client.pollQuotes(100, 20L, codeProductMap, codes);
+			return client.pollQuotes(32L, codeProductMap, codes);
 		}
 	}
 

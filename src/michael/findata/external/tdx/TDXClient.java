@@ -148,7 +148,7 @@ public class TDXClient {
 		connected = false;
 		LOGGER.info("Summary:");
 		for (int i = 0; i < name.length; i++) {
-			LOGGER.info(new StringBuilder().append(ip[i]).append(":").append(port[i]).append(fault[i] ? " fault - " : " worked - ").append(name[i]).toString());
+			LOGGER.info(ip[i] + ":" + port[i] + (fault[i] ? " fault - " : " worked - ") + name[i]);
 		}
 	}
 
@@ -159,6 +159,11 @@ public class TDXClient {
 	// this is a much resource-intensive way of polling quotes, given SH and SZ exchanges are only publishing snapshots
 	// every 5/3 seconds respectively. In other words, there is no point polling from SH for another 4.5/2.5 seconds if
 	// SH/SZ has just published a snapshot.
+	public Map<Product, com.numericalmethod.algoquant.execution.datatype.depth.Depth> pollQuotes (
+			long gapMillis, Map<String, Stock> stockMap, String... codes){
+		return pollQuotes(hqLib.length, gapMillis, stockMap, codes);
+	}
+
 	public Map<Product, com.numericalmethod.algoquant.execution.datatype.depth.Depth> pollQuotes (
 			int pollTimes, long gapMillis, Map<String, Stock> stockMap, String... codes) {
 //		System.out.println("Polling ... @\t"+System.currentTimeMillis());
@@ -185,7 +190,7 @@ public class TDXClient {
 //					System.out.println("Heartbeat completed, sleeping ...");
 					Thread.sleep(gapMillis);
 				} catch (InterruptedException e) {
-					System.out.println("Interrupt.");
+					LOGGER.warn("Interrupted.");
 				}
 			}
 			count ++;
@@ -199,7 +204,24 @@ public class TDXClient {
 			if (!success) {
 				LOGGER.warn(ip[index]+":"+port[index]+" is not working.");
 				LOGGER.warn(Native.toString(errInfo, "GBK"));
-				fault[index] = true;
+				try {
+					hqLib[index].TdxHq_Disconnect();
+				} catch (Exception e) {
+					LOGGER.warn(ip[index]+":"+port[index]+" exception caught while disconnecting: "+e.getMessage());
+				}
+				LOGGER.info(ip[index]+":"+port[index]+" trying to reconnect.");
+				try {
+					if (hqLib[index].TdxHq_Connect(ip[index], port[index], result, errInfo)) {
+						LOGGER.info(ip[index]+":"+port[index]+" reconnection successful.");
+					} else {
+						LOGGER.warn(ip[index]+":"+port[index]+" reconnection failed.");
+						LOGGER.warn(Native.toString(errInfo, "GBK"));
+						fault[index] = true;
+					}
+				} catch (Exception e) {
+					LOGGER.warn(ip[index]+":"+port[index]+" reconnection failed: "+e.getMessage());
+					fault[index] = true;
+				}
 			} else {
 //				System.out.println(count+"---------------");
 				rawTemp = raw;
