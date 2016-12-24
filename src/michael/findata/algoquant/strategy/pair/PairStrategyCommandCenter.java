@@ -17,7 +17,7 @@ import java.util.List;
 public class PairStrategyCommandCenter {
 //	private static Logger LOGGER = getClassLogger();
 	public static void main (String [] args) {
-		DBUtil.tryToStartDB();
+		Process dbProcess = DBUtil.tryToStartDB();
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
 		CommandCenter cc = (CommandCenter) context.getBean("commandCenter");
 		GridStrategyRepository gridRepo = (GridStrategyRepository) context.getBean("gridStrategyRepository");

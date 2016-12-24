@@ -16,6 +16,7 @@ import michael.findata.service.StockPriceMinuteService;
 import michael.findata.service.StockService;
 import michael.findata.spring.data.repository.ShortInHkPairStrategyRepository;
 import michael.findata.spring.data.repository.StockRepository;
+import michael.findata.util.DBUtil;
 import org.apache.xerces.impl.xs.SchemaSymbols;
 import org.joda.time.Interval;
 import org.joda.time.LocalDate;
@@ -138,6 +139,7 @@ public class FindataTests extends AbstractTestNGSpringContextTests {
 
 	@Test
 	public void test_MetaBroker() {
+		Process dbProcess = DBUtil.tryToStartDB();
 //		GridStrategyRepository gridRepo = (GridStrategyRepository) context.getBean("gridInstanceRepository");
 //		StockRepository stockRepo = (StockRepository) context.getBean("stockRepository");
 		cc.setShSzHqClient(new TDXClient(TDXClient.TDXClientConfigs));

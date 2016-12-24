@@ -13,6 +13,7 @@ import michael.findata.service.StockService;
 import michael.findata.spring.data.repository.PairInstanceRepository;
 import michael.findata.spring.data.repository.PairStatsRepository;
 import michael.findata.spring.data.repository.StockRepository;
+import michael.findata.util.DBUtil;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
@@ -24,6 +25,7 @@ import static michael.findata.algoquant.execution.datatype.order.HexinOrder.Hexi
 // Test the CommandCenter with HoppingStrategy
 public class CommandCenterTest {
 	public static void main(String[] args) throws IOException {
+		Process dbProcess = DBUtil.tryToStartDB();
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
 		CommandCenter cc = (CommandCenter) context.getBean("commandCenter");
 		StockRepository stockRepo = (StockRepository) context.getBean("stockRepository");

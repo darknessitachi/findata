@@ -10,24 +10,28 @@ import static michael.findata.util.LogUtil.getClassLogger;
 public class DBUtil {
 	private static Logger LOGGER = getClassLogger();
 
-	public static void dealWithDBAccessError (Exception e) {
+	private static Process dbProcess;
+
+	public static Process dealWithDBAccessError (Exception e) {
 		if (e instanceof DataAccessException && e.getMessage().contains("JDBC")) {
 			LOGGER.warn("{}: {} seems like a DB crash.", e, e.getMessage());
-			tryToStartDB();
+			return tryToStartDB();
 		} else {
 			LOGGER.warn("Don't know how to handle exception {}: {}\n", e.getClass(), e.getMessage());
 			e.printStackTrace();
+			return null;
 		}
 	}
 
-	public static void tryToStartDB () {
+	public static Process tryToStartDB() {
 		try {
 			LOGGER.info("Trying to start DB.");
-//			new ProcessBuilder("D:\\Development\\MySql-5.6\\bin\\mysqld.exe", "--defaults-file=\"F:\\MySQL Server Findata\\my.ini\"").start();
-			Runtime.getRuntime().exec("D:\\Development\\MySql-5.6\\bin\\mysqld.exe --defaults-file=\"F:\\MySQL Server Findata\\my.ini\"");
+			dbProcess = Runtime.getRuntime().exec("D:\\Development\\MySql-5.6\\bin\\mysqld.exe --defaults-file=\"F:\\MySQL Server Findata\\my.ini\"");
+			return dbProcess;
 		} catch (IOException ex) {
 			LOGGER.warn("Exception caught when trying to start DB {}: {}", ex, ex.getMessage());
 			ex.printStackTrace();
+			return null;
 		}
 	}
 

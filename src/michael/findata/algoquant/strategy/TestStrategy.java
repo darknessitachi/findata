@@ -169,7 +169,7 @@ public class TestStrategy implements Strategy, DepthHandler, OrderListener {
 
 	public static void main (String args []) {
 
-		DBUtil.tryToStartDB();
+		Process dbProcess = DBUtil.tryToStartDB();
 
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
 		CommandCenter cc = (CommandCenter) context.getBean("commandCenter");

@@ -4,6 +4,7 @@ import michael.findata.algoquant.execution.component.broker.MetaBroker;
 import michael.findata.commandcenter.CommandCenter;
 import michael.findata.external.tdx.TDXClient;
 import michael.findata.spring.data.repository.GridStrategyRepository;
+import michael.findata.util.DBUtil;
 import org.joda.time.LocalTime;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -13,6 +14,7 @@ import java.util.List;
 
 public class GridStrategyCommandCenter {
 	public static void main(String[] args) throws IOException {
+		Process dbProcess = DBUtil.tryToStartDB();
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
 		CommandCenter cc = (CommandCenter) context.getBean("commandCenter");
 		GridStrategyRepository gridRepo = (GridStrategyRepository) context.getBean("gridStrategyRepository");
