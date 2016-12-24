@@ -274,6 +274,7 @@ public class TDXClient {
 //						System.out.println("First time for "+bulkTemp[i+1]+" @\t"+System.currentTimeMillis());
 						updated = true;
 					}
+					LOGGER.info("Depth created: {}", bulkTemp[i+1]);
 					Depth stockDepth = new Depth(
 							new BigDecimal(bulkTemp[i+3]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(), stockMap.get(bulkTemp[i+1]), true,
 							new BigDecimal(bulkTemp[i+33]).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue(),
@@ -308,7 +309,6 @@ public class TDXClient {
 		}
 //System.out.println("C @\t"+System.currentTimeMillis());
 //		System.out.println(codes[0]+": Time taken(ms) for this round: "+(System.currentTimeMillis() - start));
-//		System.out.println(depthMap.get(codes[1]));
 		return depthMap;
 	}
 

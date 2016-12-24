@@ -28,6 +28,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static michael.findata.util.LogUtil.getClassLogger;
@@ -75,7 +76,7 @@ public class CommandCenter implements DepthListener {
 	public static long secondHalfStartHK;
 	public static long secondHalfEndHK;
 
-	private boolean locked = false;
+	private AtomicBoolean locked = new AtomicBoolean(false);
 
 //	private Timer saveTimer;
 
@@ -297,18 +298,15 @@ public class CommandCenter implements DepthListener {
 	private boolean obtainLock() {
 		// Performance: as tested, during a 2-client session this section takes 0 ms to execute, acceptable.
 		// check and obtain lock
-		if (locked) { // already blocked? return false, meaning don't do anything and skip
-			return false;
-		} else {
-			// not blocked yet? block it and return true,
-			// meaning: 1. lock obtained; 2. do stuff; and 3. don't forget to unblock after completing
-			locked = true;
-			return true;
-		}
+		// already blocked? return false, meaning don't do anything and skip
+		// not blocked yet? block it and return true,
+		// meaning: 1. lock obtained; 2. do stuff; and 3. don't forget to unblock after completing
+		return locked.compareAndSet(false, true);
 	}
 
+	// This should only be done by a thread that has already obtained the lock by obtainLock() = true;
 	private void releaseLock () {
-		locked = false;
+		locked.set(false);
 	}
 
 	private synchronized void onStop () {
@@ -333,12 +331,16 @@ public class CommandCenter implements DepthListener {
 	}
 
 	public void depthUpdated (Depth depth) {
-		DateTime now = new DateTime();
-		relevantStrs.get(depth.product()).forEach(strategy -> {
-			if (strategy instanceof DepthHandler) {
-				((DepthHandler) strategy).onDepthUpdate(now, depth, null, null, broker);
-			}
-		});
+		if (obtainLock()) {
+			DateTime now = new DateTime();
+			relevantStrs.get(depth.product()).forEach(strategy -> {
+				if (strategy instanceof DepthHandler) {
+					((DepthHandler) strategy).onDepthUpdate(now, depth, null, null, broker);
+				}
+			});
+		} else {
+			LOGGER.warn("Depth update messaging failure due to locking [1]. {}", depth);
+		}
 	}
 
 	private void depthsUpdated(Map<Product, Depth> depths) {
@@ -462,8 +464,7 @@ public class CommandCenter implements DepthListener {
 							// System.out.println("synchronized code section executed in(ms) "+(System.currentTimeMillis() - start));
 							// if this command center is blocked by broker when executing an order, there is not point notify about the change
 							// already blocked, do nothing
-//						System.out.println(name+" no lock available. @\t"+System.currentTimeMillis());
-//						return;
+							LOGGER.warn("{} Depths update messaging failure due to locking [2].", name);
 						}
 					}
 					threadLOGGER.debug("{} heartbeat completed.", name);
