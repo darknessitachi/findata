@@ -14,13 +14,13 @@ import com.numericalmethod.algoquant.execution.strategy.Strategy;
 import com.numericalmethod.algoquant.execution.strategy.handler.DepthHandler;
 import com.numericalmethod.algoquant.execution.strategy.handler.StockEODHandler;
 import org.joda.time.DateTime;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class GridStrategy implements Strategy, DepthHandler, StockEODHandler {
 

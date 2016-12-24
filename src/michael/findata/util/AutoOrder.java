@@ -10,7 +10,7 @@ import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import michael.findata.algoquant.execution.component.broker.HexinBroker;
 import michael.findata.algoquant.strategy.PairStrategy;
 import michael.findata.external.netease.NeteaseInstantSnapshotFactory;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -18,7 +18,7 @@ import java.util.Map;
 
 import static com.numericalmethod.algoquant.execution.datatype.order.BasicOrderDescription.Side.BUY;
 import static com.numericalmethod.algoquant.execution.datatype.order.BasicOrderDescription.Side.SELL;
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 import static michael.findata.util.CalculationUtil.findBestPrice;
 
 public class AutoOrder {

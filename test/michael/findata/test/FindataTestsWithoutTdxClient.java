@@ -27,7 +27,7 @@ import michael.findata.spring.data.repository.StockRepository;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.LocalDate;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
@@ -37,7 +37,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_BUY;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_SELL;
 import static michael.findata.util.FinDataConstants.OPENCL_REGRESSION_SIZE;

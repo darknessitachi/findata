@@ -6,7 +6,7 @@ import michael.findata.algoquant.execution.component.depthprovider.DepthProvider
 import michael.findata.algoquant.execution.listener.DepthListener;
 import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 import scala.util.regexp.Base;
 
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class MetaBroker implements Broker, OrderListener, DepthListener, DepthProvider{
 	private static final Logger LOGGER = getClassLogger();

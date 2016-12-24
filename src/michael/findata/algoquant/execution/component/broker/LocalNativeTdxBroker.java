@@ -6,11 +6,11 @@ import com.sun.jna.Native;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Collection;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class LocalNativeTdxBroker implements Broker{
 	private static Logger LOGGER = getClassLogger();

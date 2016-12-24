@@ -33,10 +33,26 @@
 		<jna.version>4.2.2</jna.version>
 		<testng.version>6.8.8</testng.version>
 		<commons-email.version>1.4</commons-email.version>
+		<log4j.version>2.7</log4j.version>
 		<!--<nd4j.version>0.4-rc3.10</nd4j.version>-->
 	</properties>
 
 	<dependencies>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-api</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-slf4j-impl</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-email</artifactId>
@@ -112,6 +128,16 @@
 			<groupId>com.numericalmethod</groupId>
 			<artifactId>algoquant-core</artifactId>
 			<version>${installed.algoquant.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>ch.qos.logback</groupId>
+					<artifactId>logback-classic</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>ch.qos.logback</groupId>
+					<artifactId>logback-core</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<!--<dependency>-->
 			<!--<groupId>com.numericalmethod</groupId>-->

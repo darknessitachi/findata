@@ -17,7 +17,7 @@ import michael.findata.spring.data.repository.StockRepository;
 import michael.findata.util.DBUtil;
 import org.joda.time.DateTime;
 import org.joda.time.LocalTime;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.data.repository.Repository;
@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class TestStrategy implements Strategy, DepthHandler, OrderListener {
 	private static Logger LOGGER = getClassLogger();

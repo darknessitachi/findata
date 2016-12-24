@@ -26,7 +26,7 @@ import org.hibernate.annotations.GenericGenerator;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 import org.springframework.data.repository.Repository;
 import scala.util.regexp.Base;
 
@@ -35,7 +35,7 @@ import java.sql.Timestamp;
 import java.util.*;
 
 import static com.numericalmethod.algoquant.execution.datatype.order.Order.OrderExecutionType.*;
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolumes;
 
 /**

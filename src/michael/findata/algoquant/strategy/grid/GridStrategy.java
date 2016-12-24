@@ -18,14 +18,14 @@ import org.apache.commons.math3.util.FastMath;
 import org.hibernate.annotations.GenericGenerator;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 import org.springframework.data.repository.Repository;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
 import java.util.*;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.*;
 
 @Entity

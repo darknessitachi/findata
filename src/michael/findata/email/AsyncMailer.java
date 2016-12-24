@@ -6,12 +6,12 @@ import org.apache.commons.mail.DefaultAuthenticator;
 import org.apache.commons.mail.Email;
 import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.SimpleEmail;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class AsyncMailer {
 	private static Logger LOGGER = getClassLogger();

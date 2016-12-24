@@ -7,11 +7,11 @@ import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.Ma
 import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.SimpleMarketCondition;
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import org.joda.time.DateTime;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class NeteaseInstantSnapshotFactory {
 

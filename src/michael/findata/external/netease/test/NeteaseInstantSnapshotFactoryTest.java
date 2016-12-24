@@ -10,12 +10,12 @@ import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import michael.findata.algoquant.execution.component.broker.HexinBroker;
 import michael.findata.algoquant.strategy.Pair;
 import michael.findata.external.netease.NeteaseInstantSnapshotFactory;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
 import static com.numericalmethod.algoquant.execution.datatype.order.BasicOrderDescription.Side.*;
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 import static michael.findata.util.CalculationUtil.*;
 
 public class NeteaseInstantSnapshotFactoryTest {

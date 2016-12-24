@@ -26,14 +26,14 @@ import michael.findata.model.Stock;
 import michael.findata.spring.data.repository.GridStrategyRepository;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.io.IOException;
 import java.util.*;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class GridStrategyBackTest {
 	private static final Logger logger = getClassLogger();

@@ -271,7 +271,7 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 
 	@Override
 	public int hashCode() {
-		return code != null ? code.hashCode() : 0;
+		return code == null ? id : code.hashCode();
 	}
 
 	public Stock (String code) {

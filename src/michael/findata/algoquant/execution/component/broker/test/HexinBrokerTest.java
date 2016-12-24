@@ -3,12 +3,12 @@ package michael.findata.algoquant.execution.component.broker.test;
 import com.numericalmethod.algoquant.execution.datatype.order.LimitOrder;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import michael.findata.algoquant.execution.component.broker.HexinBroker;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Collections;
 
 import static com.numericalmethod.algoquant.execution.datatype.order.BasicOrderDescription.*;
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class HexinBrokerTest {
 

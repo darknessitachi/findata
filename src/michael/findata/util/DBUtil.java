@@ -1,11 +1,11 @@
 package michael.findata.util;
 
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 
 import java.io.IOException;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class DBUtil {
 	private static Logger LOGGER = getClassLogger();

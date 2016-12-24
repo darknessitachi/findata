@@ -3,7 +3,7 @@ package michael.findata.algoquant.execution.component.broker;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.model.Stock;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,7 +15,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 abstract class LocalBrokerProxy implements Broker {
 	private static Logger LOGGER = getClassLogger();

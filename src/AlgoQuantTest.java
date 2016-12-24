@@ -27,11 +27,11 @@ import michael.findata.external.netease.NeteaseInstantSnapshotFactory;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 /**
  * Author: Michael, Tang Ying Jian

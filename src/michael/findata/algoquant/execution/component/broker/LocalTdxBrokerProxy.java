@@ -4,12 +4,12 @@ import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Collection;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_BUY;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_SELL;
 

@@ -10,7 +10,7 @@ import com.lmax.disruptor.dsl.Disruptor;
 import com.numericalmethod.algoquant.execution.component.broker.Broker;
 import com.numericalmethod.algoquant.execution.datatype.order.LimitOrder;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -20,7 +20,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import static com.numericalmethod.algoquant.execution.datatype.order.BasicOrderDescription.*;
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class HexinBroker implements Broker{
 	@Override

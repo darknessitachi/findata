@@ -30,7 +30,7 @@ import michael.findata.spring.data.repository.StockRepository;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
@@ -40,7 +40,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import static com.numericalmethod.nmutils.NMUtils.getClassLogger;
+import static michael.findata.util.LogUtil.getClassLogger;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.CREDIT_BUY;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.CREDIT_SELL;
 
