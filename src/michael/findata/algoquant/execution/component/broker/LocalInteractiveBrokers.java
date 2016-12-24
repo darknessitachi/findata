@@ -3,7 +3,6 @@ package michael.findata.algoquant.execution.component.broker;
 import com.ib.client.*;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
-import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
 import michael.findata.algoquant.execution.component.depthprovider.DepthProvider;
 import michael.findata.algoquant.execution.datatype.depth.Depth;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
@@ -315,7 +314,7 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 		}
 		Depth d = new Depth(dd.lastPrc, subscribed.get(tickerId), true, dd.bidPrc[0], dd.askPrc[0]);
 		d.setVols(dd.bidVol[0], dd.askVol[0]);
-		LOGGER.info("Depth updated: {} ", d);
+		LOGGER.debug("Depth updated: {} ", d);
 		if (depthListener != null) {
 			depthListener.depthUpdated(d);
 		} else {

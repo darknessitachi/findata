@@ -885,8 +885,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 			try {
 				repo.save(this);
 			} catch (Exception ex) {
-				LOGGER.warn("\t{}\t: Failed to save -- exception {} caught", this, ex.getClass());
-				ex.printStackTrace();
+				LOGGER.warn("\t{}\t: Failed to save -- exception {} caught: {}", this, ex.getClass(), ex.getMessage());
 				DBUtil.dealWithDBAccessError(ex);
 			}
 		} else {

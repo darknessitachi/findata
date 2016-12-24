@@ -7,7 +7,7 @@
 
 	<Appenders>
 		<Console name="Console">
-			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %c{1}- %msg%n"/>
+			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %c{1} > %msg%n"/>
 		</Console>
 
 		<RollingRandomAccessFile name="GridStrategyAppender_DEBUG"
