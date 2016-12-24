@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Configuration status="WARN">
+	<Properties>
+		<Property name="logs.folder">log</Property>
+		<Property name="log.folder.strategy">strategy</Property>
+	</Properties>
+
+	<Appenders>
+
+		<RollingRandomAccessFile name="GridStrategyAppender_DEBUG"
+								 immediateFlush="false"
+								 fileName="${logs.folder}/${log.folder.strategy}/grid/grid.debug.1.log"
+								 filePattern="${logs.folder}/${log.folder.strategy}/grid/grid.%d{yyyy-MM-dd}.debug-%i.log.gz">
+			<PatternLayout>
+				<Pattern>%d %p %c{1} [%t] %m%n</Pattern>
+			</PatternLayout>
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="250 MB"/>
+			</Policies>
+		</RollingRandomAccessFile>
+
+		<RollingRandomAccessFile name="GridStrategyAppender_INFO"
+								 immediateFlush="false"
+								 fileName="${logs.folder}/${log.folder.strategy}/grid/grid.info.1.log"
+								 filePattern="${logs.folder}/${log.folder.strategy}/grid/grid.%d{yyyy-MM-dd}.info-%i.log.gz">
+			<PatternLayout>
+				<Pattern>%d %p %c{1} [%t] %m%n</Pattern>
+			</PatternLayout>
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="250 MB"/>
+			</Policies>
+		</RollingRandomAccessFile>
+
+		<RollingRandomAccessFile name="ShortInHKPairStrategyAppender_DEBUG"
+								 immediateFlush="false"
+								 fileName="${logs.folder}/${log.folder.strategy}/shortinhk/shortinhk.debug.1.log"
+								 filePattern="${logs.folder}/${log.folder.strategy}/shortinhk/shortinhk.%d{yyyy-MM-dd}.debug-%i.log.gz">
+			<PatternLayout>
+				<Pattern>%d %p %c{1} [%t] %m%n</Pattern>
+			</PatternLayout>
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="250 MB"/>
+			</Policies>
+		</RollingRandomAccessFile>
+
+		<RollingRandomAccessFile name="ShortInHKPairStrategyAppender_INFO"
+								 immediateFlush="false"
+								 fileName="${logs.folder}/${log.folder.strategy}/shortinhk/shortinhk.info.1.log"
+								 filePattern="${logs.folder}/${log.folder.strategy}/shortinhk/shortinhk.%d{yyyy-MM-dd}.info-%i.log.gz">
+			<PatternLayout>
+				<Pattern>%d %p %c{1} [%t] %m%n</Pattern>
+			</PatternLayout>
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="250 MB"/>
+			</Policies>
+		</RollingRandomAccessFile>
+
+		<RollingRandomAccessFile name="CommandCenterAppender"
+								 immediateFlush="false"
+								 fileName="${logs.folder}/command_center/cc.1.log"
+								 filePattern="${logs.folder}/command_center/cc.%d{yyyy-MM-dd}.%i.log.gz">
+			<PatternLayout>
+				<Pattern>%d %p %c{1} [%t] %m%n</Pattern>
+			</PatternLayout>
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="250 MB"/>
+			</Policies>
+		</RollingRandomAccessFile>
+
+	</Appenders>
+
+	<Loggers>
+		<AsyncLogger name="michael.findata.algoquant.strategy.grid.GridStrategy" level="debug" includeLocation="false" additivity="false">
+			<AppenderRef ref="GridStrategyAppender_DEBUG" level="debug"/>
+			<AppenderRef ref="GridStrategyAppender_INFO" level="info"/>
+		</AsyncLogger>
+
+		<AsyncLogger name="michael.findata.algoquant.strategy.grid.GridStrategy" level="debug" includeLocation="false" additivity="false">
+			<AppenderRef ref="ShortInHKPairStrategyAppender_DEBUG" level="debug"/>
+			<AppenderRef ref="ShortInHKPairStrategyAppender_INFO" level="info"/>
+		</AsyncLogger>
+
+		<AsyncRoot level="info" includeLocation="false">
+			<AppenderRef ref="CommandCenterAppender"/>
+		</AsyncRoot>
+	</Loggers>
+
+</Configuration>
