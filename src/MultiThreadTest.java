@@ -1,17 +1,10 @@
 import org.apache.logging.log4j.Logger;
-import org.slf4j.impl.StaticLoggerBinder;
 
 import static michael.findata.util.LogUtil.getClassLogger;
 
 public class MultiThreadTest {
 
 	private static Logger LOGGER = getClassLogger();
-	static final StaticLoggerBinder binder = StaticLoggerBinder.getSingleton();
-
-	static {
-		System.out.println(binder.getLoggerFactory());
-		System.out.println(binder.getLoggerFactoryClassStr());
-	}
 
 	static long start;
 	public static void main (String args []) throws InterruptedException {

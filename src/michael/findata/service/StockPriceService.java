@@ -4,11 +4,15 @@ import michael.findata.external.SecurityTimeSeriesData;
 import michael.findata.external.SecurityTimeSeriesDatum;
 import michael.findata.external.tdx.TDXClient;
 import michael.findata.external.tdx.TDXFileBasedPriceHistory;
+import michael.findata.model.ExchangeRateDaily;
+import michael.findata.spring.data.repository.ExchangeRateDailyRepository;
 import michael.findata.util.Consumer2;
 import michael.findata.util.FinDataConstants;
 import org.joda.time.DateTime;
+import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.core.env.SystemEnvironmentPropertySource;
@@ -20,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -27,6 +32,10 @@ import java.util.*;
 import static michael.findata.util.FinDataConstants.yyyyDashMMDashdd;
 @Service
 public class StockPriceService extends JdbcDaoSupport {
+
+	@Autowired
+	private ExchangeRateDailyRepository exchangeRateDailyRepo;
+
 	// Bulk-load stock pricing data from THS, make sure THS pricing data is complete before doing this!!!!!
 	public void refreshStockPriceHistories() throws IOException, SQLException, ParseException,
 			ClassNotFoundException, IllegalAccessException, InstantiationException {
@@ -76,11 +85,11 @@ public class StockPriceService extends JdbcDaoSupport {
 		return (float) slots.stream().mapToDouble(Slot::getInvestment).sum();
 	}
 
-	public void walk(DateTime start,
-					 DateTime end,
-					 String[] codes,
+	public void walk(LocalDate start,
+					 LocalDate end,
 					 boolean log,
-					 Consumer2<DateTime, Map<String, SecurityTimeSeriesDatum>> doStuff) {
+					 Consumer2<DateTime, Map<String, SecurityTimeSeriesDatum>> doStuff,
+					 String... codes) {
 		String temp = "";
 		for (String s : codes) {
 			temp += "'" + s + "', ";
@@ -90,9 +99,22 @@ public class StockPriceService extends JdbcDaoSupport {
 				"SELECT date, code, open, high, low, close " +
 				"FROM code_price " +
 				"WHERE ? <= date AND date <= ? AND code IN ("+temp+"'') ORDER BY date, code ASC"
-				, start.toLocalDate().toDate(), end.toLocalDate().toDate());
+				, start.toDate(), end.toDate());
 		DateTime date = null;
 		DateTime oldDate;
+
+		// exchange rates
+		Timestamp tsStart = new Timestamp(start.toDateTimeAtStartOfDay().getMillis());
+		Timestamp tsEnd = new Timestamp(end.toDateTimeAtStartOfDay().getMillis());
+		Map<Timestamp, ExchangeRateDaily> forexHKD = new HashMap<>();
+		Map<Timestamp, ExchangeRateDaily> forexUSD = new HashMap<>();
+		exchangeRateDailyRepo.findByDateBetweenAndCurrency(tsStart, tsEnd, "HKD").forEach(forex -> {
+			forexHKD.put(forex.date(), forex);
+		});
+		exchangeRateDailyRepo.findByDateBetweenAndCurrency(tsStart, tsEnd, "USD").forEach(forex -> {
+			forexUSD.put(forex.date(), forex);
+		});
+
 		HashMap<String, SecurityTimeSeriesDatum> datumMap = new HashMap<>();
 		while (rs.next()) {
 			oldDate = date;
@@ -107,6 +129,16 @@ public class StockPriceService extends JdbcDaoSupport {
 						datumMap.put(code, new SecurityTimeSeriesDatum(oldDate));
 					}
 				}
+				ExchangeRateDaily hkdRate = forexHKD.get(new Timestamp(oldDate.toDate().getTime()));
+				ExchangeRateDaily usdRate = forexUSD.get(new Timestamp(oldDate.toDate().getTime()));
+				// exchange rate
+				if (hkdRate != null) {
+					datumMap.put("HKD", new SecurityTimeSeriesDatum(oldDate, 0, 0, 0, 0, 0, (float)hkdRate.close(), false));
+				}
+				if (usdRate != null) {
+					datumMap.put("USD", new SecurityTimeSeriesDatum(oldDate, 0, 0, 0, 0, 0, (float)usdRate.close(), false));
+				}
+
 
 				doStuff.apply(oldDate, datumMap);
 				if (log) {
@@ -131,6 +163,15 @@ public class StockPriceService extends JdbcDaoSupport {
 				if (!codesIn.contains(code)) {
 					datumMap.put(code, new SecurityTimeSeriesDatum(date));
 				}
+			}
+			ExchangeRateDaily hkdRate = forexHKD.get(new Timestamp(date.toDate().getTime()));
+			ExchangeRateDaily usdRate = forexUSD.get(new Timestamp(date.toDate().getTime()));
+			// exchange rate
+			if (hkdRate != null) {
+				datumMap.put("HKD", new SecurityTimeSeriesDatum(date, 0, 0, 0, 0, 0, (float)hkdRate.close(), false));
+			}
+			if (usdRate != null) {
+				datumMap.put("USD", new SecurityTimeSeriesDatum(date, 0, 0, 0, 0, 0, (float)usdRate.close(), false));
 			}
 			doStuff.apply(date, datumMap);
 			if (log) {

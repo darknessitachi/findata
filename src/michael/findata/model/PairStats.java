@@ -52,6 +52,30 @@ public class PairStats implements Comparable<PairStats> {
 	@Column(name = "adf_p_ma")
 	private double adfpma; // the adfp moving average
 
+	@Basic
+	@Column(name = "min")
+	private double min; // the minimum
+
+	@Basic
+	@Column(name = "max")
+	private double max; // the maximum
+
+	@Basic
+	@Column(name = "percentile01")
+	private double percentile01; // the 1 percentile
+
+	@Basic
+	@Column(name = "percentile05")
+	private double percentile05; // the 5 percentile
+
+	@Basic
+	@Column(name = "percentile95")
+	private double percentile95; // the 95 percentile
+
+	@Basic
+	@Column(name = "percentile99")
+	private double percentile99; // the 99 percentile
+
 	@Transient
 	private String codeToShort = null;
 
@@ -202,6 +226,54 @@ public class PairStats implements Comparable<PairStats> {
 	public int compareTo(PairStats o) {
 		if (o == null) return 1;
 		return adfpma > o.getAdfpma() ? 1 : (adfpma < o.getAdfpma() ? -1 : (equals(o)? 0 : 1));
+	}
+
+	public double getMax() {
+		return max;
+	}
+
+	public void setMax(double max) {
+		this.max = max;
+	}
+
+	public double getPercentile01() {
+		return percentile01;
+	}
+
+	public void setPercentile01(double percentile01) {
+		this.percentile01 = percentile01;
+	}
+
+	public double getMin() {
+		return min;
+	}
+
+	public void setMin(double min) {
+		this.min = min;
+	}
+
+	public double getPercentile05() {
+		return percentile05;
+	}
+
+	public void setPercentile05(double percentile05) {
+		this.percentile05 = percentile05;
+	}
+
+	public double getPercentile95() {
+		return percentile95;
+	}
+
+	public void setPercentile95(double percentile95) {
+		this.percentile95 = percentile95;
+	}
+
+	public double getPercentile99() {
+		return percentile99;
+	}
+
+	public void setPercentile99(double percentile99) {
+		this.percentile99 = percentile99;
 	}
 
 	public enum TimeSeriesType {

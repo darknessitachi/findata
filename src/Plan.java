@@ -1,4 +1,5 @@
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
+import com.numericalmethod.suanshu.stats.descriptive.rank.Quantile;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.algoquant.strategy.TestStrategy;
 import michael.findata.commandcenter.CommandCenter;
@@ -6,6 +7,7 @@ import michael.findata.external.tdx.TDXClient;
 import michael.findata.model.Stock;
 import michael.findata.spring.data.repository.StockRepository;
 import michael.findata.util.DBUtil;
+import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.joda.time.LocalTime;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -15,18 +17,14 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_BUY;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_SELL;
 
 public class Plan {
-	public static void main (String args []) throws IOException {
-//		Map<Long, Order> orderMap = new HashMap<>();
-//
-//		Order a = new HexinOrder(new Stock("600585"), 12000, 12d, SIMPLE_SELL);
-//		orderMap.put(a.id(), a);
-//		System.out.println(orderMap.containsValue(a));
-//		DBUtil.tryToStopDB();
+	public static void main (String args []) throws IOException, InterruptedException {
+		System.out.println (9999*9999);
 	}
 }
 
@@ -63,14 +61,18 @@ public class Plan {
  * Step 2: update H share historical Data up to today
  * Step 3: Calculate stats and Create strategy for tomorrow
  *
+ *
+ * 0. use priceadjuster for inspecbyminute/byday
+ * 0. use min residual as another indicator for pair trading: already can generate min/max/percentiles in PairStats
+ * 0. maybe we need to use a timer to monitor db?
  * 0. use exchange rate in db to init in memory exchange rate
- * 0. Use disruptor to implement all brokers so that they function like IB
- * 0. use min residual as another indicator for pair trading
+ * 0. a. Use disruptor to implement all brokers so that they function like IB
+ *    b. Use disruptor to dispatch depths to strategies.
  * 0. localbrokerproxy line 115 hxOrder.ack(results[i]); if index out of bound occurs here, whole command center will pause, handle exception gracefully,
  * try to separate those orders which have issue from those don't
  * 0. ShortInHK to handle shorting during the last three minutes of HK daily session, when the most profitable moments usually happens
  * 0. ShortInHK to handle short in A too.
- * 0. 2333 as an example, IB historical data has been adjusted with split but not dividend, how to handle?
+ *
  * 0. Residual calc to take into account split/dividend
  * 1. test correlation calculation with dividend taken into consideration
  * 2. ratio calculation in pair strategy needs to use the pairopendate as the reference date
@@ -83,6 +85,28 @@ public class Plan {
  * 0. Use Kalman Filter or Regression for H->A arb?
  * 0. automatic π…∂´¥˙¬Î matching in NativeTdx
  * 0. ShortInHKPairStrategy has three outstanding issues, but it can already be used.
+
+ 7. Optimization issue:
+ It takes 0ms to determine whether or not to open a position.
+ However it takes 25+ms to calculate the position and another 25+ms to submit an order!
+ 11:08:19.226 [Thread-4] DEBUG ShortInHKPairStrategy,547- 	[ID: 78, ∏£“´≤£¡ß(HK)->∏£“´≤£¡ß, s:0.902, o:0.024, c:0.000, NEW]	: Processing depth: 600660 ∏£“´≤£¡ß
+ Traded: true
+ ask5 18.46	5000
+ ask4 18.45	13400
+ ask3 18.44	6300
+ ask2 18.43	1400
+ ask1 18.42	12900
+ bid1 18.41	10700
+ bid2 18.4	29600
+ bid3 18.39	10500
+ bid4 18.38	9500
+ bid5 18.37	11000
+ 11:08:19.226 [Thread-4] DEBUG ShortInHKPairStrategy,517- 	[ID: 78, ∏£“´≤£¡ß(HK)->∏£“´≤£¡ß, s:0.902, o:0.024, c:0.000, NEW]	: Ratio: 0.8805783333333335
+ 11:08:19.226 [Thread-4] INFO  ShortInHKPairStrategy,590- 	[ID: 78, ∏£“´≤£¡ß(HK)->∏£“´≤£¡ß, s:0.902, o:0.024, c:0.000, NEW]	: Pair is currently NEW. Residual vs OpenThreshold: 0.02412296750212506 vs 0.024 - above open threshold, trying to open the pair.
+ 11:08:19.251 [Thread-4] INFO  ShortInHKPairStrategy,609- 	[ID: 78, ∏£“´≤£¡ß(HK)->∏£“´≤£¡ß, s:0.902, o:0.024, c:0.000, NEW]	: Calculated short/long volumes: 2400.0/2700.0 @ short/long prices: 23.4/18.42 with fx: 0.8939346533768381
+ 11:08:19.251 [Thread-4] INFO  ShortInHKPairStrategy,611- 	[ID: 78, ∏£“´≤£¡ß(HK)->∏£“´≤£¡ß, s:0.902, o:0.024, c:0.000, NEW]	: Calculated short/long ratio: 50203.37013364323/49734.00000000001
+ 11:08:19.278 [Thread-4] INFO  ShortInHKPairStrategy,629- 	[ID: 78, ∏£“´≤£¡ß(HK)->∏£“´≤£¡ß, s:0.902, o:0.024, c:0.000, NEW]	: Short leg opening order submitted: [11]: 	SELL 	03606 ∏£“´≤£¡ß(HK) @	23.400	for	-2400.000	, tags: {Broker=IB}, state: UNFILLED, filled: 0.000000
+ 11:08:19.279 [Thread-4] INFO  ShortInHKPairStrategy,803- 	[ID: 78, ∏£“´≤£¡ß(HK)->∏£“´≤£¡ß, s:0.902, o:0.024, c:0.000, NEW]	: Saving to DB after status changed from NEW to OPENING.
 
  * ”Ø∏ªª˘Ω(02800) (∫„…˙÷∏ ˝) VS ∫„…˙ETF(SZ159920)
  * 02828.HK êa…˙Hπ… VS 150175+150176
@@ -105,8 +129,6 @@ public class Plan {
  * ask1 -1.0	0
  * bid1 -1.0	0
 
- negative ratio?!!!!!!!!!!!!!
- 0. grid debug log file
  * 0. ‘⁄ƒÍµ◊“™‘Ÿ◊ˆ“ª¥Œadjustment factor recalc for all stocks/interesting funds
  * 1. market order on hexin broker: this can be achieved with limit order: just relax the price much more
  * 0. Update the list of all AH stocks and able to update their price, so that our spread comparison can automatically include them

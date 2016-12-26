@@ -34,7 +34,6 @@ import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.*;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import static michael.findata.util.LogUtil.getClassLogger;
@@ -222,8 +221,10 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 	@Test
 	public void test_HistoricalData () throws InterruptedException {
 //		historicalData.update(false);
-		historicalData.update(false, 6818, 6837, 358, 2318, 2338, 3606, 914, 177, 386, 1398, 939, 6030, 3328, 3968, 2800, 2828, 3147, 2823, 2822, 3188, 2333);
-//		historicalData.update(true, 2333);
+//		historicalData.update(false,
+//				168, 2196, 1088, 6818, 6837, 358, 2318, 2338, 3606, 914, 177, 386,
+//				1398, 939, 6030, 3328, 3968, 2800, 2828, 3147, 2823, 2822, 3188, 2333);
+		historicalData.update(true, 1288, 3988);
 	}
 
 	@Test
@@ -429,24 +430,32 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 
 	@Test
 	public void test_PairStrategyService_inspectPair() {
-//		pairStrategyService.inspectPair("00914", "600585", "2016-11-02", "2016-12-02", 0.900608);
-//		pairStrategyService.inspectPair("03606", "600660", "2016-11-02", "2016-12-02", 0.900514);
-//		pairStrategyService.inspectPair("02338", "000338", "2016-11-02", "2016-12-02", 0.956049);
-//		pairStrategyService.inspectPair("00177", "600377", "2016-11-02", "2016-12-02", 0.973196);
-//		pairStrategyService.inspectPair("02318", "601318", "2016-11-02", "2016-12-02", 0.965983);
-//		pairStrategyService.inspectPair("00939", "601939", "2016-10-16", "2016-12-02", 1.047381);
-//		pairStrategyService.inspectPair("03968", "600036", "2016-10-16", "2016-12-02", 1.047381);
-		pairStrategyService.inspectPair("01398", "601398", "2016-07-11", "2016-12-02", 1.148928);
+//		pairStrategyService.inspectPairByMinute("00914", "600585", "2016-11-02", "2016-12-02", 0.900608);
+//		pairStrategyService.inspectPairByMinute("03606", "600660", "2016-11-02", "2016-12-02", 0.900514);
+//		pairStrategyService.inspectPairByMinute("02338", "000338", "2016-11-02", "2016-12-02", 0.956049);
+//		pairStrategyService.inspectPairByMinute("00177", "600377", "2016-11-02", "2016-12-02", 0.973196);
+//		pairStrategyService.inspectPairByMinute("02318", "601318", "2016-11-02", "2016-12-02", 0.965983);
+//		pairStrategyService.inspectPairByMinute("00939", "601939", "2016-10-16", "2016-12-02", 1.047381);
+//		pairStrategyService.inspectPairByMinute("03968", "600036", "2016-10-16", "2016-12-02", 1.047381);
+		pairStrategyService.inspectPairByMinute("01398", "601398", "2016-07-11", "2016-12-02", 1.148928);
 	}
 
 	@Test
 	public void test_PairStrategyService_inspect() {
 
+//		// 海螺水泥
+//		String codeHK = "00914";
+//		String codeA = "600585";
+
+//		// 福耀玻璃
+//		String codeHK = "03606";
+//		String codeA = "600660";
+
 		// 宁沪高速
 //		String codeHK = "00177";
 //		String codeA = "600377";
 
-		//海通证券
+//		// 海通证券
 //		String codeHK = "06837";
 //		String codeA = "600837";
 
@@ -455,14 +464,56 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 //		String codeA = "601818";
 
 		// 中国石化
-		String codeHK = "00386";
-		String codeA = "600028";
+//		String codeHK = "00386";
+//		String codeA = "600028";
+
+		// 潍柴动力
+//		String codeHK = "02338";
+//		String codeA = "000338";
+
+		// 中国平安
+//		String codeHK = "02318";
+//		String codeA = "601318";
+
+		// 工商银行
+//		String codeHK = "01398";
+//		String codeA = "601398";
+
+		// 建设银行
+//		String codeHK = "00939";
+//		String codeA = "601939";
+
+		// 中国神华
+		// 中国神华
+//		String codeHK = "01088";
+//		String codeA = "601088";
+
+		// 招商银行
+//		String codeHK = "03968";
+//		String codeA = "600036";
+
+//		// 青岛啤酒
+//		String codeHK = "00168";
+//		String codeA = "600600";
+
+		// 复星医药
+//		String codeHK = "02196";
+//		String codeA = "600196";
+
+		// 长城汽车
+//		String codeHK = "02333";
+//		String codeA = "601633";
+
+		// 长城汽车
+		String codeHK = "00358";
+		String codeA = "600362";
 
 		double [][] result = pairStrategyService.cointcorrel(
 				DateTime.parse("2016-09-18").withTimeAtStartOfDay(),
 				DateTime.parse("2016-12-08").withTimeAtStartOfDay().plusHours(23),
 				new String [][] {{codeHK,codeA}}, OPENCL_REGRESSION_SIZE, null, stockPriceMinuteService, null, true);
-		pairStrategyService.inspectPair(codeHK, codeA, "2016-09-17", "2016-12-09", result[0][0]);
+//		pairStrategyService.inspectPairByMinute(codeHK, codeA, "2016-09-17", "2016-12-25", result[0][0]);
+		pairStrategyService.inspectPairByDay(codeHK, codeA, "2014-11-25", "2016-12-25", result[0][0]);
 
 //		String codeHK = "00914";
 //		String codeA = "600585";
@@ -470,7 +521,7 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 //				DateTime.parse("2016-11-17").withTimeAtStartOfDay(),
 //				DateTime.parse("2016-12-02").withTimeAtStartOfDay().plusHours(23),
 //				new String [][] {{codeHK,codeA}}, OPENCL_REGRESSION_SIZE, null, stockPriceMinuteService, null, true);
-//		pairStrategyService.inspectPair(codeHK, codeA, "2016-11-17", "2016-12-02", result[0][0]);
+//		pairStrategyService.inspectPairByMinute(codeHK, codeA, "2016-11-17", "2016-12-02", result[0][0]);
 
 //		String codeHK = "02822";
 //		String codeA = "510050";
@@ -478,7 +529,7 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 //				DateTime.parse("2016-07-11").withTimeAtStartOfDay(),
 //				DateTime.parse("2016-07-26").withTimeAtStartOfDay().plusHours(23),
 //				new String [][] {{codeHK,codeA}}, OPENCL_REGRESSION_SIZE, null, stockPriceMinuteService, null, true);
-//		pairStrategyService.inspectPair(codeHK, codeA, "2016-07-11", "2016-12-02", result[0][0]);
+//		pairStrategyService.inspectPairByMinute(codeHK, codeA, "2016-07-11", "2016-12-02", result[0][0]);
 	}
 
 	@Test
