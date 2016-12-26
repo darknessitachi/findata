@@ -19,6 +19,7 @@ import org.hibernate.annotations.GenericGenerator;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.apache.logging.log4j.Logger;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.Repository;
 
 import javax.persistence.*;
@@ -70,6 +71,10 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 	public GridStrategy () {}
 
 	private static final Logger LOGGER = getClassLogger();
+
+	public Logger getLogger () {
+		return LOGGER;
+	}
 
 	@Id
 	@GeneratedValue(generator="increment")
@@ -380,9 +385,6 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 		emailNotification(emailTitle);
 	}
 
-	public void emailNotification(String titlePrefix) {
-		AsyncMailer.instance.email(String.format("%s: %s", titlePrefix, this), notification());
-	}
 
 	@Override
 	// Contract: it is the DividendHandler(strategy)'s responsibility to filter repeated or out-of-order dividend events
@@ -456,27 +458,6 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 	}
 
 	@Override
-	public void onStop() {
-		// Save to DB
-		LOGGER.info("\t{}\t: Saving to DB and stop.", this);
-		trySave();
-		emailNotification("Trading Ended");
-	}
-
-	public void trySave() {
-		if (gridRepo != null) {
-			try {
-				gridRepo.save(this);
-			} catch (Exception ex) {
-				LOGGER.warn("\t{}\t: Failed to save -- exception {} caught: {}", this, ex.getClass(), ex.getMessage());
-				DBUtil.dealWithDBAccessError(ex);
-			}
-		} else {
-			LOGGER.warn("\t{}\t: Failed to save -- repository is null.", this);
-		}
-	}
-
-	@Override
 	public String notification() {
 		return String.format(
 				"<pre><b>%s</b>\n<b>ID:</b> %d\n<b>Stock:</b> %s\n<b>Active:</b> %s\n<b>Current peak:</b> %.3f\n<b>Current baseline:</b> %.3f\n<b>Current bottom:</b> %.3f\n<b>Buy/Sell amount threshold:</b> %.1f\n<b>Reference date:</b> %s\n<b>Position date:</b> %s\n<b>Position total:</b> %d\n<b>Position sellable:</b> %d\n<b>Share valuation:</b> %.3f\n<b>Reserve limit under valuation:</b> %d\n<b>Ten-percent capital:</b> %.1f\n<b>Buy/Sell amount threshold lower bound:</b> %.1f\n<b>Peak/Bottom threshold:</b> %.3f</pre>",
@@ -545,8 +526,11 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 
 	@Override
 	// Set this, so that when CommandCenter stops, the strategy itself can be saved.
-	public void setRepository(Repository gridRepo) {
+	public void setRepository(CrudRepository gridRepo) {
 		this.gridRepo = (GridStrategyRepository) gridRepo;
+	}
+	public CrudRepository getRepository() {
+		return gridRepo;
 	}
 
 	public void setReferenceDate(Timestamp referenceDate) {

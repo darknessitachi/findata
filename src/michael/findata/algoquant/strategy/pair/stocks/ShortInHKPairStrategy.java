@@ -27,6 +27,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
 import org.apache.logging.log4j.Logger;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.Repository;
 import scala.util.regexp.Base;
 
@@ -59,6 +60,10 @@ import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolume
 @Access(AccessType.FIELD)
 public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHandler, DividendHandler, Comparable<ShortInHKPairStrategy> {
 	private static final Logger LOGGER = getClassLogger();
+
+	public Logger getLogger () {
+		return LOGGER;
+	}
 
 	//经验参数：
 	public static Map<String, Param> paramMap = new HashMap<>();
@@ -863,34 +868,16 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		return 0;
 	}
 
-	@Override
-	public void onStop() {
-		// Save to DB
-		LOGGER.info("\t{}\t: Saving myself to DB and stop.", this);
-		trySave();
-		emailNotification("Trading Ended");
-	}
-
 	@Transient
 	private ShortInHkPairStrategyRepository repo;
 
 	@Override
-	public void setRepository(Repository repository) {
+	public void setRepository(CrudRepository repository) {
 		repo = (ShortInHkPairStrategyRepository) repository;
 	}
 
-	@Override
-	public void trySave() {
-		if (repo != null) {
-			try {
-				repo.save(this);
-			} catch (Exception ex) {
-				LOGGER.warn("\t{}\t: Failed to save -- exception {} caught: {}", this, ex.getClass(), ex.getMessage());
-				DBUtil.dealWithDBAccessError(ex);
-			}
-		} else {
-			LOGGER.warn("\t{}\t: Failed to save -- repository is null.", this);
-		}
+	public CrudRepository getRepository() {
+		return repo;
 	}
 
 	// Used in email notification message body
@@ -989,10 +976,6 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		}
 	}
 
-	public void emailNotification(String titlePrefix) {
-		AsyncMailer.instance.email(String.format("%s: ShortInHKStrategy %s", titlePrefix, this), notification());
-	}
-
 	@Override
 	public void onDividend(DateTime now, Dividend dividend, MarketCondition mc, TradeBlotter blotter, Broker broker) {
 	}
@@ -1011,7 +994,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 
 	@Override
 	public String toString () {
-		return String.format("[ID: %d, %s->%s, s:%.3f, o:%.3f, c:%.3f, %s]", id, getNameToShort(), getNameToLong(), slope(), openThreshold, closeThreshold, status);
+		return String.format("ShortInHKStrategy [ID: %d, %s->%s, s:%.3f, o:%.3f, c:%.3f, %s]", id, getNameToShort(), getNameToLong(), slope(), openThreshold, closeThreshold, status);
 	}
 
 	@Override

@@ -20,6 +20,7 @@ import org.joda.time.LocalTime;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.Repository;
 
 import java.util.ArrayList;
@@ -32,12 +33,9 @@ public class TestStrategy implements Strategy, DepthHandler, OrderListener {
 	private static Logger LOGGER = getClassLogger();
 	private boolean executed = false;
 	private StockRepository stockRepo;
-	@Override
-	public void onStop() {
-	}
 
 	@Override
-	public void setRepository(Repository repository) {
+	public void onStop() {
 	}
 
 	@Override
@@ -45,7 +43,11 @@ public class TestStrategy implements Strategy, DepthHandler, OrderListener {
 	}
 
 	@Override
-	public String notification() {
+	public void setRepository(CrudRepository repository) {
+	}
+
+	@Override
+	public CrudRepository getRepository () {
 		return null;
 	}
 

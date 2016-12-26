@@ -19,6 +19,7 @@ import michael.findata.spring.data.repository.PairInstanceRepository;
 import michael.findata.spring.data.repository.PairStatsRepository;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.Repository;
 
 import java.util.*;
@@ -33,15 +34,6 @@ import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolume
 // So in effect, it looks like the strategy is hopping from on stock/etf to another very quickly
 public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthHandler {
 
-	@Override
-	public String notification() {
-		return "";
-	}
-
-	@Override
-	public void trySave() {
-
-	}
 	/**
 	 * 510500<->159902: 3dev->1.5dev
 	 * <p>
@@ -117,7 +109,7 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 
 	public void onDateUpdate(LocalDate exeDate) {
 		System.out.println("Preparing for date: " + exeDate);
-		save();
+		trySave();
 		refreshShortablePortfolio();
 		this.executionDate = exeDate;
 
@@ -369,15 +361,20 @@ public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthH
 	}
 
 	public void onStop() {
-		save();
+		trySave();
 		refreshShortablePortfolio();
 	}
 
 	@Override
-	public void setRepository(Repository repository) {
+	public void setRepository(CrudRepository repository) {
 	}
 
-	private void save() {
+	@Override
+	public CrudRepository getRepository () {
+		return null;
+	}
+
+	public void trySave() {
 		if (pairs == null) return;
 		System.out.println("Saving pair instances.");
 		for (PairInstance p : pairs) {
