@@ -49,4 +49,6 @@ public interface Strategy extends com.numericalmethod.algoquant.execution.strate
 	void setRepository (CrudRepository repository);
 	CrudRepository getRepository ();
 	Collection<Stock> getTargetSecurities ();
+	boolean isBacktestMode();
+	void setBacktestMode(boolean backtestMode);
 }

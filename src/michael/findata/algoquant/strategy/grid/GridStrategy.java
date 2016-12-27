@@ -33,6 +33,20 @@ import static michael.findata.algoquant.execution.datatype.order.HexinOrder.Hexi
 @Table(name = "strategy_instance_grid")
 @Access(AccessType.FIELD)
 public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Comparable<GridStrategy> {
+
+	// true: in simulation/backtesting
+	// false: in real trading
+	private boolean backtestMode = false;
+
+	final public boolean isBacktestMode() {
+		return backtestMode;
+	}
+
+	@Override
+	final public void setBacktestMode(boolean backtestMode) {
+		this.backtestMode = backtestMode;
+	}
+
 	@Override
 	public Collection<Stock> getTargetSecurities() {
 		Set<Stock> s = new HashSet<>(1);

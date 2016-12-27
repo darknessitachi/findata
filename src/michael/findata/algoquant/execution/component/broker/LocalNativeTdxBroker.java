@@ -141,7 +141,7 @@ public class LocalNativeTdxBroker implements Broker{
 		trade = (TdxLibrary) Native.loadLibrary("Trade", TdxLibrary.class);
 		trade.OpenTdx();
 		//µÇÂ¼
-//		clientID = trade.Logon("180.153.18.180", (short) 7708, "6.33", (short) 2, "8009145070", "8009145070", "495179", "495179", ErrInfo);
+//		clientID = trade.Logon("180.153.18.180", (short) 7708, "6.33", (short) 2, "8009145070", "8009145070", "123456", "123456", ErrInfo);
 		long time = System.currentTimeMillis();
 		clientID = trade.Logon(ip, port, "6.33", yingyebuID, accountNo, tradeAccount, pass, commsPass, ErrInfo);
 		System.out.println(System.currentTimeMillis() - time);
@@ -296,9 +296,5 @@ public class LocalNativeTdxBroker implements Broker{
 				LOGGER.error("{} cancellation error: ", o, errorString);
 			}
 		}
-	}
-
-	public static void main (String [] args) {
-		new LocalNativeTdxBroker("180.153.18.180", (short)7708, (short)2, "8009145070", "8009145070", "495179", "495179");
 	}
 }

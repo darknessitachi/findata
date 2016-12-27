@@ -65,6 +65,19 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		return LOGGER;
 	}
 
+	// true: in simulation/backtesting
+	// false: in real trading
+	private boolean backtestMode = false;
+
+	final public boolean isBacktestMode() {
+		return backtestMode;
+	}
+
+	@Override
+	final public void setBacktestMode(boolean backtestMode) {
+		this.backtestMode = backtestMode;
+	}
+
 	//经验参数：
 	public static Map<String, Param> paramMap = new HashMap<>();
 	static {

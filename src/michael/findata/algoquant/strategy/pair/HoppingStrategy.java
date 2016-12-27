@@ -34,6 +34,19 @@ import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolume
 // So in effect, it looks like the strategy is hopping from on stock/etf to another very quickly
 public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthHandler {
 
+	// true: in simulation/backtesting
+	// false: in real trading
+	private boolean backtestMode = false;
+
+	final public boolean isBacktestMode() {
+		return backtestMode;
+	}
+
+	@Override
+	final public void setBacktestMode(boolean backtestMode) {
+		this.backtestMode = backtestMode;
+	}
+
 	/**
 	 * 510500<->159902: 3dev->1.5dev
 	 * <p>

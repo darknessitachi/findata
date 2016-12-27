@@ -40,7 +40,7 @@ public class HexinBroker implements Broker{
 	}
 
 	public HexinBroker (String consoleWinTitle, boolean startConsole) {
-		this(consoleWinTitle, startConsole, "E:\\Program Files\\weituo\\华泰联合\\xiadan.exe", "495179", "514979");
+		this(consoleWinTitle, startConsole, "E:\\Program Files\\weituo\\华泰联合\\xiadan.exe", "123456", "123456");
 	}
 
 	public HexinBroker (String consoleWinTitle,

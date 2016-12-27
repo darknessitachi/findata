@@ -31,6 +31,20 @@ import static michael.findata.util.LogUtil.getClassLogger;
 
 public class TestStrategy implements Strategy, DepthHandler, OrderListener {
 	private static Logger LOGGER = getClassLogger();
+
+	// true: in simulation/backtesting
+	// false: in real trading
+	private boolean backtestMode = false;
+
+	final public boolean isBacktestMode() {
+		return backtestMode;
+	}
+
+	@Override
+	final public void setBacktestMode(boolean backtestMode) {
+		this.backtestMode = backtestMode;
+	}
+
 	private boolean executed = false;
 	private StockRepository stockRepo;
 

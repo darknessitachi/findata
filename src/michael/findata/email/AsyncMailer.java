@@ -67,7 +67,7 @@ public class AsyncMailer {
 
 	public void email (String subject, String message, String ... to) {
 		RingBuffer<EmailEvent> ringBuffer = disruptor.getRingBuffer();
-		ringBuffer.publishEvent((event, sequence) -> event.set(subject, message, to));
+		ringBuffer.publishEvent((event, sequence, sbj, msg, t) -> event.set(sbj, msg, t), subject, message, to);
 		LOGGER.info("Email queued.");
 	}
 
