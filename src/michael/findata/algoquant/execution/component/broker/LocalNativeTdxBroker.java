@@ -6,6 +6,7 @@ import com.sun.jna.Native;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
+import michael.findata.util.ResourceUtil;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Collection;
@@ -127,8 +128,9 @@ public class LocalNativeTdxBroker implements Broker{
 
 	private TdxLibrary trade;
 	private int clientID;
-	private String gddmSH = "E042255853";
-	private String gddmSZ = "0604227902";
+	private static String gddmSH = "E042255853";
+	private static String gddmSZ = "0604227902";
+	public static String password = ResourceUtil.getString("michael.broker.tdx.pass");
 
 	public LocalNativeTdxBroker (String ip, short port, short yingyebuID, String accountNo, String tradeAccount, String pass, String commsPass) {
 		//DLL是32位的,因此必须使用jdk32位开发,才能调用DLL;

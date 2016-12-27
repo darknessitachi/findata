@@ -2,6 +2,7 @@ package michael.findata.email;
 
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
+import michael.findata.util.ResourceUtil;
 import org.apache.commons.mail.DefaultAuthenticator;
 import org.apache.commons.mail.Email;
 import org.apache.commons.mail.EmailException;
@@ -16,12 +17,12 @@ import static michael.findata.util.LogUtil.getClassLogger;
 public class AsyncMailer {
 	private static Logger LOGGER = getClassLogger();
 
-	private int port = 25;
-	private String hostName = "smtp.sina.com";
-	private String userName = "8122850yjtang";
-	private String password = "108129yao";
-	private String from = "8122850yjtang@sina.com";
-	private boolean sslOnConnect = false;
+	private static int port = 25;
+	private static String hostName = "smtp.sina.com";
+	private static String userName = "8122850yjtang";
+	private static String password = ResourceUtil.getString("michael.email.pass");
+	private static String from = "8122850yjtang@sina.com";
+	private static boolean sslOnConnect = false;
 	private Disruptor<EmailEvent> disruptor;
 //	private ExecutorService executor;
 

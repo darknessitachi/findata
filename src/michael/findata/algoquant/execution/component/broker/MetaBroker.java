@@ -30,7 +30,7 @@ public class MetaBroker implements Broker, OrderListener, DepthListener, DepthPr
 	public MetaBroker (Stock ... subscriptions) {
 		defaultABroker = new LocalTdxBrokerProxy(10001);
 		defaultHBroker = new LocalInteractiveBrokers(4001, subscriptions);
-		LocalNativeTdxBroker zhongxinBroker = new LocalNativeTdxBroker("180.153.18.180", (short)7708, (short)2, "8009145070", "8009145070", "123456", "123456");
+		LocalNativeTdxBroker zhongxinBroker = new LocalNativeTdxBroker("180.153.18.180", (short)7708, (short)2, "8009145070", "8009145070", LocalNativeTdxBroker.password, "123456");
 //		orderMap = new HashMap<>();
 		orderListenerMap = new HashMap<>();
 		brokerMap = new HashMap<>();
