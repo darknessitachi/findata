@@ -15,8 +15,9 @@ public interface MarketConditionHandler extends StrategyHandler {
 	 * @param blotter   the current trade blotter
 	 * @param broker    a broker service
 	 */
-	public void onMarketConditionUpdate(DateTime now,
+	default void onMarketConditionUpdate(DateTime now,
 										MarketCondition mc,
 										TradeBlotter blotter,
-										Broker broker);
+										Broker broker) {
+	}
 }

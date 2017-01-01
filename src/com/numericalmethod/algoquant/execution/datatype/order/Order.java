@@ -63,7 +63,7 @@ public abstract class Order extends BasicOrderDescription {
 	}
 
 	private static final AtomicLong counter = new AtomicLong(0);
-	private long id;
+	private final long id;
 	private DateTime expiry;
 	private OrderState state;
 	private double filledQuantity = 0.0;
@@ -101,10 +101,6 @@ public abstract class Order extends BasicOrderDescription {
 
 	public long id() {
 		return id;
-	}
-
-	public void id(long id) {
-		this.id = id;
 	}
 
 	/**

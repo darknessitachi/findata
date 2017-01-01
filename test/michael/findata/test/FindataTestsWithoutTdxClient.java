@@ -221,10 +221,10 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 	@Test
 	public void test_HistoricalData () throws InterruptedException {
 //		historicalData.update(false);
-//		historicalData.update(false,
-//				168, 2196, 1088, 6818, 6837, 358, 2318, 2338, 3606, 914, 177, 386,
-//				1398, 939, 6030, 3328, 3968, 2800, 2828, 3147, 2823, 2822, 3188, 2333);
-		historicalData.update(true, 1288, 3988);
+		historicalData.update(false,
+				168, 2196, 1088, 6818, 6837, 358, 2318, 2338, 3606, 914, 177, 386,
+				1398, 939, 6030, 3328, 3968, 2800, 2828, 3147, 2823, 2822, 3188, 2333);
+//		historicalData.update(true, 1288, 3988);
 	}
 
 	@Test
@@ -242,6 +242,45 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 					System.out.println("\tAdjusted:\t" + pa.adjust("510300", start, date.toLocalDate(), data.get("510300").getClose()/1000d));},
 				"601009", "000568", "510300"
 		);
+	}
+
+	@Test
+	public void test_DividendService_calculateAdjustmentFactorForStock () {
+//		ds.calculateAdjFactorForStock("000338");
+		ds.calculateAdjFactorForStock("02338");
+		ds.calculateAdjFactorForStock("200054");
+		ds.calculateAdjFactorForStock("600381");
+	}
+
+	@Test
+	public void test_DividendService_priceAdjuster() {
+		LocalDate start = new LocalDate(2016, 1, 1);
+		LocalDate end = new LocalDate(2016, 12, 31);
+		DividendService.PriceAdjuster pa = ds.newPriceAdjuster(start, end, "000338", "02338");
+
+		System.out.println(pa.adjust("000338", LocalDate.parse("2016-07-27"), LocalDate.parse("2016-07-28"), 10d));
+		System.out.println(pa.adjust("000338", LocalDate.parse("2016-07-28"), LocalDate.parse("2016-07-28"), 10d));
+		System.out.println(pa.adjust("000338", LocalDate.parse("2016-07-28"), LocalDate.parse("2016-07-29"), 10d));
+		System.out.println(pa.adjust("000338", LocalDate.parse("2016-07-28"), LocalDate.parse("2016-07-30"), 10d));
+		System.out.println(pa.adjust("000338", LocalDate.parse("2016-07-28"), LocalDate.parse("2016-10-19"), 10d));
+		System.out.println(pa.adjust("000338", LocalDate.parse("2016-07-28"), LocalDate.parse("2016-10-20"), 10d));
+
+		System.out.println(pa.adjust("000338", LocalDate.parse("2016-07-29"), LocalDate.parse("2016-07-29"), 10d));
+		System.out.println(pa.adjust("000338", LocalDate.parse("2016-07-29"), LocalDate.parse("2016-07-30"), 10d));
+		System.out.println(pa.adjust("000338", LocalDate.parse("2016-07-29"), LocalDate.parse("2016-10-19"), 10d));
+		System.out.println(pa.adjust("000338", LocalDate.parse("2016-07-29"), LocalDate.parse("2016-10-20"), 10d));
+
+		System.out.println(pa.adjust("02338", LocalDate.parse("2016-07-02"), LocalDate.parse("2016-07-03"), 10d));
+		System.out.println(pa.adjust("02338", LocalDate.parse("2016-07-03"), LocalDate.parse("2016-07-03"), 10d));
+		System.out.println(pa.adjust("02338", LocalDate.parse("2016-07-03"), LocalDate.parse("2016-07-04"), 10d));
+		System.out.println(pa.adjust("02338", LocalDate.parse("2016-07-03"), LocalDate.parse("2016-07-05"), 10d));
+		System.out.println(pa.adjust("02338", LocalDate.parse("2016-07-03"), LocalDate.parse("2016-09-20"), 10d));
+		System.out.println(pa.adjust("02338", LocalDate.parse("2016-07-03"), LocalDate.parse("2016-09-21"), 10d));
+
+		System.out.println(pa.adjust("02338", LocalDate.parse("2016-07-04"), LocalDate.parse("2016-07-04"), 10d));
+		System.out.println(pa.adjust("02338", LocalDate.parse("2016-07-04"), LocalDate.parse("2016-07-05"), 10d));
+		System.out.println(pa.adjust("02338", LocalDate.parse("2016-07-04"), LocalDate.parse("2016-09-20"), 10d));
+		System.out.println(pa.adjust("02338", LocalDate.parse("2016-07-04"), LocalDate.parse("2016-09-21"), 10d));
 	}
 
 	@Test
@@ -540,10 +579,10 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 
 	@Test
 	public void test_ShortInHKPairStrategy_emailNotification () {
-		shortInHkPairStrategyRepo.findByOpenableDate(LocalDate.now().minusDays(1).toDate()).forEach(strategy -> {
+		shortInHkPairStrategyRepo.findByOpenableDate(LocalDate.now().minusDays(0).toDate()).forEach(strategy -> {
 			strategy.emailNotification("Test");
 		});
-		AsyncMailer.instance.stop();
+//		AsyncMailer.instance().stop();
 	}
 
 	@Test
@@ -556,7 +595,7 @@ public class FindataTestsWithoutTdxClient extends AbstractTestNGSpringContextTes
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		AsyncMailer.instance.stop();
+//		AsyncMailer.instance().stop();
 	}
 
 	@Test

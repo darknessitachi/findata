@@ -32,20 +32,7 @@ import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolume
 // This is a variation of the pair strategy.
 // The difference is that it only opens and doesn't need to close.
 // So in effect, it looks like the strategy is hopping from on stock/etf to another very quickly
-public class HoppingStrategy implements Strategy, MarketConditionHandler, DepthHandler {
-
-	// true: in simulation/backtesting
-	// false: in real trading
-	private boolean backtestMode = false;
-
-	final public boolean isBacktestMode() {
-		return backtestMode;
-	}
-
-	@Override
-	final public void setBacktestMode(boolean backtestMode) {
-		this.backtestMode = backtestMode;
-	}
+public class HoppingStrategy implements Strategy {
 
 	/**
 	 * 510500<->159902: 3dev->1.5dev

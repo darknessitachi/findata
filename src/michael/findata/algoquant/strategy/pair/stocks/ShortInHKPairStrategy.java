@@ -3,41 +3,35 @@ package michael.findata.algoquant.strategy.pair.stocks;
 import com.numericalmethod.algoquant.execution.component.broker.Broker;
 import com.numericalmethod.algoquant.execution.component.tradeblotter.TradeBlotter;
 import com.numericalmethod.algoquant.execution.datatype.depth.marketcondition.MarketCondition;
+import com.numericalmethod.algoquant.execution.datatype.execution.Execution;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import com.numericalmethod.algoquant.execution.datatype.product.fx.Currencies;
-import com.numericalmethod.algoquant.execution.strategy.handler.DepthHandler;
 import michael.findata.algoquant.execution.component.broker.LocalInteractiveBrokers;
 import michael.findata.algoquant.execution.component.broker.MetaBroker;
 import michael.findata.algoquant.execution.datatype.depth.Depth;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
-import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.algoquant.execution.strategy.Strategy;
-import michael.findata.algoquant.execution.strategy.handler.DividendHandler;
-import michael.findata.algoquant.strategy.Pair;
 import michael.findata.algoquant.strategy.pair.PairStrategyUtil;
 import michael.findata.commandcenter.CommandCenter;
-import michael.findata.email.AsyncMailer;
 import michael.findata.model.Dividend;
 import michael.findata.model.PairStats;
 import michael.findata.model.Stock;
+import michael.findata.service.DividendService;
 import michael.findata.spring.data.repository.ShortInHkPairStrategyRepository;
-import michael.findata.util.DBUtil;
+import org.apache.logging.log4j.Logger;
 import org.hibernate.annotations.GenericGenerator;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
-import org.apache.logging.log4j.Logger;
 import org.springframework.data.repository.CrudRepository;
-import org.springframework.data.repository.Repository;
-import scala.util.regexp.Base;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
 import java.util.*;
 
-import static com.numericalmethod.algoquant.execution.datatype.order.Order.OrderExecutionType.*;
-import static michael.findata.util.LogUtil.getClassLogger;
+import static com.numericalmethod.algoquant.execution.datatype.order.Order.OrderExecutionType.MARKET_ORDER;
 import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolumes;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 /**
  * Open suitable for a pair with the short side from HK stock exchange
@@ -58,24 +52,11 @@ import static michael.findata.algoquant.strategy.pair.PairStrategyUtil.calVolume
 @Entity
 @Table(name = "strategy_instance_pair")
 @Access(AccessType.FIELD)
-public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHandler, DividendHandler, Comparable<ShortInHKPairStrategy> {
+public class ShortInHKPairStrategy implements Strategy, Comparable<ShortInHKPairStrategy> {
 	private static final Logger LOGGER = getClassLogger();
 
 	public Logger getLogger () {
 		return LOGGER;
-	}
-
-	// true: in simulation/backtesting
-	// false: in real trading
-	private boolean backtestMode = false;
-
-	final public boolean isBacktestMode() {
-		return backtestMode;
-	}
-
-	@Override
-	final public void setBacktestMode(boolean backtestMode) {
-		this.backtestMode = backtestMode;
 	}
 
 	//经验参数：
@@ -102,21 +83,21 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		// 0.022	-	0
 		// 0.032	-	0
 		paramMap.put("00914->600585 1", new Param(0.020, 0, 57000, 37000));
-		paramMap.put("00914->600585 2", new Param(0.025, 0, 57000, 37000));
-		paramMap.put("00914->600585 3", new Param(0.035, 0, 57000, 37000));
+		paramMap.put("00914->600585 2", new Param(0.027, 0, 57000, 37000));
+		paramMap.put("00914->600585 3", new Param(0.034, 0, 57000, 37000));
 
 		// 福耀玻璃：03606->600660
 		// 0.016	-	0
 		// 0.024	-	0
 		// 0.034	-	0
-		paramMap.put("03606->600660 1", new Param(0.016, 0, 57000, 37000));
-		paramMap.put("03606->600660 2", new Param(0.024, 0, 57000, 37000));
+		paramMap.put("03606->600660 1", new Param(0.020, 0, 57000, 37000));
+		paramMap.put("03606->600660 2", new Param(0.027, 0, 57000, 37000));
 		paramMap.put("03606->600660 3", new Param(0.034, 0, 57000, 37000));
 	}
 
 	// for hibernate use only
 	protected ShortInHKPairStrategy() {
-		openThreshold = 0.03;
+		openThreshold = .03;
 		closeThreshold = .013;
 		amountUpperLimit = 57000; // default in RMB!!!
 		amountLowerLimit = 37000; // default in RMB!!!
@@ -491,7 +472,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 	/**
 	 * @return calculated price delta, null if any of the depth is not available
 	 */
-	private Double residual() {
+	private Double residual(LocalDate queryDate) {
 		if (depthToShort == null || depthToLong == null) {
 			LOGGER.debug("\t{}\t: depthToShort: {}, depthToLong: {}. At least one of the above is null. Cannot calculate residual.", this, depthToShort, depthToLong);
 			return null;
@@ -544,6 +525,13 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 			LOGGER.debug("\t{}\t: Investigation: depthToLong.bestBid(longVolumeHeld*depthToLong.bid(1))={}", this, depthToLong.bestBid(longVolumeHeld*depthToLong.bid(1)));
 			return null;
 		}
+
+		// turn off the follow 4 statements to use raw price instead of adjusted prices
+		LOGGER.debug("\t{}\t: Before adjustment - short: {} / long: {}", this, effectivePriceForShortSide, effectivePriceForLongSide);
+		effectivePriceForShortSide = adjust(getCodeToShort(), queryDate, effectivePriceForShortSide);
+		effectivePriceForLongSide = adjust(getCodeToLong(), queryDate, effectivePriceForLongSide);
+		LOGGER.debug("\t{}\t: After adjustment - short: {} / long: {}", this, effectivePriceForShortSide, effectivePriceForLongSide);
+
 		residualLatest = effectivePriceForShortSide * slope() / effectivePriceForLongSide - 1;
 		return residualLatest;
 	}
@@ -570,7 +558,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		}
 		LOGGER.debug("\t{}\t: Processing depth: {}", this, depth);
 		//
-		Double residual = residual();
+		Double residual = residual(now.toLocalDate());
 		if (residual == null) {
 			LOGGER.debug("\t{}\t: Residual not available, returning.", this);
 			return;
@@ -579,9 +567,19 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 			LOGGER.debug("\t{}\t: Trading session about to end in less than 3 minutes.", this);
 			switch (status) {
 				case NEW:
+					if (residual > openThreshold) {
+						emailNotification("Open Opportunity");
+					}
+					LOGGER.debug("\t{}\t: Status is {}, returning...", this, status);
+					return;
 				case CLOSED:
 				case FORCED:
+					LOGGER.debug("\t{}\t: Status is {}, returning...", this, status);
+					return;
 				case OPENED:
+					if (residual < closeThreshold) {
+						emailNotification("Close Opportunity");
+					}
 					LOGGER.debug("\t{}\t: Status is {}, returning...", this, status);
 					return;
 				case OPENING:
@@ -637,7 +635,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 
 					// Executed short order
 					openingOrderShort = new HexinOrder(toShort(), shortVolumeCalculated, actualPriceForShortSide, HexinOrder.HexinType.SIMPLE_SELL);
-					openingOrderShort.addTag(MetaBroker.ORDER_TAG_BROKER, shortSideBrokerTag);
+					openingOrderShort.addTag(HexinOrder.ORDER_TAG_BROKER, shortSideBrokerTag);
 					List<HexinOrder> orders = new ArrayList<>(1);
 					orders.add(openingOrderShort);
 					broker.sendOrder(orders);
@@ -750,6 +748,40 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		}
 	}
 
+	@Transient
+	private DividendService dividendService = null;
+	// must set this before strategy is used
+	public void dividendService(DividendService service) {
+		dividendService = service;
+	}
+
+	@Transient
+	private DividendService.PriceAdjuster priceAdjuster = null; // don't use directly, use priceAdjuster() instead;
+	private DividendService.PriceAdjuster priceAdjuster () {
+		if (priceAdjuster == null && dividendService != null) {
+			dividendService.newPriceAdjuster(referenceDate(), LocalDate.now(), getCodeToShort(), getCodeToLong());
+		}
+		return priceAdjuster;
+	}
+
+	@Transient
+	private LocalDate referenceDate = null; // don't use directly, use referenceDate() instead
+	private LocalDate referenceDate () {
+		if (referenceDate == null) {
+			referenceDate = LocalDate.fromDateFields(stats().getTrainingStart());
+		}
+		return referenceDate;
+	}
+
+	private double adjust(String code, LocalDate queryDate, double price) {
+		DividendService.PriceAdjuster pa = priceAdjuster();
+		if (pa != null) {
+			return pa.adjust(code, referenceDate(), queryDate, price);
+		} else {
+			return price;
+		}
+	}
+
 	private void cancelUnfilledOpening(Broker broker) {
 		List<HexinOrder> orders = new ArrayList<>(1);
 		orders.add(openingOrderShort);
@@ -797,10 +829,10 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 		// Close position:
 		// Execute short buy back and long sell back
 		closingOrderShort = new HexinOrder(toShort(), shortVolumeHeld, actualPriceForShortSide, HexinOrder.HexinType.SIMPLE_BUY);
-		closingOrderShort.addTag(MetaBroker.ORDER_TAG_BROKER, shortSideBrokerTag);
+		closingOrderShort.addTag(HexinOrder.ORDER_TAG_BROKER, shortSideBrokerTag);
 		// Minus 5 cents to sell order to make sure it fills.
 		closingOrderLong = new HexinOrder(toLong(), longVolumeHeld, actualPriceForLongSide-0.05, HexinOrder.HexinType.SIMPLE_SELL, MARKET_ORDER);
-		closingOrderLong.addTag(MetaBroker.ORDER_TAG_BROKER, longSideBrokerTag);
+		closingOrderLong.addTag(HexinOrder.ORDER_TAG_BROKER, longSideBrokerTag);
 		List<HexinOrder> orders = new ArrayList<>(2);
 		orders.add(closingOrderShort);
 		orders.add(closingOrderLong);
@@ -897,16 +929,16 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 	@Override
 	public String notification () {
 		return String.format(
-				"<pre><b>%s</b>\n<b>ID:</b> %d\n<b>Status:</b> %s\n<b>Short-side:</b> %s-%s\n<b>Long-side:</b> %s-%s\n<b>Slope:</b> %.5f\n<b>Residual latest:</b> %.3f\n<b>Open threshold:</b> %.3f\n<b>Close threshold:</b> %.3f\n<b>Date opened:</b> %s\n<b>Date closed:</b> %s\n<b>Short-side open price:</b> %.4f\n<b>Long-side open price:</b> %.4f\n<b>Short-side close price:</b> %.4f\n<b>Long-side close price:</b> %.4f\n<b>Short volume held:</b> %.0f\n<b>Long volume held:</b> %.0f\n<b>Short volume calculated:</b> %.0f\n<b>Long volume calculated:</b> %.0f\n<b>Minimum residual:</b> %.4f\n<b>Maximum Residual:</b> %.4f\n<b>Minimum residual date:</b> %s\n<b>Maximum residual date:</b> %s\n<b>Residual open:</b> %.4f\n<b>Residual close:</b> %.4f\n<b>Openable date:</b> %s\n<b>Force closure date:</b> %s\n<b>Upper limit amount:</b> %.0f\n<b>Lower limit amount:</b> %.0f</pre>",
+				"<pre><b>%s</b>\n<b>ID:</b> %d\n<b>Status:</b> %s\n<b>Short-side:</b> %s-%s\n<b>Long-side:</b> %s-%s\n<b>Slope:</b> %.5f\n<b>Residual latest:</b> %.2f%%\n<b>Open threshold:</b> %.2f%%\n<b>Close threshold:</b> %.2f%%\n<b>Date opened:</b> %s\n<b>Date closed:</b> %s\n<b>Short-side open price:</b> %.4f\n<b>Long-side open price:</b> %.4f\n<b>Short-side close price:</b> %.4f\n<b>Long-side close price:</b> %.4f\n<b>Short volume held:</b> %.0f\n<b>Long volume held:</b> %.0f\n<b>Short volume calculated:</b> %.0f\n<b>Long volume calculated:</b> %.0f\n<b>Minimum residual:</b> %.2f%%\n<b>Maximum Residual:</b> %.2f%%\n<b>Minimum residual date:</b> %s\n<b>Maximum residual date:</b> %s\n<b>Residual open:</b> %.2f%%\n<b>Residual close:</b> %.2f%%\n<b>Openable date:</b> %s\n<b>Force closure date:</b> %s\n<b>Upper limit amount:</b> %.0f\n<b>Lower limit amount:</b> %.0f</pre>",
 				"ShortInHKPairStrategy",
 				id,
 				status,
 				getNameToShort(), getCodeToShort(),
 				getNameToLong(), getCodeToLong(),
 				slope(),
-				residualLatest,
-				openThreshold,
-				closeThreshold,
+				residualLatest == null ? null : residualLatest*100,
+				openThreshold*100,
+				closeThreshold*100,
 				dateOpened,
 				dateClosed,
 				shortOpen,
@@ -917,12 +949,12 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 				longVolumeHeld,
 				shortVolumeCalculated,
 				longVolumeCalculated,
-				minResidual,
-				maxResidual,
+				minResidual == null ? null : minResidual*100,
+				maxResidual == null ? null : maxResidual*100,
 				minResidualDate,
 				maxResidualDate,
-				residualOpen,
-				residualClose,
+				residualOpen == null ? null : residualOpen*100,
+				residualClose == null ? null : residualClose*100,
 				openableDate,
 				forceClosureDate,
 				amountUpperLimit,
@@ -939,7 +971,8 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 	}
 
 	@Override
-	public void orderUpdated(Order order, Broker broker) {
+	public void onExecution(DateTime now, Execution execution, MarketCondition mc, TradeBlotter blotter, Broker broker) {
+		Order order = execution.order();
 		LOGGER.info("\t{}\t: Order {} updated.", this, order);
 		switch (status) {
 			case NEW:
@@ -953,7 +986,7 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 					// If short order is fully filled, execute long order.
 					// Add 5 cents to buy order to make sure it fills.
 					openingOrderLong = new HexinOrder(toLong(), longVolumeCalculated, actualPriceForLongSide+0.05, HexinOrder.HexinType.SIMPLE_BUY);
-					openingOrderLong.addTag(MetaBroker.ORDER_TAG_BROKER, longSideBrokerTag);
+					openingOrderLong.addTag(HexinOrder.ORDER_TAG_BROKER, longSideBrokerTag);
 					List<HexinOrder> orders = new ArrayList<>(1);
 					orders.add(openingOrderLong);
 					broker.sendOrder(orders);
@@ -987,10 +1020,6 @@ public class ShortInHKPairStrategy implements OrderListener, Strategy, DepthHand
 				LOGGER.warn("\t{}\t: This should only happen immediately after using IB to execute position closing orders (forcefully). And it is very likely caused by unhandled order update message.", this);
 				break;
 		}
-	}
-
-	@Override
-	public void onDividend(DateTime now, Dividend dividend, MarketCondition mc, TradeBlotter blotter, Broker broker) {
 	}
 
 	public enum Status {

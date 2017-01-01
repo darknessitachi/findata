@@ -1,9 +1,9 @@
 package michael.findata.algoquant.execution.component.broker;
 
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
+import com.numericalmethod.algoquant.execution.strategy.handler.ExecutionHandler;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType;
-import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
 
 import java.io.*;
@@ -31,20 +31,20 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 
 	private Timer keepAliveTimer;
 
-	// This boolean lock mechanism only supports two contending parties
-	private volatile boolean lock = false; // false - not held; true - held by a thread
-	public void waitLock () {
-		System.out.println("Waiting lock.");
-		while (lock) {
-			// wait until lock is released
-		}
-		lock = true;
-		System.out.println("Lock obtained.");
-	}
-	public void releaseLock () {
-		System.out.println("Lock released.");
-		lock = false;
-	}
+//	// This boolean lock mechanism only supports two contending parties
+//	private volatile boolean lock = false; // false - not held; true - held by a thread
+//	public void waitLock () {
+//		System.out.println("Waiting lock.");
+//		while (lock) {
+//			// wait until lock is released
+//		}
+//		lock = true;
+//		System.out.println("Lock obtained.");
+//	}
+//	public void releaseLock () {
+//		System.out.println("Lock released.");
+//		lock = false;
+//	}
 
 	public void stop () {
 		try{
@@ -59,8 +59,7 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 	}
 
 	@Override
-	public void setOrderListener(Order o, OrderListener listener) {
-
+	public void setOrderListener(Order o, ExecutionHandler handler) {
 	}
 
 	public void test () {
@@ -279,7 +278,7 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 		keepAliveTimer.scheduleAtFixedRate(new TimerTask() {
 			@Override
 			public void run() {
-				waitLock();
+//				waitLock();
 				if (portCreditBuySell != portNA) {
 					refreshGrid(portCreditBuySell);
 				}
@@ -295,7 +294,7 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 				if (portMonitor != portNA) {
 					refreshGrid(portMonitor);
 				}
-				releaseLock();
+//				releaseLock();
 			}
 		}, 60000, 60000);
 
@@ -330,7 +329,7 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 
 	@Override
 	public void sendOrder(Collection<? extends Order> orders) {
-		waitLock();
+//		waitLock();
 		ArrayList<Order> normalOrders = new ArrayList<>();
 		ArrayList<Order> creditOrders = new ArrayList<>();
 		ArrayList<Order> pairOpenOrders = new ArrayList<>();
@@ -371,14 +370,14 @@ public class LocalHexinBrokerProxy extends LocalBrokerProxy {
 		if (!pairCloseOrders.isEmpty()) {
 			orderOutToDotNetComponent(pairCloseOrders, portPairClose);
 		}
-		releaseLock();
+//		releaseLock();
 	}
 
 	@Override
 	public void cancelOrder(Collection<? extends Order> orders) {
-		waitLock();
+//		waitLock();
 		// TODO: 2016/5/22 Cancel order
-		releaseLock();
+//		releaseLock();
 	}
 
 	public static void main (String [] args) throws InterruptedException, IOException {

@@ -32,20 +32,7 @@ import static michael.findata.algoquant.execution.datatype.order.HexinOrder.Hexi
 @Entity
 @Table(name = "strategy_instance_grid")
 @Access(AccessType.FIELD)
-public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Comparable<GridStrategy> {
-
-	// true: in simulation/backtesting
-	// false: in real trading
-	private boolean backtestMode = false;
-
-	final public boolean isBacktestMode() {
-		return backtestMode;
-	}
-
-	@Override
-	final public void setBacktestMode(boolean backtestMode) {
-		this.backtestMode = backtestMode;
-	}
+public class GridStrategy implements Strategy, Comparable<GridStrategy> {
 
 	@Override
 	public Collection<Stock> getTargetSecurities() {
@@ -361,7 +348,7 @@ public class GridStrategy implements Strategy, DividendHandler, DepthHandler, Co
 			}
 		}
 		HexinOrder order = new HexinOrder(depth.product(), volume, effectivePrice, type);
-		order.addTag(MetaBroker.ORDER_TAG_BROKER, brokerTag);
+		order.addTag(HexinOrder.ORDER_TAG_BROKER, brokerTag);
 		orders.add(order);
 		LOGGER.info("\t{}\t: At {}, submitting order {}", this, now, order);
 		broker.sendOrder(orders);

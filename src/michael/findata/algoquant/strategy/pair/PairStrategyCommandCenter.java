@@ -1,9 +1,11 @@
 package michael.findata.algoquant.strategy.pair;
 
+import michael.findata.algoquant.execution.strategy.DisruptorStrategyMarshaller;
 import michael.findata.algoquant.strategy.grid.GridStrategy;
 import michael.findata.algoquant.strategy.pair.stocks.ShortInHKPairStrategy;
 import michael.findata.commandcenter.CommandCenter;
 import michael.findata.external.tdx.TDXClient;
+import michael.findata.service.DividendService;
 import michael.findata.spring.data.repository.GridStrategyRepository;
 import michael.findata.spring.data.repository.ShortInHkPairStrategyRepository;
 import michael.findata.util.DBUtil;
@@ -15,31 +17,31 @@ import java.util.HashSet;
 import java.util.List;
 
 public class PairStrategyCommandCenter {
-//	private static Logger LOGGER = getClassLogger();
+
 	public static void main (String [] args) {
 		Process dbProcess = DBUtil.tryToStartDB();
 		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/pair_spring.xml");
 		CommandCenter cc = (CommandCenter) context.getBean("commandCenter");
 		GridStrategyRepository gridRepo = (GridStrategyRepository) context.getBean("gridStrategyRepository");
 //		StockRepository stockRepo = (StockRepository) context.getBean("stockRepository");
+		DividendService dividendService = (DividendService) context.getBean("dividendService");
 		cc.setShSzHqClient(new TDXClient(TDXClient.TDXClientConfigs));
 		ShortInHkPairStrategyRepository shortInHkPairStrategyRepo = (ShortInHkPairStrategyRepository) context.getBean("shortInHkPairStrategyRepository");
 
 		HashSet<ShortInHKPairStrategy> pairStras = new HashSet<>();
 		pairStras.addAll(shortInHkPairStrategyRepo.findByOpenableDate(LocalDate.now().toDate()));
 		pairStras.addAll(shortInHkPairStrategyRepo.findByStatusIn(ShortInHKPairStrategy.Status.OPENED, ShortInHKPairStrategy.Status.OPENING));
+
 		pairStras.forEach(strategy -> {
+			strategy.dividendService(dividendService);
 			strategy.setRepository(shortInHkPairStrategyRepo);
-			cc.addStrategy(strategy);
-//			LOGGER.info("Added strategy: [{}]", strategy);
+			cc.addStrategy(new DisruptorStrategyMarshaller(strategy));
 		});
 
 		List<GridStrategy> grids = gridRepo.findByActive(true);
-//		Set<Stock> stocks = new HashSet<>();
 		for (GridStrategy grid : grids) {
-			cc.addStrategy(grid);
+			cc.addStrategy(new DisruptorStrategyMarshaller(grid));
 			grid.setRepository(gridRepo);
-//			stocks.add(grid.getStock());
 		}
 
 		// Set up command center

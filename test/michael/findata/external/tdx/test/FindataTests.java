@@ -132,12 +132,6 @@ public class FindataTests extends AbstractTestNGSpringContextTests {
 	}
 
 	@Test
-	public void test_DividendService_calculateAdjFactorForStock() {
-		ds.calculateAdjFactorForStock("200054");
-		ds.calculateAdjFactorForStock("600381");
-	}
-
-	@Test
 	public void test_MetaBroker() {
 		Process dbProcess = DBUtil.tryToStartDB();
 //		GridStrategyRepository gridRepo = (GridStrategyRepository) context.getBean("gridInstanceRepository");

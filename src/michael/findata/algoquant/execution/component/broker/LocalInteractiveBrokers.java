@@ -1,15 +1,17 @@
 package michael.findata.algoquant.execution.component.broker;
 
 import com.ib.client.*;
+import com.ib.client.Execution;
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
+import com.numericalmethod.algoquant.execution.strategy.handler.ExecutionHandler;
 import michael.findata.algoquant.execution.component.depthprovider.DepthProvider;
 import michael.findata.algoquant.execution.datatype.depth.Depth;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.algoquant.execution.listener.DepthListener;
-import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
 import org.apache.logging.log4j.Logger;
+import org.joda.time.DateTime;
 
 import java.util.*;
 
@@ -27,8 +29,8 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 	public static double CNH_HKD_bid = -1;
 	public static double CNH_HKD_last = 1.1180;
 
-	private Map<Long, Order> orderMap;
-	private Map<Long, OrderListener> orderListenerMap;
+	private Map<Integer, Order> orderMap; // server side order id -> order. This is a must - you cannot use client side order id here
+	private Map<Order, ExecutionHandler> orderListenerMap; // client side order id -> handler. This is a must - you cannot use server side order id here.
 	private int port;
 	private Map<Integer, Stock> subscribed;
 	private Map<Integer, DepthData> depthDataMap;
@@ -198,17 +200,19 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 					continue;
 			}
 			if (order instanceof HexinOrder) {
-				if (orderMap.containsKey(order.id())) {
-					m_s.placeOrder((int)order.id(), contractStock, OrderSamples.LimitOrder(buyOrSell, order.quantity(), order.price()));
+				if (orderMap.containsKey(((HexinOrder) order).serverSideId())) {
+					m_s.placeOrder(((HexinOrder) order).serverSideId(), contractStock, OrderSamples.LimitOrder(buyOrSell, order.quantity(), order.price()));
 					LOGGER.info("Updated order [{}].", order);
 				} else {
 					int vId = (int) validId;
 					validId ++;
+					((HexinOrder)order).serverSideId(vId);
+					orderMap.put(vId, order);
 					m_s.placeOrder(vId, contractStock, OrderSamples.LimitOrder(buyOrSell, order.quantity(), order.price()));
-					order.id(vId);
-					orderMap.put((long)vId, order);
 					LOGGER.info("Placed order [{}].", order);
 				}
+			} else {
+				LOGGER.warn("There is no way to send/update non-Hexin order - unable to obtain/store server-side order id. [{}]", order);
 			}
 		}
 	}
@@ -216,14 +220,19 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 	@Override
 	public void cancelOrder(Collection<? extends Order> orders) {
 		for (Order order : orders) {
-			LOGGER.info("Cancelling order [{}]", order.id());
-			m_s.cancelOrder((int) order.id());
+			if (order instanceof HexinOrder) {
+				LOGGER.info("Cancelling order [server-side id: {}]", ((HexinOrder) order).serverSideId());
+				m_s.cancelOrder(((HexinOrder)order).serverSideId());
+			} else {
+				LOGGER.warn("There is no way to cancel non-Hexin order - unable to obtain server-side order id. [{}]", order);
+			}
 		}
 	}
 
 	@Override
-	public void setOrderListener (Order order, OrderListener listener) {
-		orderListenerMap.put(order.id(), listener);
+	public void setOrderListener (Order order, ExecutionHandler handler) {
+		orderListenerMap.put(order, handler);
+		LOGGER.debug("IB orderListenerMap put: {} -> {}", order, handler);
 	}
 
 	@Override
@@ -421,13 +430,14 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 	@Override
 	public void orderStatus(int orderId, String status, double filled, double remaining,
 							double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, String whyHeld) {
-		LOGGER.info(String.format("orderStatus: orderId: %s, status: %s, filled: %f, remaining: %f, avgFillPrice: %f, permId: %d, parentId: %d, lastFillPrice: %f, clientId: %d, whyHeld: %s\n",
+		LOGGER.info(String.format("orderStatus: orderId: %s, status: %s, filled: %f, remaining: %f, avgFillPrice: %f, permId: %d, parentId: %d, lastFillPrice: %f, clientId: %d, whyHeld: %s",
 				orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld));
-		Order order = orderMap.get((long)orderId);
+		Order order = orderMap.get(orderId);
 		if (order == null) {
 			LOGGER.debug("Cannot find corresponding order with id {} in my order map.", orderId);
 			return;
 		}
+		double fillQtyThisTime = 0;
 		switch (status) {
 			// TODO: 11/14/2016 deal with other status
 			case "Cancelled":
@@ -452,28 +462,34 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 			case "Filled":
 				if (!order.state().equals(Order.OrderState.FILLED)) {
 					// make sure our corresponding order is in "FILLED" state
+					fillQtyThisTime = filled - order.filledQuantity();
 					order.fill(order.quantity());
 					LOGGER.info("Order fully filled: {}", order);
 				}
 				break;
 			default:
 				if (filled > order.filledQuantity()) {
-					LOGGER.info("Order partially filled: {}", order);
 					if (order.state().equals(Order.OrderState.UNFILLED)) {
-						order.fill(filled);
+						fillQtyThisTime = filled;
+						order.fill(fillQtyThisTime);
 					} else {
-						order.fill(filled - order.filledQuantity());
+						fillQtyThisTime = filled - order.filledQuantity();
+						order.fill(fillQtyThisTime);
 					}
+					LOGGER.info("Order partially filled: {}", order);
 				}
 				break;
 		}
-		OrderListener listener = orderListenerMap.get((long)orderId);
-		if (listener == null) {
+		ExecutionHandler handler = orderListenerMap.get(order);
+		if (handler == null) {
 			LOGGER.info("No listener found for order {}", order);
 			return;
 		}
-		LOGGER.info("notifying listener {} for order {}", listener, order);
-		listener.orderUpdated(order, this);
+		LOGGER.info("notifying listener {} for order {}", handler, order);
+		DateTime now = DateTime.now();
+		handler.onExecution(now,
+				new com.numericalmethod.algoquant.execution.datatype.execution.Execution(order, now, fillQtyThisTime, lastFillPrice),
+				null, null, this);
 	}
 
 	@Override
@@ -670,9 +686,9 @@ public class LocalInteractiveBrokers implements Broker, EWrapper, DepthProvider 
 	public void softDollarTiers(int reqId, SoftDollarTier[] tiers) {
 	}
 
-	public void printListeners() {
+	public void printOrderListeners() {
 		orderListenerMap.entrySet().forEach(entry -> {
-			System.out.printf("IB: %s -> %s\n", entry.getKey(), entry.getValue());
+			LOGGER.info("IB: {} -> {}", entry.getKey(), entry.getValue());
 		});
 	}
 }

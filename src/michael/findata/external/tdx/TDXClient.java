@@ -309,6 +309,7 @@ public class TDXClient {
 		}
 //System.out.println("C @\t"+System.currentTimeMillis());
 //		System.out.println(codes[0]+": Time taken(ms) for this round: "+(System.currentTimeMillis() - start));
+//		LOGGER.info("Depth map created.");
 		return depthMap;
 	}
 

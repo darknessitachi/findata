@@ -1,4 +1,5 @@
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
+import com.numericalmethod.algoquant.execution.datatype.product.Product;
 import com.numericalmethod.suanshu.stats.descriptive.rank.Quantile;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
 import michael.findata.algoquant.strategy.TestStrategy;
@@ -8,6 +9,8 @@ import michael.findata.model.Stock;
 import michael.findata.spring.data.repository.StockRepository;
 import michael.findata.util.DBUtil;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
+import org.apache.logging.log4j.Logger;
+import org.joda.time.LocalDate;
 import org.joda.time.LocalTime;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -15,16 +18,78 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_BUY;
 import static michael.findata.algoquant.execution.datatype.order.HexinOrder.HexinType.SIMPLE_SELL;
+import static michael.findata.util.LogUtil.getClassLogger;
 
 public class Plan {
 	public static void main (String args []) throws IOException, InterruptedException {
-		System.out.println (9999*9999);
+//		Logger logger = getClassLogger();
+
+//		log(logger);
+//		log(logger);
+//		log(logger);
+//		for (int i = 1; i < 10; i++) {
+//			logger.info("Time: {}", log(logger)/1000000d);
+//		}
+
+//		Stock a = new Stock("600000");
+//		Stock b = new Stock("600026");
+//		equal(a, b);
+//		equal(a, b);
+//		equal(a, b);
+//		for (int i = 1; i < 10; i++) {
+//			logger.info("Time: {}", equal(a, b)/1000000d);
+//		}
+//		logger.info("");
+//		HashMap<Product, List> map = new HashMap<>();
+//		map.put(a, new ArrayList());
+//		map.put(b, new ArrayList());
+//		map.get(a);
+//		map.get(b);
+//		for (int i = 1; i < 10; i++) {
+//			logger.info("Time: {}", mapGet(map, b)/1000000d);
+//		}
+		System.out.print(LocalDate.now().toDateTimeAtStartOfDay().plusHours(16).plusMinutes(30).toDate());
+	}
+
+	private static long mapGet (Map map, Object object) {
+		long start = System.nanoTime();
+		map.get(object);
+		map.get(object);
+		map.get(object);
+		map.get(object);
+		map.get(object);
+		map.get(object);
+		map.get(object);
+		map.get(object);
+		map.get(object);
+		map.get(object);
+		return System.nanoTime() - start;
+	}
+
+	private static long log (Logger logger) {
+		long start = System.nanoTime();
+		logger.info("Hello!");
+		return System.nanoTime() - start;
+	}
+
+	private static long equal (Object a, Object b) {
+		long start = System.nanoTime();
+		a.equals(b);
+		a.equals(b);
+		a.equals(b);
+		a.equals(b);
+		a.equals(b);
+		a.equals(b);
+		a.equals(b);
+		a.equals(b);
+		a.equals(b);
+		a.equals(b);
+		return System.nanoTime() - start;
 	}
 }
 
@@ -63,27 +128,25 @@ public class Plan {
  *
  *
  * 0. use priceadjuster for inspecbyminute/byday
+
+ * 0. Residual calc to take into account split/dividend
+ * 1. test correlation calculation with dividend taken into consideration
+ * 2. ratio calculation in pair strategy needs to use the pair stats training start date as the reference date
+ * 0. Test A/H pair strategy with dividends, do not rush, since dividend season is far down the road
+ *
  * 0. use min residual as another indicator for pair trading: already can generate min/max/percentiles in PairStats
- * 0. maybe we need to use a timer to monitor db?
  * 0. use exchange rate in db to init in memory exchange rate
- * 0. a. Use disruptor to implement all brokers so that they function like IB
- *    b. Use disruptor to dispatch depths to strategies.
- * 0. localbrokerproxy line 115 hxOrder.ack(results[i]); if index out of bound occurs here, whole command center will pause, handle exception gracefully,
  * try to separate those orders which have issue from those don't
  * 0. ShortInHK to handle shorting during the last three minutes of HK daily session, when the most profitable moments usually happens
  * 0. ShortInHK to handle short in A too.
  *
- * 0. Residual calc to take into account split/dividend
- * 1. test correlation calculation with dividend taken into consideration
- * 2. ratio calculation in pair strategy needs to use the pairopendate as the reference date
- * 0. Test A/H pair strategy with dividends, do not rush, since dividend season is far down the road
+
  * 0. Order's "rejected" status
  *
  * 0. Use inspectpair to find shortinA opportunities and try to create a streamlined semi-auto process
  * 0. Learn from ETFnStockBasketTest
  * 0. HKstock minute / daily prices / dividend split
  * 0. Use Kalman Filter or Regression for H->A arb?
- * 0. automatic ¹É¶«´úÂë matching in NativeTdx
  * 0. ShortInHKPairStrategy has three outstanding issues, but it can already be used.
 
  7. Optimization issue:

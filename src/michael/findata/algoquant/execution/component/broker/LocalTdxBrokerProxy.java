@@ -1,8 +1,8 @@
 package michael.findata.algoquant.execution.component.broker;
 
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
+import com.numericalmethod.algoquant.execution.strategy.handler.ExecutionHandler;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
-import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
 import org.apache.logging.log4j.Logger;
 
@@ -26,25 +26,26 @@ public class LocalTdxBrokerProxy extends LocalBrokerProxy {
 		test();
 	}
 
+	// We use disruptor now (DisruptorBrokerMarshaller), instead of lock
 	// This boolean lock mechanism only supports two contending parties
-	private volatile boolean lock = false; // false - not held; true - held by a thread
-	public void waitLock () {
-		LOGGER.info("Waiting lock.");
-		while (lock) {
-			// wait until lock is released
-		}
-		lock = true;
-		LOGGER.info("Lock obtained.");
-	}
-
-	public void releaseLock () {
-		LOGGER.info("Lock released.");
-		lock = false;
-	}
+//	private volatile boolean lock = false; // false - not held; true - held by a thread
+//	public void waitLock () {
+//		LOGGER.info("Waiting lock.");
+//		while (lock) {
+//			// wait until lock is released
+//		}
+//		lock = true;
+//		LOGGER.info("Lock obtained.");
+//	}
+//
+//	public void releaseLock () {
+//		LOGGER.info("Lock released.");
+//		lock = false;
+//	}
 
 	@Override
 	public void sendOrder(Collection<? extends Order> orders) {
-		waitLock();
+//		waitLock();
 		ArrayList<Order> normalOrders = new ArrayList<>();
 		ArrayList<Order> creditOrders = new ArrayList<>();
 		ArrayList<Order> pairOpenOrders = new ArrayList<>();
@@ -85,14 +86,14 @@ public class LocalTdxBrokerProxy extends LocalBrokerProxy {
 		if (!pairCloseOrders.isEmpty()) {
 			orderOutToDotNetComponent(pairCloseOrders, port);
 		}
-		releaseLock();
+//		releaseLock();
 	}
 
 	@Override
 	public void cancelOrder(Collection<? extends Order> orders) {
-		waitLock();
+//		waitLock();
 		cancelOrderToDotNetComponent(orders, port);
-		releaseLock();
+//		releaseLock();
 	}
 
 	public boolean test (){
@@ -151,6 +152,7 @@ public class LocalTdxBrokerProxy extends LocalBrokerProxy {
 	}
 
 	@Override
-	public void setOrderListener(Order o, OrderListener listener) {
+	public void setOrderListener(Order o, ExecutionHandler handler) {
+		LOGGER.debug("HT orderListenerMap put: {} -> {}", o, handler);
 	}
 }

@@ -22,6 +22,7 @@ import michael.findata.service.DividendService;
 import michael.findata.spring.data.repository.DividendRepository;
 import michael.findata.util.DBUtil;
 import org.joda.time.DateTime;
+import org.joda.time.LocalDate;
 import org.joda.time.LocalDateTime;
 import org.joda.time.LocalTime;
 import org.apache.logging.log4j.Logger;
@@ -78,8 +79,6 @@ public class CommandCenter implements DepthListener {
 
 	private AtomicBoolean locked = new AtomicBoolean(false);
 
-//	private Timer saveTimer;
-
 	public CommandCenter () {
 		strategies = new ArrayList<>();
 		setFirstHalfStartCN(new LocalTime(9, 29, 50));
@@ -90,14 +89,6 @@ public class CommandCenter implements DepthListener {
 		setSecondHalfStartHK(new LocalTime(12, 59, 50));
 		setSecondHalfEndCN(new LocalTime(15, 0, 10));
 		setSecondHalfEndHK(new LocalTime(16, 0, 10));
-
-//		saveTimer = new Timer(true); // Daemon timer, stops when command center stops
-//		saveTimer.scheduleAtFixedRate(new TimerTask() {
-//			@Override
-//			public void run() {
-//				// Save strategies
-//			}
-//		}, firstHalfStartCN, 670090); // fix delay: 11 minutes and 16 seconds+
 	}
 
 	public void addTargetSecurities(Collection<Stock> targetSecurities) {
@@ -180,10 +171,37 @@ public class CommandCenter implements DepthListener {
 		}
 	}
 
+	private void updateDividendAndAdjFactorsForAShares () {
+		TDXClient c = new TDXClient("218.6.198.155:7709");
+		c.connect();
+		targetSecurities.forEach(stock -> {
+			if (Exchange.SHSE.equals(stock.exchange()) || Exchange.SZSE.equals(stock.exchange())) {
+				dividendService.refreshDividendDataForFund(stock.getCode(), c);
+			}
+			dividendService.calculateAdjFactorForStock(stock.getCode());
+		});
+		c.disconnect();
+	}
+
+	private void scheduleStopTask () {
+		// schedule stop 30 minutes after hk market stops
+		Timer stopTimer = new Timer(true); // Daemon timer, stops when command center stops
+		stopTimer.schedule(new TimerTask() {
+			@Override
+			public void run() {
+				LOGGER.info("Stop timer activated.");
+				onStop();
+			}
+		}, new Date(secondHalfEndHK+3*60*1000)); // 30 min after hk market stops;
+	}
+
 	public void start () {
 		// Caution: better put this line as the first statement in this method, quite a
 		// number of statements depend on it!
 		setTargetSecurities();
+
+		updateDividendAndAdjFactorsForAShares();
+		scheduleStopTask();
 
 		// Caution: this has to be put after setTargetSecurities!
 		MetaBroker broker = new MetaBroker(hkStocks);
@@ -295,21 +313,21 @@ public class CommandCenter implements DepthListener {
 		this.secondHalfEndHK = secondHalfEndHK.toDateTimeToday().getMillis();
 	}
 
-	private boolean obtainLock() {
-		// Performance: as tested, during a 2-client session this section takes 0 ms to execute, acceptable.
-		// check and obtain lock
-		// already blocked? return false, meaning don't do anything and skip
-		// not blocked yet? block it and return true,
-		// meaning: 1. lock obtained; 2. do stuff; and 3. don't forget to unblock after completing
-		return locked.compareAndSet(false, true);
-	}
+//	private boolean obtainLock() {
+//		// Performance: as tested, during a 2-client session this section takes 0 ms to execute, acceptable.
+//		// check and obtain lock
+//		// already blocked? return false, meaning don't do anything and skip
+//		// not blocked yet? block it and return true,
+//		// meaning: 1. lock obtained; 2. do stuff; and 3. don't forget to unblock after completing
+//		return locked.compareAndSet(false, true);
+//	}
+//
+//	// This should only be done by a thread that has already obtained the lock by obtainLock() = true;
+//	private void releaseLock () {
+//		locked.set(false);
+//	}
 
-	// This should only be done by a thread that has already obtained the lock by obtainLock() = true;
-	private void releaseLock () {
-		locked.set(false);
-	}
-
-	private synchronized void onStop () {
+	private synchronized void onStop() {
 		if ((shSzThread == null || shSzThread.isStopped()) &&
 				(shThread == null || shThread.isStopped()) &&
 				(szThread == null || szThread.isStopped()) &&
@@ -324,23 +342,29 @@ public class CommandCenter implements DepthListener {
 			if (broker instanceof michael.findata.algoquant.execution.component.broker.Broker) {
 				((michael.findata.algoquant.execution.component.broker.Broker) broker).stop();
 			}
-			AsyncMailer.instance.stop();
 			DBUtil.tryToStopDB();
 			LOGGER.info("Command Center Stopped.");
+		} else {
+			LOGGER.warn("Some depth thread has stopped. Command center cannot stop.");
 		}
 	}
 
 	public void depthUpdated (Depth depth) {
-		if (obtainLock()) {
+		// no need to use lock any more, we use disruptor now
+//		if (obtainLock()) {
+		Product product = depth.product();
+		if (product instanceof Stock) {
 			DateTime now = new DateTime();
-			relevantStrs.get(depth.product()).forEach(strategy -> {
+			relevantStrs.get(product).forEach(strategy -> {
 				if (strategy instanceof DepthHandler) {
 					((DepthHandler) strategy).onDepthUpdate(now, depth, null, null, broker);
 				}
 			});
-		} else {
-			LOGGER.warn("Depth update messaging failure due to locking [1]. {}", depth);
 		}
+//			releaseLock();
+//		} else {
+//			LOGGER.warn("Depth update messaging failure due to locking [1]. {}", depth);
+//		}
 	}
 
 	private void depthsUpdated(Map<Product, Depth> depths) {
@@ -357,13 +381,17 @@ public class CommandCenter implements DepthListener {
 			}
 		});
 
+		Product product;
 		// Depth handlers
 		for (Map.Entry<Product, Depth> entry : depths.entrySet()) {
-			relevantStrs.get(entry.getKey()).forEach(strategy -> {
-				if (strategy instanceof DepthHandler) {
-					((DepthHandler) strategy).onDepthUpdate(now, entry.getValue(), condition, null, broker);
-				}
-			});
+			product = entry.getKey();
+			if (product instanceof Stock) {
+				relevantStrs.get(product).forEach(strategy -> {
+					if (strategy instanceof DepthHandler) {
+						((DepthHandler) strategy).onDepthUpdate(now, entry.getValue(), condition, null, broker);
+					}
+				});
+			}
 		}
 	}
 
@@ -444,28 +472,32 @@ public class CommandCenter implements DepthListener {
 						threadLOGGER.debug("{}: empty result.", name);
 					} else {
 						threadLOGGER.debug("{}: non-empty result.", name);
-//						System.out.println(name+" try obtaining lock. @\t"+System.currentTimeMillis());
-						if (obtainLock()) {
-							LOGGER.debug("{}: lock obtained.", name);
-//							System.out.println(name+" locked obtained. @\t"+System.currentTimeMillis());
 
-							// Multi-threaded version
-							// do it with a new thread
-//							Thread t = new Thread(() -> {
-//								depthsUpdated(pollResult);
-//							});t.start();
+						// No need to obtain lock any more, we used disruptors now.
+						depthsUpdated(pollResult);
 
-							// Single-threaded version
-							// do it within the same thread
-							depthsUpdated(pollResult);
-							releaseLock();
-							LOGGER.debug("{}: lock released.", name);
-						} else {
-							// System.out.println("synchronized code section executed in(ms) "+(System.currentTimeMillis() - start));
-							// if this command center is blocked by broker when executing an order, there is not point notify about the change
-							// already blocked, do nothing
-							LOGGER.warn("{} Depths update messaging failure due to locking [2].", name);
-						}
+////						System.out.println(name+" try obtaining lock. @\t"+System.currentTimeMillis());
+//						if (obtainLock()) {
+//							LOGGER.debug("{}: lock obtained.", name);
+////							System.out.println(name+" locked obtained. @\t"+System.currentTimeMillis());
+//
+//							// Multi-threaded version
+//							// do it with a new thread
+////							Thread t = new Thread(() -> {
+////								depthsUpdated(pollResult);
+////							});t.start();
+//
+//							// Single-threaded version
+//							// do it within the same thread
+//							depthsUpdated(pollResult);
+//							releaseLock();
+//							LOGGER.debug("{}: lock released.", name);
+//						} else {
+//							// System.out.println("synchronized code section executed in(ms) "+(System.currentTimeMillis() - start));
+//							// if this command center is blocked by broker when executing an order, there is not point notify about the change
+//							// already blocked, do nothing
+//							LOGGER.warn("{} Depths update messaging failure due to locking [2].", name);
+//						}
 					}
 					threadLOGGER.debug("{} heartbeat completed.", name);
 					if (heartbeatInterval > 0) {
@@ -483,7 +515,6 @@ public class CommandCenter implements DepthListener {
 				((LocalHexinBrokerProxy) broker).stop();
 			}
 			stopped = true;
-			onStop();
 		}
 	}
 

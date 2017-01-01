@@ -54,27 +54,27 @@ public class PairStats implements Comparable<PairStats> {
 
 	@Basic
 	@Column(name = "min")
-	private double min; // the minimum
+	private Double min; // the minimum
 
 	@Basic
 	@Column(name = "max")
-	private double max; // the maximum
+	private Double max; // the maximum
 
 	@Basic
 	@Column(name = "percentile01")
-	private double percentile01; // the 1 percentile
+	private Double percentile01; // the 1 percentile
 
 	@Basic
 	@Column(name = "percentile05")
-	private double percentile05; // the 5 percentile
+	private Double percentile05; // the 5 percentile
 
 	@Basic
 	@Column(name = "percentile95")
-	private double percentile95; // the 95 percentile
+	private Double percentile95; // the 95 percentile
 
 	@Basic
 	@Column(name = "percentile99")
-	private double percentile99; // the 99 percentile
+	private Double percentile99; // the 99 percentile
 
 	@Transient
 	private String codeToShort = null;
@@ -228,51 +228,51 @@ public class PairStats implements Comparable<PairStats> {
 		return adfpma > o.getAdfpma() ? 1 : (adfpma < o.getAdfpma() ? -1 : (equals(o)? 0 : 1));
 	}
 
-	public double getMax() {
+	public Double getMax() {
 		return max;
 	}
 
-	public void setMax(double max) {
+	public void setMax(Double max) {
 		this.max = max;
 	}
 
-	public double getPercentile01() {
+	public Double getPercentile01() {
 		return percentile01;
 	}
 
-	public void setPercentile01(double percentile01) {
+	public void setPercentile01(Double percentile01) {
 		this.percentile01 = percentile01;
 	}
 
-	public double getMin() {
+	public Double getMin() {
 		return min;
 	}
 
-	public void setMin(double min) {
+	public void setMin(Double min) {
 		this.min = min;
 	}
 
-	public double getPercentile05() {
+	public Double getPercentile05() {
 		return percentile05;
 	}
 
-	public void setPercentile05(double percentile05) {
+	public void setPercentile05(Double percentile05) {
 		this.percentile05 = percentile05;
 	}
 
-	public double getPercentile95() {
+	public Double getPercentile95() {
 		return percentile95;
 	}
 
-	public void setPercentile95(double percentile95) {
+	public void setPercentile95(Double percentile95) {
 		this.percentile95 = percentile95;
 	}
 
-	public double getPercentile99() {
+	public Double getPercentile99() {
 		return percentile99;
 	}
 
-	public void setPercentile99(double percentile99) {
+	public void setPercentile99(Double percentile99) {
 		this.percentile99 = percentile99;
 	}
 

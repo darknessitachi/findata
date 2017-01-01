@@ -54,12 +54,14 @@ public class AsyncMailer {
 		disruptor.handleEventsWith((event, sequence, endOfBatch) -> sendEMail(event.title, event.message, event.to));
 		// Start the Disruptor, starts all threads running
 		disruptor.start();
-	}
-
-	public void stop () {
-//		executor.shutdown();
-		LOGGER.info("Mailer is shutting down...");
-		disruptor.shutdown();
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				LOGGER.info("Mailer is shutting down...");
+				disruptor.shutdown();
+				LOGGER.info("Mailer shutdown completed.");
+			}
+		});
 	}
 
 	public void email (String subject, String message) {
@@ -108,5 +110,12 @@ public class AsyncMailer {
 		}
 	}
 
-	public static AsyncMailer instance = new AsyncMailer();
+	public static AsyncMailer instance () {
+		if (instance == null) {
+			instance = new AsyncMailer();
+		}
+		return instance;
+	}
+
+	private static AsyncMailer instance;
 }

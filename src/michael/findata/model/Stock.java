@@ -259,14 +259,12 @@ public class Stock implements com.numericalmethod.algoquant.execution.datatype.p
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
+		if (o == null || !(o instanceof Stock)) return false;
 
 		Stock stock = (Stock) o;
 
 //		if (id != stock.id) return false;
-		if (code != null ? !code.equals(stock.code) : stock.code != null) return false;
-
-		return true;
+		return code != null ? code.equals(stock.code) : stock.code == null;
 	}
 
 	@Override

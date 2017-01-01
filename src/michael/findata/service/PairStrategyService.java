@@ -36,11 +36,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.sql.SQLSyntaxErrorException;
 import java.sql.Timestamp;
 import java.util.*;
-import java.util.function.Function;
 
+import static michael.findata.algoquant.execution.strategy.Strategy.LOGGER;
 import static michael.findata.algoquant.strategy.pair.stocks.ShortInHKPairStrategy.paramMap;
 
 @Service
@@ -294,8 +293,20 @@ public class PairStrategyService {
 		Consumer2<DateTime, Map<String, SecurityTimeSeriesDatum>> doTest = (date, data) -> {
 			LocalDate curDate = date.toLocalDate();
 			prices.clear();
-			double forexHKD = data.get("HKD").getAmount();
-			double forexUSD = data.get("USD").getAmount();
+			double forexHKD;
+			double forexUSD;
+			try {
+				forexHKD = data.get("HKD").getAmount();
+			} catch (NullPointerException npe) {
+				LOGGER.error("Not able to obtain HKD exchange on {}", curDate);
+				return;
+			}
+			try {
+				forexUSD = data.get("USD").getAmount();
+			} catch (NullPointerException npe) {
+				LOGGER.error("Not able to obtain USD exchange on {}", curDate);
+				return;
+			}
 //			System.out.printf("%s\t", date);
 			data.forEach((code, datum) -> {
 				if (datum.isTraded() && datum.getClose() > 0) {

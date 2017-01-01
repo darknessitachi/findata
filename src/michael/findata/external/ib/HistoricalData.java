@@ -183,6 +183,7 @@ public class HistoricalData {
 				now = shortDateFormat.print(minMillis)+" 17:01:01 GMT";
 			}
 //			now = shortDateFormat.print(minMillis)+" 00:01:01 GMT";
+			LOGGER.info("Historical minute data: requesting {} 20 D from {}", code, now);
 			m_s.reqHistoricalData(code, stockContract, now, "20 D", "1 min", "TRADES", 1, 1, null);
 		}
 
@@ -201,6 +202,7 @@ public class HistoricalData {
 				minMillis = System.currentTimeMillis();
 				now = shortDateFormat.print(minMillis)+" 17:01:01 GMT";
 			}
+			LOGGER.info("Historical daily data: requesting {} 20 D from {}", code, now);
 			m_s.reqHistoricalData(code+DAILY_DATA_OFFSET, stockContract, now, "20 D", "1 day", "TRADES", 1, 1, null);
 		}
 

@@ -1,14 +1,18 @@
 package michael.findata.algoquant.execution.component.broker;
 
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
+import com.numericalmethod.algoquant.execution.strategy.handler.ExecutionHandler;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import michael.findata.algoquant.execution.datatype.order.HexinOrder;
-import michael.findata.algoquant.execution.listener.OrderListener;
 import michael.findata.model.Stock;
+import michael.findata.spring.data.repository.StockRepository;
 import michael.findata.util.ResourceUtil;
 import org.apache.logging.log4j.Logger;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+import java.util.Arrays;
 import java.util.Collection;
 
 import static michael.findata.util.LogUtil.getClassLogger;
@@ -126,6 +130,7 @@ public class LocalNativeTdxBroker implements Broker{
 		//OpenTdx和CloseTdx在整个应用程序中只能被调用一次.API带有断线自动重连功能，应用程序只需根据API函数返回的出错信息进行适当错误处理即可
 	}
 
+	private boolean loggedIn = false;
 	private TdxLibrary trade;
 	private int clientID;
 	private static String gddmSH = "E042255853";
@@ -146,15 +151,17 @@ public class LocalNativeTdxBroker implements Broker{
 //		clientID = trade.Logon("180.153.18.180", (short) 7708, "6.33", (short) 2, "8009145070", "8009145070", "123456", "123456", ErrInfo);
 		long time = System.currentTimeMillis();
 		clientID = trade.Logon(ip, port, "6.33", yingyebuID, accountNo, tradeAccount, pass, commsPass, ErrInfo);
-		System.out.println(System.currentTimeMillis() - time);
+		LOGGER.info("Login took {} seconds.", (System.currentTimeMillis() - time) / 1000d);
 
 		if (clientID == -1) {
 			LOGGER.error(Native.toString(ErrInfo, "GBK"));
+			loggedIn = false;
 			return;
 		}
+		loggedIn = true;
 		LOGGER.info("Tdx native broker logon successful!");
 
-		//查询
+		//查询 clientID
 		trade.QueryData(clientID, 5, Result, ErrInfo);
 		//TdxLibrary1.QueryData(ClientID2, 0, Result, ErrInfo);//第二个帐号查询资金
 		LOGGER.info(Native.toString(Result, "GBK"));
@@ -169,11 +176,16 @@ public class LocalNativeTdxBroker implements Broker{
 	}
 
 	@Override
-	public void setOrderListener(Order o, OrderListener listener) {
+	public void setOrderListener(Order o, ExecutionHandler handler) {
+		LOGGER.debug("ZX orderListenerMap put: {} -> {}", o, handler);
 	}
 
 	@Override
 	public void sendOrder(Collection<? extends Order> orders) {
+		if (!loggedIn) {
+			LOGGER.warn("Not logged in yet, cannot send order.");
+			return;
+		}
 		byte[] result = new byte[1024];
 		byte[] errInfo = new byte[256];
 
@@ -240,9 +252,9 @@ public class LocalNativeTdxBroker implements Broker{
 			String resultString = Native.toString(result, "GBK");
 			String errorString = Native.toString(errInfo, "GBK");
 			if (resultString.length() != 0) {
-				o.id(Integer.parseInt(resultString.substring(resultString.indexOf('\n')+1).trim()));
 				if (o instanceof HexinOrder) {
-					((HexinOrder) o).ack(resultString);
+					((HexinOrder)o).serverSideId(Integer.parseInt(resultString.substring(resultString.indexOf('\n')+1).trim()));
+					((HexinOrder)o).ack(resultString);
 				}
 				LOGGER.info("{} submitted. Result: {}", o, resultString);
 			}
@@ -254,6 +266,10 @@ public class LocalNativeTdxBroker implements Broker{
 
 	@Override
 	public void cancelOrder(Collection<? extends Order> orders) {
+		if (!loggedIn) {
+			LOGGER.warn("Not logged in yet, cannot cancel order.");
+			return;
+		}
 		byte[] result = new byte[1024];
 		byte[] errInfo = new byte[256];
 		String exchangeId;
@@ -284,13 +300,16 @@ public class LocalNativeTdxBroker implements Broker{
 					continue;
 				}
 			}
-			trade.CancelOrder(clientID, exchangeId, String.valueOf((int) o.id()), result, errInfo);
+			trade.CancelOrder(clientID, exchangeId, String.valueOf(((HexinOrder)o).serverSideId()), result, errInfo);
 			String resultString = Native.toString(result, "GBK");
 			String errorString = Native.toString(errInfo, "GBK");
 			if (resultString.length() != 0) {
-				o.id(Integer.parseInt(resultString.substring(resultString.indexOf('\n')+1).trim()));
 				if (o instanceof HexinOrder) {
-					((HexinOrder) o).ack(resultString);
+//					Integer ssid = Integer.parseInt(resultString.substring(resultString.indexOf('\n')+1).trim());
+//					System.out.printf("Original ssid %d\n", ((HexinOrder) o).serverSideId());
+//					System.out.printf("Trying to assign ssid %d\n", ssid);
+//					((HexinOrder)o).serverSideId(ssid);
+					((HexinOrder)o).ack(resultString);
 				}
 				LOGGER.info("{} cancelled. Result: {}", o, resultString);
 			}
@@ -298,5 +317,14 @@ public class LocalNativeTdxBroker implements Broker{
 				LOGGER.error("{} cancellation error: ", o, errorString);
 			}
 		}
+	}
+
+	// Test
+	public static void main (String [] args) {
+		ApplicationContext context = new ClassPathXmlApplicationContext("/michael/findata/app_context_no_tdx_client.xml");
+		StockRepository stockRepo = (StockRepository) context.getBean("stockRepository");
+		LocalNativeTdxBroker broker = new LocalNativeTdxBroker("180.153.18.180", (short)7708, (short)2, "8009145070", "8009145070", LocalNativeTdxBroker.password, "123456");
+		broker.sendOrder(Arrays.asList(new HexinOrder(stockRepo.findOneByCode("600016"), 6000, 1, HexinOrder.HexinType.SIMPLE_BUY)));
+		broker.stop();
 	}
 }

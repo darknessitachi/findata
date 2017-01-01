@@ -2,8 +2,22 @@ package michael.findata.algoquant.execution.datatype.order;
 
 import com.numericalmethod.algoquant.execution.datatype.order.Order;
 import com.numericalmethod.algoquant.execution.datatype.product.Product;
+import michael.findata.algoquant.execution.component.broker.MetaBroker;
+
+import java.util.Objects;
 
 public class HexinOrder extends Order {
+
+	public static final String ORDER_TAG_SERVER_SIDE_ID = "SSID";
+	public static final String ORDER_TAG_BROKER = "BRK";
+
+	public Integer serverSideId() {
+		return (Integer) getTag(HexinOrder.ORDER_TAG_SERVER_SIDE_ID);
+	}
+
+	public void serverSideId(int id) {
+		addTag(HexinOrder.ORDER_TAG_SERVER_SIDE_ID, id);
+	}
 
 	private String ack;
 
@@ -22,7 +36,7 @@ public class HexinOrder extends Order {
 				quantity, price);
 		this.hexinType = hexinType;
 		this.type = executionType;
-		this.id(-1);
+//		this.id(-1);
 	}
 
 	private HexinType hexinType;
@@ -50,7 +64,7 @@ public class HexinOrder extends Order {
 	}
 
 	public boolean submitted () {
-		return id() != -1;
+		return serverSideId() != null;
 	}
 
 	public enum HexinType {
@@ -87,6 +101,14 @@ public class HexinOrder extends Order {
 
 	@Override
 	public int hashCode () {
-		return (int)id();
+		return (int) id();
+	}
+
+	@Override
+	public boolean equals (Object another) {
+		if (this == another) return true;
+		if (another == null || !(another instanceof HexinOrder)) return false;
+		HexinOrder anotherHexinOrder = (HexinOrder) another;
+		return id() == anotherHexinOrder.id();
 	}
 }

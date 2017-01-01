@@ -11,9 +11,10 @@ import org.joda.time.DateTime;
 public interface DividendHandler extends StrategyHandler {
 
 	// new dividend/split happens
-	public void onDividend(DateTime now,
+	default void onDividend(DateTime now,
 						   Dividend dividend,
 						   MarketCondition mc,
 						   TradeBlotter blotter,
-						   Broker broker);
+						   Broker broker) {
+	}
 }

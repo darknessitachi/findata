@@ -1,5 +1,6 @@
 package michael.findata.service;
 
+import com.numericalmethod.algoquant.execution.datatype.product.stock.Exchange;
 import michael.findata.external.SecurityDividendData;
 import michael.findata.external.SecurityDividendRecord;
 import michael.findata.external.hexun2008.Hexun2008DividendData;
@@ -139,7 +140,7 @@ public class DividendService extends JdbcDaoSupport {
 	@Transactional
 	public void calculateAdjFactorForStock(String code) {
 		SqlRowSet rs = getJdbcTemplate().queryForRowSet(
-				"SELECT dividend.id id, stock_id, code, name, payment_date, round(bonus + 1, 6) as fct, amount " +
+				"SELECT dividend.id id, stock_id, code, name, payment_date, round(bonus + 1, 6) as fct, amount, stock.exchange exchange " +
 				"FROM dividend, stock " +
 				"WHERE stock_id = stock.id " +
 //				"AND payment_date >= '2015-01-01' " +
@@ -160,7 +161,19 @@ public class DividendService extends JdbcDaoSupport {
 			try {
 				yest_close = getJdbcTemplate().queryForObject("SELECT close FROM code_price WHERE code = ? AND date < ? ORDER BY date DESC LIMIT 1", Double.class, code, payment_date) / 1000d;
 			} catch (Exception e) {
+				System.out.println();
 				continue;
+			}
+			if ("HK".equals(rs.getString("exchange"))) {
+				// H¹É exchange rate
+				try {
+					double fx = getJdbcTemplate().queryForObject("SELECT close FROM exchange_rate_daily WHERE exchange_date < ? AND currency = 'HKD' ORDER BY exchange_date DESC LIMIT 1", Double.class, payment_date);
+					yest_close = yest_close * fx;
+					System.out.print("\tfx: "+fx);
+				} catch (Exception e) {
+					System.out.println();
+					continue;
+				}
 			}
 			System.out.print("\tyest_clse: " + yest_close);
 			adj = rs.getDouble("fct")*yest_close/(yest_close-rs.getDouble("amount"));

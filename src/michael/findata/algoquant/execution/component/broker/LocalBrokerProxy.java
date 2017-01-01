@@ -28,10 +28,14 @@ abstract class LocalBrokerProxy implements Broker {
 		}
 		ArrayList<Order> orders = new ArrayList<>();
 		for (Order o : ordrs) {
-			if (o.id() == -1) {
-				LOGGER.warn("Order {} is very likely not submitted yet. So we shouldn't cancel it.", o);
+			if (o instanceof HexinOrder) {
+				if (((HexinOrder) o).serverSideId() == null || ((HexinOrder) o).serverSideId() < 0) {
+					LOGGER.warn("Order {} is very likely not submitted yet. So we shouldn't cancel it.", o);
+				} else {
+					orders.add(o);
+				}
 			} else {
-				orders.add(o);
+				LOGGER.warn("There is no way to cancel non-Hexin order - unable to obtain server-side order id. [{}]", o);
 			}
 		}
 		if (orders.size() == 0) {
@@ -42,7 +46,7 @@ abstract class LocalBrokerProxy implements Broker {
 			s = new Socket(InetAddress.getByName("127.0.0.1"), port);
 			OutputStream ops = s.getOutputStream();
 			for (Order o : orders) {
-				ops.write(("Cancel|"+o.id()+'\n').getBytes());
+				ops.write(("Cancel|"+((HexinOrder) o).serverSideId()+'\n').getBytes());
 			}
 			ops.flush();
 			BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
@@ -112,8 +116,8 @@ abstract class LocalBrokerProxy implements Broker {
 			for (int i = orders.size() - 1; i > -1; i--) {
 				if (orders.get(i) instanceof HexinOrder) {
 					hxOrder = ((HexinOrder) orders.get(i));
-					hxOrder.ack(results[i]);
-					hxOrder.id(Integer.parseInt(results[i].substring(results[i].indexOf("{=") + 2, results[i].length() - 1)));
+					hxOrder.ack(results[i]); //  if index out of bound occurs here, the system doesn't know how to match return msgs with orders
+					hxOrder.serverSideId(Integer.parseInt(results[i].substring(results[i].indexOf("{=") + 2, results[i].length() - 1)));
 				}
 			}
 //			if (line.length() > 0) {
@@ -123,8 +127,8 @@ abstract class LocalBrokerProxy implements Broker {
 //				}
 //				count++;
 //			}
-		} catch (IOException e) {
-			e.printStackTrace();
+		} catch (Exception ex) {
+			ex.printStackTrace();
 		}
 	}
 }
